@@ -59,7 +59,8 @@ const VALIDATION_UI = {
 };
 
 const MonacoEditor = () => {
-  const { theme, isFullScreen, containerRef, schemaFormat } = useContext(AppContext);
+  const { theme, isFullScreen, containerRef, schemaFormat } =
+    useContext(AppContext);
 
   const [compiledSchema, setCompiledSchema] = useState<CompiledSchema | null>(
     null
@@ -69,7 +70,9 @@ const MonacoEditor = () => {
     // window.sessionStorage.getItem(SESSION_STORAGE_KEY)?.trim() ??
     // JSON.stringify(defaultJSONSchema, null, 2)
 
-    schemaFormat === "yaml" ? YAML.dump(defaultSchema) : JSON.stringify(defaultSchema, null, 2)
+    schemaFormat === "yaml"
+      ? YAML.dump(defaultSchema)
+      : JSON.stringify(defaultSchema, null, 2)
   );
 
   const [schemaValidation, setSchemaValidation] = useState<ValidationStatus>({
@@ -89,7 +92,6 @@ const MonacoEditor = () => {
         : JSON.stringify(defaultSchema, null, 2)
     );
   }, [schemaFormat]);
-
 
   useEffect(() => {
     if (!schemaText.trim()) return;
@@ -132,13 +134,13 @@ const MonacoEditor = () => {
         setSchemaValidation(
           !dialect && typeof parsedSchema !== "boolean"
             ? {
-              status: "warning",
-              message: VALIDATION_UI["warning"].message,
-            }
+                status: "warning",
+                message: VALIDATION_UI["warning"].message,
+              }
             : {
-              status: "success",
-              message: VALIDATION_UI["success"].message,
-            }
+                status: "success",
+                message: VALIDATION_UI["success"].message,
+              }
         );
       } catch (err) {
         const message = err instanceof Error ? err.message : String(err);
@@ -167,7 +169,7 @@ const MonacoEditor = () => {
           <Editor
             height="90%"
             width="100%"
-            defaultLanguage={schemaFormat}
+            language={schemaFormat}
             value={schemaText}
             theme={theme === "light" ? "vs-light" : "vs-dark"}
             options={{ minimap: { enabled: false } }}
