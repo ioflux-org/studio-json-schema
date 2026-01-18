@@ -22,7 +22,7 @@
   --tool-name-color: #1e3a8a;
   --tool-content-color: #6b7280;
   --navigation-text-color: #6b7280;
-  --view-option-text-color: #444444;
+  --dropdown-text-color: #444444;
   --view-text-color: #6b7280;
   --validation-text-color: #444444;
 }
@@ -51,6 +51,7 @@
   --tool-name-color: #fff;
   --tool-content-color: #fff;
   --navigation-text-color: #ffffff;
+  --dropdown-text-color: #ffffff;
   --view-text-color: #fff;
   --validation-text-color: #fff;
 }

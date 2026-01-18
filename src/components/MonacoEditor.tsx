@@ -15,6 +15,9 @@ import defaultSchema from "../data/defaultJSONSchema.json";
 import { AppContext } from "../contexts/AppContext";
 import SchemaVisualization from "./SchemaVisualization";
 import FullscreenToggleButton from "./FullscreenToggleButton";
+import { parseSchema } from "../utils/parseSchema";
+import YAML from "js-yaml";
+import type { JSONSchema } from "@apidevtools/json-schema-ref-parser";
 
 type ValidationStatus = {
   status: "success" | "warning" | "error";
@@ -30,7 +33,8 @@ type CreateBrowser = (
 
 const DEFAULT_SCHEMA_ID = "https://studio.ioflux.org/schema";
 const DEFAULT_SCHEMA_DIALECT = "https://json-schema.org/draft/2020-12/schema";
-const SESSION_STORAGE_KEY = "ioflux.schema.editor.content";
+const SESSION_SCHEMA_KEY = "ioflux.schema.editor.content";
+const SESSION_FORMAT_KEY = "ioflux.schema.editor.format";
 
 const JSON_SCHEMA_DIALECTS = [
   "https://json-schema.org/draft/2020-12/schema",
@@ -38,7 +42,7 @@ const JSON_SCHEMA_DIALECTS = [
   "http://json-schema.org/draft-07/schema#",
   "http://json-schema.org/draft-06/schema#",
   "http://json-schema.org/draft-04/schema#",
-] as const;
+];
 const SUPPORTED_DIALECTS = ["https://json-schema.org/draft/2020-12/schema"];
 
 const VALIDATION_UI = {
@@ -56,16 +60,40 @@ const VALIDATION_UI = {
   },
 };
 
+type SchemaFormat = "json" | "yaml";
+
+const saveFormat = (key: string, format: SchemaFormat) => {
+  sessionStorage.setItem(key, format);
+};
+
+const loadSchemaJSON = (key: string): any => {
+  const raw = sessionStorage.getItem(key);
+  if (!raw) return defaultSchema;
+  try {
+    return JSON.parse(raw);
+  } catch {
+    return defaultSchema;
+  }
+};
+
+const saveSchemaJSON = (key: string, schema: JSONSchema) => {
+  sessionStorage.setItem(key, JSON.stringify(schema, null, 2));
+};
+
 const MonacoEditor = () => {
-  const { theme, isFullScreen, containerRef } = useContext(AppContext);
+  const { theme, isFullScreen, containerRef, schemaFormat } =
+    useContext(AppContext);
 
   const [compiledSchema, setCompiledSchema] = useState<CompiledSchema | null>(
     null
   );
 
+  const initialSchemaJSON = loadSchemaJSON(SESSION_SCHEMA_KEY);
+
   const [schemaText, setSchemaText] = useState<string>(
-    window.sessionStorage.getItem(SESSION_STORAGE_KEY)?.trim() ??
-      JSON.stringify(defaultSchema, null, 2)
+    schemaFormat === "yaml"
+      ? YAML.dump(initialSchemaJSON)
+      : JSON.stringify(initialSchemaJSON, null, 2)
   );
 
   const [schemaValidation, setSchemaValidation] = useState<ValidationStatus>({
@@ -74,8 +102,16 @@ const MonacoEditor = () => {
   });
 
   useEffect(() => {
-    window.sessionStorage.setItem(SESSION_STORAGE_KEY, schemaText);
-  }, [schemaText]);
+    saveFormat(SESSION_FORMAT_KEY, schemaFormat);
+
+    const schemaJSON = loadSchemaJSON(SESSION_SCHEMA_KEY);
+
+    setSchemaText(
+      schemaFormat === "yaml"
+        ? YAML.dump(schemaJSON)
+        : JSON.stringify(schemaJSON, null, 2)
+    );
+  }, [schemaFormat]);
 
   useEffect(() => {
     if (!schemaText.trim()) return;
@@ -83,7 +119,8 @@ const MonacoEditor = () => {
     const timeout = setTimeout(async () => {
       try {
         // INFO: parsedSchema is mutated by buildSchemaDocument function
-        const parsedSchema = JSON.parse(schemaText);
+        const parsedSchema = parseSchema(schemaText, schemaFormat);
+        const copy = Object.assign({}, parsedSchema);
 
         const dialect = parsedSchema.$schema;
         const dialectVersion = dialect ?? DEFAULT_SCHEMA_DIALECT;
@@ -126,6 +163,8 @@ const MonacoEditor = () => {
                 message: VALIDATION_UI["success"].message,
               }
         );
+
+        saveSchemaJSON(SESSION_SCHEMA_KEY, copy);
       } catch (err) {
         const message = err instanceof Error ? err.message : String(err);
 
@@ -137,7 +176,7 @@ const MonacoEditor = () => {
     }, 300);
 
     return () => clearTimeout(timeout);
-  }, [schemaText]);
+  }, [schemaText, schemaFormat]);
 
   return (
     <div ref={containerRef} className="h-[92vh] flex flex-col">
@@ -153,7 +192,7 @@ const MonacoEditor = () => {
           <Editor
             height="90%"
             width="100%"
-            defaultLanguage="json"
+            language={schemaFormat}
             value={schemaText}
             theme={theme === "light" ? "vs-light" : "vs-dark"}
             options={{ minimap: { enabled: false } }}

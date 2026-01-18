@@ -5,7 +5,7 @@ import {
   useRef,
   type ReactNode,
 } from "react";
-import { AppContext } from "./AppContext";
+import { AppContext, type SchemaFormat } from "./AppContext";
 
 export const AppProvider = ({ children }: { children: ReactNode }) => {
   const containerRef = useRef<HTMLDivElement>(null);
@@ -19,12 +19,22 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
       : "light";
   });
 
+  const [schemaFormat, setSchemaFormat] = useState<SchemaFormat>(
+    (window.sessionStorage.getItem(
+      "ioflux.schema.editor.format"
+    ) as SchemaFormat) ?? "json"
+  );
+
   const toggleTheme = () => {
     setTheme((prev) => {
       const next = prev === "light" ? "dark" : "light";
       localStorage.setItem("theme", next);
       return next;
     });
+  };
+
+  const changeSchemaFormat = (format: SchemaFormat) => {
+    setSchemaFormat(format);
   };
 
   const toggleFullScreen = useCallback(() => {
@@ -65,6 +75,8 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
     theme,
     toggleTheme,
     toggleFullScreen,
+    schemaFormat,
+    changeSchemaFormat,
   };
 
   return <AppContext.Provider value={value}>{children}</AppContext.Provider>;

@@ -1,11 +1,12 @@
 import { BsGithub, BsMoonStars, BsBook, BsSun } from "react-icons/bs";
 import { useContext } from "react";
 import { Tooltip } from "react-tooltip";
-import { AppContext } from "../contexts/AppContext";
+import { AppContext, type SchemaFormat } from "../contexts/AppContext";
 import FullscreenToggleButton from "./FullscreenToggleButton";
 
 const NavigationBar = () => {
-  const { theme, toggleTheme } = useContext(AppContext);
+  const { theme, toggleTheme, schemaFormat, changeSchemaFormat } =
+    useContext(AppContext);
 
   return (
     <nav className="h-[8vh] flex justify-between items-center shadow-lg relative z-10">
@@ -28,6 +29,16 @@ const NavigationBar = () => {
       </div>
 
       <ul className="flex gap-5 mr-10">
+        <li>
+          <select
+            onChange={(e) => changeSchemaFormat(e.target.value as SchemaFormat)}
+            className="text-sm border rounded-sm bg-[var(--bg-color)] text-[var(--dropdown-text-color)] border-[var(--navigation-text-color)] cursor-pointer"
+            value={schemaFormat}
+          >
+            <option value="json">JSON</option>
+            <option value="yaml">YAML</option>
+          </select>
+        </li>
         <li>
           <button
             className="text-xl cursor-pointer"
