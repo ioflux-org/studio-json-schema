@@ -1,4 +1,5 @@
-import { useCallback, useEffect, useState, useMemo } from "react";
+// Change 1: Added useImperativeHandle and forwardRef to expose search function to parent component
+import { useCallback, useEffect, useState, useMemo, useImperativeHandle, forwardRef } from "react";
 import type { CompiledSchema } from "@hyperjump/json-schema/experimental";
 import "@xyflow/react/dist/style.css";
 import dagre from "@dagrejs/dagre";
@@ -10,6 +11,10 @@ import {
   useEdgesState,
   Position,
   BackgroundVariant,
+  // Change 2: Added useReactFlow hook to access setCenter/getZoom for panning to searched nodes
+  useReactFlow,
+  // Change 3: Added ReactFlowProvider wrapper required for useReactFlow hook to work
+  ReactFlowProvider,
   type NodeMouseHandler,
 } from "@xyflow/react";
 
@@ -30,11 +35,16 @@ const NODE_WIDTH = 172;
 const NODE_HEIGHT = 36;
 const HORIZONTAL_GAP = 150;
 
-const GraphView = ({
-  compiledSchema,
-}: {
-  compiledSchema: CompiledSchema | null;
-}) => {
+// Change 4: Exported interface so parent component can type the ref correctly
+export interface GraphViewHandle {
+  searchNode: (searchString: string) => boolean;
+}
+
+// Change 5: Renamed to GraphViewInner and wrapped with forwardRef to expose methods via ref
+const GraphViewInner = forwardRef<GraphViewHandle, { compiledSchema: CompiledSchema | null }>(
+  function GraphViewInner({ compiledSchema }, ref) {
+  // Change 6: Get setCenter and getZoom from useReactFlow to programmatically pan/zoom the canvas
+  const { setCenter, getZoom } = useReactFlow();
   const [expandedNode, setExpandedNode] = useState<{
     nodeId: string;
     data: Record<string, unknown>;
@@ -44,6 +54,37 @@ const GraphView = ({
   const [edges, setEdges, onEdgeChange] = useEdgesState<GraphEdge>([]);
   const [collisionResolved, setCollisionResolved] = useState(false);
   const [hoveredEdgeId, setHoveredEdgeId] = useState<string | null>(null);
+
+  // Change 7: New searchNode function that finds a node and centers the view on it
+  const searchNode = useCallback((searchString: string): boolean => {
+    const searchLower = searchString.toLowerCase();
+    const foundNode = nodes.find((node) => {
+      const label = node.data?.label?.toString().toLowerCase() || "";
+      const nodeId = node.id.toLowerCase();
+      return label.includes(searchLower) || nodeId.includes(searchLower);
+    });
+
+    if (foundNode && foundNode.measured?.width && foundNode.measured?.height) {
+      const x = foundNode.position.x + foundNode.measured.width / 2;
+      const y = foundNode.position.y + foundNode.measured.height / 2;
+      setCenter(x, y, { zoom: Math.max(getZoom(), 1), duration: 500 });
+      
+      // Highlight the found node by selecting it
+      setNodes((nds) =>
+        nds.map((n) => ({
+          ...n,
+          selected: n.id === foundNode.id,
+        }))
+      );
+      return true;
+    }
+    return false;
+  }, [nodes, setCenter, getZoom, setNodes]);
+
+  // Change 8: Expose searchNode function to parent via ref using useImperativeHandle
+  useImperativeHandle(ref, () => ({
+    searchNode,
+  }), [searchNode]);
 
   const onNodeClick: NodeMouseHandler = useCallback((_event, node) => {
     setExpandedNode({
@@ -234,6 +275,17 @@ const GraphView = ({
       )}
     </div>
   );
-};
+}
+);
+
+const GraphView = forwardRef<GraphViewHandle, { compiledSchema: CompiledSchema | null }>(
+  function GraphView(props, ref) {
+    return (
+      <ReactFlowProvider>
+        <GraphViewInner ref={ref} {...props} />
+      </ReactFlowProvider>
+    );
+  }
+);
 
 export default GraphView;

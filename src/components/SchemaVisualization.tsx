@@ -1,6 +1,8 @@
-import React, { useEffect, useState } from "react";
+// Change 1: Added useRef to create a reference to the GraphView component
+import React, { useEffect, useState, useRef } from "react";
 import { CgClose } from "react-icons/cg";
-import GraphView from "./GraphView";
+// Change 2: Import GraphViewHandle type to properly type the ref
+import GraphView, { type GraphViewHandle } from "./GraphView";
 import { type CompiledSchema } from "@hyperjump/json-schema/experimental";
 import { Tooltip } from "react-tooltip";
 
@@ -11,6 +13,8 @@ const SchemaVisualization = ({
 }) => {
   const [errorMessage, setErrorMessage] = useState("");
   const [showErrorPopup, setShowErrorPopup] = useState(true);
+  // Change 3: Create a ref to access GraphView's searchNode method
+  const graphViewRef = useRef<GraphViewHandle>(null);
 
   const handleChange = (event: React.ChangeEvent<HTMLInputElement>) => {
     const searchString = event.target.value.trim();
@@ -18,16 +22,13 @@ const SchemaVisualization = ({
       setErrorMessage("");
       return;
     }
-    const searchResult = handleSearch(searchString);
-    if (!searchResult) {
+    // Change 4: Call the actual searchNode function via ref instead of the stub
+    const found = graphViewRef.current?.searchNode(searchString);
+    if (!found) {
       setErrorMessage(`${searchString} is not in schema`);
     } else {
       setErrorMessage("");
     }
-  };
-
-  const handleSearch = (searchString: string) => {
-    return searchString;
   };
 
   useEffect(() => {
@@ -44,7 +45,8 @@ const SchemaVisualization = ({
 
   return (
     <>
-      <GraphView compiledSchema={compiledSchema} />
+      {/* Change 5: Pass the ref to GraphView to access its searchNode method */}
+      <GraphView ref={graphViewRef} compiledSchema={compiledSchema} />
 
       {/*Error Message */}
       {errorMessage && showErrorPopup && (
