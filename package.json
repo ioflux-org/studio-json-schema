@@ -1,6 +1,6 @@
 {
   "name": "json-schema-studio",
-  "version": "0.2.3-beta",
+  "version": "0.2.4-beta",
   "type": "module",
   "homepage": "studio.ioflux.org",
   "repository": "https://github.com/ioflux-org/studio-json-schema",

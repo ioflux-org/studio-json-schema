@@ -195,7 +195,10 @@ const MonacoEditor = () => {
             language={schemaFormat}
             value={schemaText}
             theme={theme === "light" ? "vs-light" : "vs-dark"}
-            options={{ minimap: { enabled: false } }}
+            options={{
+              minimap: { enabled: false },
+              occurrencesHighlight: "off",
+            }}
             onChange={(value) => setSchemaText(value ?? "")}
           />
           <div className="flex-1 p-2 bg-[var(--validation-bg-color)] text-sm overflow-y-auto">
