@@ -3,6 +3,7 @@ import { CgClose } from "react-icons/cg";
 import GraphView from "./GraphView";
 import { type CompiledSchema } from "@hyperjump/json-schema/experimental";
 import { Tooltip } from "react-tooltip";
+import EditorToggleButton from "./EditorToggleButton";
 
 const SchemaVisualization = ({
   compiledSchema,
@@ -44,6 +45,9 @@ const SchemaVisualization = ({
 
   return (
     <>
+      <div className="absolute top-[10px] left-[10px] z-10">
+        <EditorToggleButton />
+      </div>
       <GraphView compiledSchema={compiledSchema} />
 
       {/*Error Message */}

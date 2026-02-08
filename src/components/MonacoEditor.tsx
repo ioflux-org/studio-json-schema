@@ -81,7 +81,7 @@ const saveSchemaJSON = (key: string, schema: JSONSchema) => {
 };
 
 const MonacoEditor = () => {
-  const { theme, isFullScreen, containerRef, schemaFormat } =
+  const { theme, isFullScreen, containerRef, schemaFormat, isEditorVisible } =
     useContext(AppContext);
 
   const [compiledSchema, setCompiledSchema] = useState<CompiledSchema | null>(
@@ -155,13 +155,13 @@ const MonacoEditor = () => {
         setSchemaValidation(
           !dialect && typeof parsedSchema !== "boolean"
             ? {
-                status: "warning",
-                message: VALIDATION_UI["warning"].message,
-              }
+              status: "warning",
+              message: VALIDATION_UI["warning"].message,
+            }
             : {
-                status: "success",
-                message: VALIDATION_UI["success"].message,
-              }
+              status: "success",
+              message: VALIDATION_UI["success"].message,
+            }
         );
 
         saveSchemaJSON(SESSION_SCHEMA_KEY, copy);
@@ -188,26 +188,30 @@ const MonacoEditor = () => {
         </div>
       )}
       <PanelGroup direction="horizontal">
-        <Panel className="flex flex-col" minSize={10} defaultSize={25}>
-          <Editor
-            height="90%"
-            width="100%"
-            language={schemaFormat}
-            value={schemaText}
-            theme={theme === "light" ? "vs-light" : "vs-dark"}
-            options={{
+        {isEditorVisible && (
+          <>
+            <Panel className="flex flex-col" minSize={10} defaultSize={25}>
+              <Editor
+                height="90%"
+                width="100%"
+                language={schemaFormat}
+                value={schemaText}
+                theme={theme === "light" ? "vs-light" : "vs-dark"}
+                options={{
               minimap: { enabled: false },
               occurrencesHighlight: "off",
             }}
-            onChange={(value) => setSchemaText(value ?? "")}
-          />
-          <div className="flex-1 p-2 bg-[var(--validation-bg-color)] text-sm overflow-y-auto">
-            <div className={VALIDATION_UI[schemaValidation.status].className}>
-              {schemaValidation.message}
-            </div>
-          </div>
-        </Panel>
-        <PanelResizeHandle className="w-[1px] bg-gray-400" />
+                onChange={(value) => setSchemaText(value ?? "")}
+              />
+              <div className="flex-1 p-2 bg-[var(--validation-bg-color)] text-sm overflow-y-auto">
+                <div className={VALIDATION_UI[schemaValidation.status].className}>
+                  {schemaValidation.message}
+                </div>
+              </div>
+            </Panel>
+            <PanelResizeHandle className="w-[1px] bg-gray-400" />
+          </>
+        )}
         <Panel
           minSize={60}
           className="flex flex-col relative bg-[var(--visualize-bg-color)]"

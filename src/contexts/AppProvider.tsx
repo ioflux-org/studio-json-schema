@@ -25,6 +25,11 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
     ) as SchemaFormat) ?? "json"
   );
 
+  const [isEditorVisible, setIsEditorVisible] = useState<boolean>(() => {
+    const saved = localStorage.getItem("ioflux.editor.visible");
+    return saved === null ? true : saved === "true";
+  });
+
   const toggleTheme = () => {
     setTheme((prev) => {
       const next = prev === "light" ? "dark" : "light";
@@ -35,6 +40,14 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
 
   const changeSchemaFormat = (format: SchemaFormat) => {
     setSchemaFormat(format);
+  };
+
+  const toggleEditorVisibility = () => {
+    setIsEditorVisible((prev) => {
+      const next = !prev;
+      localStorage.setItem("ioflux.editor.visible", String(next));
+      return next;
+    });
   };
 
   const toggleFullScreen = useCallback(() => {
@@ -77,6 +90,8 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
     toggleFullScreen,
     schemaFormat,
     changeSchemaFormat,
+    isEditorVisible,
+    toggleEditorVisibility,
   };
 
   return <AppContext.Provider value={value}>{children}</AppContext.Provider>;
