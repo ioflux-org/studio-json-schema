@@ -153,6 +153,8 @@ const GraphView = ({
     if (!compiledSchema) {
       setNodes([]);
       setEdges([]);
+      setExpandedNode(null);
+      setHoveredEdgeId(null);
       return;
     }
 

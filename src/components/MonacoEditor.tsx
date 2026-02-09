@@ -20,7 +20,7 @@ import YAML from "js-yaml";
 import type { JSONSchema } from "@apidevtools/json-schema-ref-parser";
 
 type ValidationStatus = {
-  status: "success" | "warning" | "error";
+  status: "success" | "warning" | "error" | "idle";
   message: string;
 };
 
@@ -46,6 +46,10 @@ const JSON_SCHEMA_DIALECTS = [
 const SUPPORTED_DIALECTS = ["https://json-schema.org/draft/2020-12/schema"];
 
 const VALIDATION_UI = {
+  idle: {
+    message: "Enter a schema to validate.",
+    className: "text-gray-400 font-normal",
+  },
   success: {
     message: "✓ Valid JSON Schema",
     className: "text-green-400 font-semibold",
@@ -97,8 +101,8 @@ const MonacoEditor = () => {
   );
 
   const [schemaValidation, setSchemaValidation] = useState<ValidationStatus>({
-    status: "success",
-    message: VALIDATION_UI["success"].message,
+    status: "idle",
+    message: VALIDATION_UI["idle"].message,
   });
 
   useEffect(() => {
@@ -117,8 +121,8 @@ const MonacoEditor = () => {
     if (!schemaText.trim()) {
       setCompiledSchema(null);
       setSchemaValidation({
-        status: "success",
-        message: VALIDATION_UI["success"].message,
+        status: "idle",
+        message: VALIDATION_UI["idle"].message,
       });
       return;
     }
