@@ -2,14 +2,23 @@ import { BsX } from "react-icons/bs";
 import { type NodeData } from "../utils/processAST";
 
 const NodeDetailsPopup = ({
+  nodeId,
   data,
   onClose,
 }: {
+  nodeId?: string;
   data: {
     nodeData?: NodeData;
   };
   onClose: () => void;
 }) => {
+  const formatRoute = (nodeId: string) => {
+    const hashIndex = nodeId.indexOf("#");
+    const pathPart = hashIndex !== -1 ? nodeId.substring(hashIndex + 1) : nodeId;
+    
+    const route = pathPart ? `root${pathPart}` : "root";
+    return route.replace(/\//g, " > ");
+  };
   const formatValue = (value: string | string[]) => {
     return (
       <div className="flex flex-col">
@@ -40,6 +49,13 @@ const NodeDetailsPopup = ({
         </button>
 
         <div className="relative pt-8 text-sm">
+          {nodeId && (
+            <div className="mb-4 p-2 bg-gray-50 rounded border border-gray-200">
+              <div className="overflow-x-auto max-h-[60px] overflow-y-auto pr-1">
+                <div className="font-mono text-xs text-gray-800 whitespace-nowrap">{formatRoute(nodeId)}</div>
+              </div>
+            </div>
+          )}
           <table className="w-full border border-gray-200 text-left">
             <thead>
               <tr className="bg-gray-100 border-b border-gray-300">
