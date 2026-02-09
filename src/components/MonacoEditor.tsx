@@ -114,7 +114,14 @@ const MonacoEditor = () => {
   }, [schemaFormat]);
 
   useEffect(() => {
-    if (!schemaText.trim()) return;
+    if (!schemaText.trim()) {
+      setCompiledSchema(null);
+      setSchemaValidation({
+        status: "success",
+        message: VALIDATION_UI["success"].message,
+      });
+      return;
+    }
 
     const timeout = setTimeout(async () => {
       try {

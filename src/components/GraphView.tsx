@@ -150,6 +150,12 @@ const GraphView = ({
   );
 
   useEffect(() => {
+    if (!compiledSchema) {
+      setNodes([]);
+      setEdges([]);
+      return;
+    }
+
     try {
       const result = generateNodesAndEdges(compiledSchema);
       if (!result) return;
