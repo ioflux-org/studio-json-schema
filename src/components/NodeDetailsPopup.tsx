@@ -1,6 +1,6 @@
-import { BsX } from "react-icons/bs";
+import { BsX, BsCopy, BsCheck } from "react-icons/bs";
+import { useState, useContext } from "react";
 import { type NodeData } from "../utils/processAST";
-import { useContext } from "react";
 import { AppContext } from "../contexts/AppContext";
 
 const NodeDetailsPopup = ({
@@ -15,12 +15,22 @@ const NodeDetailsPopup = ({
   onClose: () => void;
 }) => {
   const { theme } = useContext(AppContext);
+  const [copied, setCopied] = useState(false);
+
   const formatRoute = (nodeId: string) => {
     const hashIndex = nodeId.indexOf("#");
     const pathPart = hashIndex !== -1 ? nodeId.substring(hashIndex + 1) : nodeId;
     
     const route = pathPart ? `root${pathPart}` : "root";
     return route.replace(/\//g, " > ");
+  };
+
+  const copyPathToClipboard = () => {
+    if (nodeId) {
+      navigator.clipboard.writeText(formatRoute(nodeId).replace(/ > /g, "/"));
+      setCopied(true);
+      setTimeout(() => setCopied(false), 2000);
+    }
   };
   const formatValue = (value: string | string[]) => {
     return (
@@ -53,10 +63,21 @@ const NodeDetailsPopup = ({
 
         <div className="relative pt-8 text-sm">
           {nodeId && (
-            <div className="mb-4 p-2 bg-gray-50 rounded border border-gray-200">
-              <div className="overflow-x-auto max-h-[60px] overflow-y-auto pr-1">
+            <div className="mb-4 p-2 bg-gray-50 rounded border border-gray-200 flex items-center justify-between">
+              <div className="overflow-x-auto max-h-[60px] overflow-y-auto pr-1 flex-1">
                 <div className="font-mono text-xs text-gray-800 whitespace-nowrap">{formatRoute(nodeId)}</div>
               </div>
+              <button
+                onClick={copyPathToClipboard}
+                className="ml-2 p-1.5 text-gray-600 hover:text-gray-900 hover:bg-gray-200 rounded transition-colors flex-shrink-0"
+                title="Copy path to clipboard"
+              >
+                {copied ? (
+                  <BsCheck size={16} className="text-green-600" />
+                ) : (
+                  <BsCopy size={16} />
+                )}
+              </button>
             </div>
           )}
           <table className="w-full border border-[var(--popup-border-color)] text-left">
