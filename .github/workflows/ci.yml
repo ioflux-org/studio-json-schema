@@ -1,0 +1,88 @@
+name: CI
+
+on:
+  pull_request:
+    branches:
+    - main
+    paths-ignore:
+    - "**.md"
+
+jobs:
+  pr-body-validation:
+    runs-on: ubuntu-latest
+    steps:
+    - name: Checkout
+      uses: actions/checkout@v4
+
+    - name: Validate PR body
+      env:
+        PR_BODY: ${{ github.event.pull_request.body }}
+      run: |
+        echo "Validating PR body..."
+        
+        # Check if PR body exists
+        if [ -z "$PR_BODY" ]; then
+          echo "❌ PR description is required"
+          exit 1
+        fi
+
+        # Check for recommended sections (warnings only)
+        if ! echo "$PR_BODY" | grep -qi "## Description"; then
+          echo "⚠️ Consider adding a '## Description' section"
+        fi
+
+        if ! echo "$PR_BODY" | grep -qi "## Type of Change"; then
+          echo "⚠️ Consider adding a '## Type of Change' section"
+        fi
+
+        if ! echo "$PR_BODY" | grep -qi "## Testing"; then
+          echo "⚠️ Consider adding a '## Testing' section"
+        fi
+
+        # Check for linked issue (optional but recommended)
+        if ! echo "$PR_BODY" | grep -Ei "(closes|fixes|resolves|related to) #[0-9]+" && \
+           ! echo "$PR_BODY" | grep -Ei "#[0-9]+"; then
+          echo "⚠️ Consider linking an issue with 'Fixes #123' or 'Closes #123'"
+        fi
+
+        echo "✅ PR body validation passed"
+
+  dependency-check:
+    runs-on: ubuntu-latest
+    steps:
+    - name: Checkout
+      uses: actions/checkout@v4
+      with:
+        fetch-depth: 0
+
+    - name: Check dependency consistency
+      run: |
+        echo "Checking dependency changes..."
+        
+        # Get changed files using PR-safe SHAs
+        CHANGED_FILES=$(git diff ${{ github.event.pull_request.base.sha }}...${{ github.sha }} --name-only)
+        
+        # Check if package.json was changed
+        if echo "$CHANGED_FILES" | grep -q "package.json"; then
+          echo "📦 package.json was modified"
+          
+          # Check if package-lock.json was also changed
+          if echo "$CHANGED_FILES" | grep -q "package-lock.json"; then
+            echo "✅ package-lock.json was also updated"
+          else
+            echo "❌ package.json was changed but package-lock.json was not updated"
+            echo "Please run 'npm install' and commit the updated package-lock.json"
+            exit 1
+          fi
+        else
+          echo "📦 No dependency changes detected"
+        fi
+
+        # Check for package-lock.json changes without package.json
+        if echo "$CHANGED_FILES" | grep -q "package-lock.json" && \
+           ! echo "$CHANGED_FILES" | grep -q "package.json"; then
+          echo "⚠️ package-lock.json was changed but package.json was not"
+          echo "This is unusual but may be acceptable for lockfile updates"
+        fi
+
+        echo "✅ Dependency check passed"
