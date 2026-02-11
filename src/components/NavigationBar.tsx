@@ -1,4 +1,4 @@
-import { BsGithub, BsMoonStars, BsBook, BsSun } from "react-icons/bs";
+import { BsGithub, BsMoonStars, BsBook, BsSun, BsUpload } from "react-icons/bs";
 import { RiSearchLine, RiCloseLine } from "react-icons/ri";
 import {
   type KeyboardEvent,
@@ -11,20 +11,70 @@ import {
 import { Tooltip } from "react-tooltip";
 import { AppContext } from "../contexts/AppContext";
 import FullscreenToggleButton from "./FullscreenToggleButton";
+import type { SchemaFormat } from "../contexts/AppContext";
 
 const NavigationBar = () => {
   const {
     theme,
     toggleTheme,
     isFullScreen,
+    schemaFormat,
+    changeSchemaFormat,
+    setSchemaText,
     searchString,
     setSearchString,
     setSelectedNode,
     triggerNavigateMatch,
   } = useContext(AppContext);
+
+  const fileInputRef = useRef<HTMLInputElement>(null);
   const searchInputRef = useRef<HTMLInputElement>(null);
   const mobileSearchInputRef = useRef<HTMLInputElement>(null);
   const [mobileSearchOpen, setMobileSearchOpen] = useState(false);
+
+  const loadFile = (file: File) => {
+    const reader = new FileReader();
+    reader.onload = (e) => {
+      const content = e.target?.result as string;
+      if (!content) return;
+      if (file.name.endsWith(".json")) {
+        changeSchemaFormat("json");
+      } else if (file.name.endsWith(".yaml") || file.name.endsWith(".yml")) {
+        changeSchemaFormat("yaml");
+      }
+      setSchemaText(content);
+    };
+    reader.readAsText(file);
+  };
+
+  const handleFileUpload = (event: React.ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0];
+    if (file) loadFile(file);
+    event.target.value = "";
+  };
+
+  useEffect(() => {
+    const onDragOver = (e: DragEvent) => {
+      e.preventDefault();
+      e.stopPropagation();
+      if (e.dataTransfer) e.dataTransfer.dropEffect = "copy";
+    };
+    const onDrop = (e: DragEvent) => {
+      e.preventDefault();
+      e.stopPropagation();
+      const file = e.dataTransfer?.files?.[0];
+      if (!file) return;
+      const ext = file.name.split(".").pop()?.toLowerCase();
+      if (!["json", "yaml", "yml"].includes(ext ?? "")) return;
+      loadFile(file);
+    };
+    document.addEventListener("dragover", onDragOver);
+    document.addEventListener("drop", onDrop);
+    return () => {
+      document.removeEventListener("dragover", onDragOver);
+      document.removeEventListener("drop", onDrop);
+    };
+  }, []);
 
   const handleKeyDown = useCallback(
     (event: KeyboardEvent<HTMLInputElement>) => {
@@ -35,7 +85,6 @@ const NavigationBar = () => {
         if (mobileSearchOpen) setMobileSearchOpen(false);
         return;
       }
-
       if (event.key === "Enter") {
         event.preventDefault();
         triggerNavigateMatch(event.shiftKey ? "prev" : "next");
@@ -70,7 +119,6 @@ const NavigationBar = () => {
             className="w-15 h-15 md:w-15 md:h-15"
             draggable="false"
           />
-
           <div className="flex font-mono flex-col">
             <span className="text-2xl font-bold text-[var(--tool-name-color)]">
               Studio
@@ -133,6 +181,42 @@ const NavigationBar = () => {
           >
             <RiSearchLine className="text-[var(--navigation-text-color)]" />
           </button>
+        </li>
+
+        <li className="flex items-center">
+          <input
+            type="file"
+            id="schema-file-input"
+            ref={fileInputRef}
+            onChange={handleFileUpload}
+            accept=".json,.yaml,.yml"
+            className="hidden"
+          />
+          <button
+            className="text-xl cursor-pointer"
+            onClick={() => fileInputRef.current?.click()}
+            data-tooltip-id="upload-file"
+            aria-label="Upload JSON/YAML schema file"
+          >
+            <BsUpload className="text-[var(--navigation-text-color)]" />
+          </button>
+          <Tooltip
+            id="upload-file"
+            content="Upload JSON/YAML (or drag & drop)"
+            style={{ fontSize: "10px" }}
+          />
+        </li>
+
+        <li className="flex items-center">
+          <select
+            onChange={(e) => changeSchemaFormat(e.target.value as SchemaFormat)}
+            className="text-sm border rounded-sm bg-[var(--bg-color)] text-[var(--dropdown-text-color)] border-[var(--navigation-text-color)] cursor-pointer"
+            value={schemaFormat}
+            aria-label="Schema format"
+          >
+            <option value="json">JSON</option>
+            <option value="yaml">YAML</option>
+          </select>
         </li>
 
         <li className="flex items-center">
@@ -202,7 +286,6 @@ const NavigationBar = () => {
           }`}
         >
           <RiSearchLine className="text-[var(--navigation-text-color)] opacity-70" />
-
           <input
             ref={mobileSearchInputRef}
             type="text"

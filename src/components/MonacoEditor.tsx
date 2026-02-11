@@ -104,6 +104,8 @@ const MonacoEditor = () => {
     schemaFormat,
     changeSchemaFormat,
     selectedNode,
+    schemaText,
+    setSchemaText,
   } = useContext(AppContext);
 
   const editorRef = useRef<editor.IStandaloneCodeEditor | null>(null);
@@ -115,14 +117,6 @@ const MonacoEditor = () => {
 
   const [compiledSchema, setCompiledSchema] = useState<CompiledSchema | null>(
     null
-  );
-
-  const initialSchemaJSON = loadSchemaJSON(SESSION_SCHEMA_KEY);
-
-  const [schemaText, setSchemaText] = useState<string>(
-    schemaFormat === "yaml"
-      ? YAML.dump(initialSchemaJSON)
-      : JSON.stringify(initialSchemaJSON, null, 2)
   );
 
   const VALIDATION_UI = getValidationUI(theme);

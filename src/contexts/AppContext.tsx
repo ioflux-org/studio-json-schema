@@ -20,6 +20,9 @@ type AppContextType = {
   schemaFormat: SchemaFormat;
   changeSchemaFormat: (format: SchemaFormat) => void;
 
+  schemaText: string;
+  setSchemaText: (text: string) => void;
+
   selectedNode: SelectedNode | null;
   setSelectedNode: (selectedNode: SelectedNode | null) => void;
 

@@ -12,6 +12,21 @@ import {
   type SelectedNode,
 } from "./AppContext";
 
+import defaultSchema from "../data/defaultJSONSchema.json";
+import YAML from "js-yaml";
+
+const SESSION_SCHEMA_KEY = "ioflux.schema.editor.content";
+
+const loadSchemaJSON = (key: string): any => {
+  const raw = sessionStorage.getItem(key);
+  if (!raw) return defaultSchema;
+  try {
+    return JSON.parse(raw);
+  } catch {
+    return defaultSchema;
+  }
+};
+
 export const AppProvider = ({ children }: { children: ReactNode }) => {
   const containerRef = useRef<HTMLDivElement>(null);
   const [isFullScreen, setIsFullScreen] = useState(false);
@@ -29,6 +44,23 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
       "ioflux.schema.editor.format"
     ) as SchemaFormat) ?? "json"
   );
+
+  const initialSchemaJSON = loadSchemaJSON(SESSION_SCHEMA_KEY);
+
+  const [schemaText, setSchemaText] = useState<string>(
+    schemaFormat === "yaml"
+      ? YAML.dump(initialSchemaJSON)
+      : JSON.stringify(initialSchemaJSON, null, 2)
+  );
+
+  useEffect(() => {
+    const schemaJSON = loadSchemaJSON(SESSION_SCHEMA_KEY);
+    setSchemaText(
+      schemaFormat === "yaml"
+        ? YAML.dump(schemaJSON)
+        : JSON.stringify(schemaJSON, null, 2)
+    );
+  }, [schemaFormat]);
 
   const toggleTheme = () => {
     setTheme((prev) => {
@@ -59,9 +91,7 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
 
   const toggleFullScreen = useCallback(() => {
     const el = containerRef.current;
-
     if (!el) return;
-
     if (!document.fullscreenElement) {
       el.requestFullscreen()
         .then(() => setIsFullScreen(true))
@@ -78,7 +108,6 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
     const handleFullscreenChange = () => {
       setIsFullScreen(!!document.fullscreenElement);
     };
-
     document.addEventListener("fullscreenchange", handleFullscreenChange);
     return () => {
       document.removeEventListener("fullscreenchange", handleFullscreenChange);
@@ -97,6 +126,8 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
     toggleFullScreen,
     schemaFormat,
     changeSchemaFormat,
+    schemaText,
+    setSchemaText,
     selectedNode,
     setSelectedNode,
     searchString,
