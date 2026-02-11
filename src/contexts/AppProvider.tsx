@@ -58,6 +58,8 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
     );
   }, [schemaFormat]);
 
+  const [selectedNodeId, setSelectedNodeId] = useState<string | null>(null);
+
   const toggleTheme = () => {
     setTheme((prev) => {
       const next = prev === "light" ? "dark" : "light";
@@ -112,6 +114,8 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
     changeSchemaFormat,
     schemaText,
     setSchemaText,
+    selectedNodeId,
+    setSelectedNodeId,
   };
 
   return <AppContext.Provider value={value}>{children}</AppContext.Provider>;

@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useState, useMemo } from "react";
+import { useCallback, useEffect, useState, useMemo, useContext } from "react";
 import type { CompiledSchema } from "@hyperjump/json-schema/experimental";
 import "@xyflow/react/dist/style.css";
 import dagre from "@dagrejs/dagre";
@@ -30,11 +30,17 @@ const NODE_WIDTH = 172;
 const NODE_HEIGHT = 36;
 const HORIZONTAL_GAP = 150;
 
+import { AppContext } from "../contexts/AppContext";
+
+// ... (existing imports, but AppContext should be added if not present)
+
 const GraphView = ({
   compiledSchema,
 }: {
   compiledSchema: CompiledSchema | null;
 }) => {
+  const { setSelectedNodeId } = useContext(AppContext);
+  /* eslint-disable @typescript-eslint/no-unused-vars */
   const [expandedNode, setExpandedNode] = useState<{
     nodeId: string;
     data: Record<string, unknown>;
@@ -46,10 +52,8 @@ const GraphView = ({
   const [hoveredEdgeId, setHoveredEdgeId] = useState<string | null>(null);
 
   const onNodeClick: NodeMouseHandler = useCallback((_event, node) => {
-    setExpandedNode({
-      nodeId: node.id,
-      data: node.data,
-    });
+    // Popup logic removed as per user request
+    setSelectedNodeId(node.id);
   }, []);
 
   const generateNodesAndEdges = useCallback(

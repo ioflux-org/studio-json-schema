@@ -15,6 +15,9 @@ type AppContextType = {
 
   schemaText: string;
   setSchemaText: (text: string) => void;
+
+  selectedNodeId: string | null;
+  setSelectedNodeId: (nodeId: string | null) => void;
 };
 
 export const AppContext = createContext<AppContextType>({} as AppContextType);

@@ -1,4 +1,4 @@
-import { useContext, useState, useEffect } from "react";
+import { useContext, useState, useEffect, useRef } from "react";
 import { Panel, PanelGroup, PanelResizeHandle } from "react-resizable-panels";
 // INFO: modifying the following import statement to (import type { SchemaObject } from "@hyperjump/json-schema/draft-2020-12") creates error;
 import { type SchemaObject } from "@hyperjump/json-schema/draft-2020-12";
@@ -69,8 +69,15 @@ const saveSchemaJSON = (key: string, schema: JSONSchema) => {
 };
 
 const MonacoEditor = () => {
-  const { theme, isFullScreen, containerRef, schemaFormat, schemaText, setSchemaText } =
-    useContext(AppContext);
+  const {
+    theme,
+    isFullScreen,
+    containerRef,
+    schemaFormat,
+    schemaText,
+    setSchemaText,
+    selectedNodeId,
+  } = useContext(AppContext);
 
   const [compiledSchema, setCompiledSchema] = useState<CompiledSchema | null>(
     null
@@ -81,9 +88,70 @@ const MonacoEditor = () => {
     message: VALIDATION_UI["success"].message,
   });
 
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const editorRef = useRef<any>(null);
+
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const handleEditorDidMount = (editor: any) => {
+    editorRef.current = editor;
+  };
+
   useEffect(() => {
     saveFormat(SESSION_FORMAT_KEY, schemaFormat);
   }, [schemaFormat]);
+
+  useEffect(() => {
+    if (!selectedNodeId || !editorRef.current) return;
+
+    // simplistic path finding for now
+    // Example ID: "https://studio.ioflux.org/schema#/properties/address"
+    const fragment = selectedNodeId.split("#")[1];
+    if (!fragment) return;
+
+    // Remove empty parts and standard keywords that might not appear as keys in short form or are hard to find
+    const pathParts = fragment
+      .split("/")
+      .filter((p) => p && p !== "properties" && p !== "$defs" && p !== "definitions");
+
+    // Fallback: just find the last part of the path
+    const targetKey = pathParts[pathParts.length - 1];
+    if (!targetKey) return;
+
+    const model = editorRef.current.getModel();
+    if (!model) return;
+
+    const text = model.getValue();
+    const lines = text.split("\n");
+
+    // Only finds the first occurrence - basic implementation
+    let targetLine = -1;
+    for (let i = 0; i < lines.length; i++) {
+      const line = lines[i];
+      if (line.includes(`"${targetKey}"`) || line.includes(`${targetKey}:`)) {
+        targetLine = i + 1;
+        break;
+      }
+    }
+
+    if (targetLine !== -1) {
+      editorRef.current.revealLineInCenter(targetLine);
+      editorRef.current.setPosition({ lineNumber: targetLine, column: 1 });
+
+      const decoration = {
+        range: new (window as any).monaco.Range(targetLine, 1, targetLine, 1),
+        options: {
+          isWholeLine: true,
+          className: "monaco-highlight-line",
+        }
+      };
+
+      const oldDecorations = editorRef.current.getModel().getAllDecorations()
+        .filter((d: any) => d.options.className === "monaco-highlight-line")
+        .map((d: any) => d.id);
+
+      editorRef.current.deltaDecorations(oldDecorations, [decoration]);
+    }
+  }, [selectedNodeId]);
 
   useEffect(() => {
     if (!schemaText.trim()) return;
@@ -172,6 +240,7 @@ const MonacoEditor = () => {
               occurrencesHighlight: "off",
             }}
             onChange={(value) => setSchemaText(value ?? "")}
+            onMount={handleEditorDidMount}
           />
           <div className="flex-1 p-2 bg-[var(--validation-bg-color)] text-sm overflow-y-auto">
             <div className={VALIDATION_UI[schemaValidation.status].className}>

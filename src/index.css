@@ -1,1 +1,10 @@
 @import "tailwindcss";
+
+@keyframes fadeGreen {
+  from { background-color: rgba(0, 255, 0, 0.4); }
+  to { background-color: transparent; }
+}
+
+.monaco-highlight-line {
+  animation: fadeGreen 2s ease-out forwards;
+}
