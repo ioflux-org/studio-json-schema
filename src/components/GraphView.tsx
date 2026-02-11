@@ -39,7 +39,7 @@ const GraphView = ({
 }: {
   compiledSchema: CompiledSchema | null;
 }) => {
-  const { setSelectedNodeId } = useContext(AppContext);
+  const { setSelectedNodeId, selectedNodeId } = useContext(AppContext);
   /* eslint-disable @typescript-eslint/no-unused-vars */
   const [expandedNode, setExpandedNode] = useState<{
     nodeId: string;
@@ -137,20 +137,25 @@ const GraphView = ({
       orderedEdges.map((edge) => {
         const isHovered = edge.id === hoveredEdgeId;
         const isSelected = edge.selected;
-        const isActive = isHovered || isSelected;
+        const isConnectedToSelectedNode =
+          selectedNodeId && (edge.source === selectedNodeId || edge.target === selectedNodeId);
+
+        const isActive = isHovered || isSelected || isConnectedToSelectedNode;
         const strokeColor = isActive ? edge.data.color : "#666";
         const strokeWidth = isActive ? 2.5 : 1;
+
         return {
           ...edge,
-          animated: isActive,
+          animated: !!isActive, // Ensure boolean for animated prop if needed, or just isActive
           style: {
             ...edge.style,
             stroke: strokeColor,
             strokeWidth: strokeWidth,
+            zIndex: isActive ? 1000 : 0
           },
         };
       }),
-    [orderedEdges, hoveredEdgeId]
+    [orderedEdges, hoveredEdgeId, selectedNodeId]
   );
 
   useEffect(() => {
