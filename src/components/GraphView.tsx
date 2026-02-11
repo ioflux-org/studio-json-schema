@@ -14,7 +14,6 @@ import {
 } from "@xyflow/react";
 
 import CustomNode from "./CustomReactFlowNode";
-import NodeDetailsPopup from "./NodeDetailsPopup";
 import {
   processAST,
   type GraphEdge,
@@ -40,12 +39,6 @@ const GraphView = ({
   compiledSchema: CompiledSchema | null;
 }) => {
   const { setSelectedNodeId, selectedNodeId } = useContext(AppContext);
-  /* eslint-disable @typescript-eslint/no-unused-vars */
-  const [expandedNode, setExpandedNode] = useState<{
-    nodeId: string;
-    data: Record<string, unknown>;
-  } | null>(null);
-
   const [nodes, setNodes, onNodeChange] = useNodesState<GraphNode>([]);
   const [edges, setEdges, onEdgeChange] = useEdgesState<GraphEdge>([]);
   const [collisionResolved, setCollisionResolved] = useState(false);
@@ -235,12 +228,6 @@ const GraphView = ({
         <Controls />
       </ReactFlow>
 
-      {expandedNode && (
-        <NodeDetailsPopup
-          data={expandedNode.data}
-          onClose={() => setExpandedNode(null)}
-        />
-      )}
     </div>
   );
 };
