@@ -81,7 +81,7 @@ const saveSchemaJSON = (key: string, schema: JSONSchema) => {
 };
 
 const MonacoEditor = () => {
-  const { theme, isFullScreen, containerRef, schemaFormat } =
+  const { theme, isFullScreen, containerRef, schemaFormat, changeSchemaFormat } =
     useContext(AppContext);
 
   const [compiledSchema, setCompiledSchema] = useState<CompiledSchema | null>(
@@ -100,6 +100,41 @@ const MonacoEditor = () => {
     status: "success",
     message: VALIDATION_UI["success"].message,
   });
+
+  // Check for CLI-provided schema
+  useEffect(() => {
+    fetch('/api/schema')
+      .then(res => {
+        if (!res.ok) throw new Error('Not running in CLI mode');
+        return res.json();
+      })
+      .then(data => {
+        if (data.content && data.filename) {
+          console.log("Loading schema from CLI:", data.filename);
+
+          const isYaml = data.filename.endsWith('.yaml') || data.filename.endsWith('.yml');
+
+          try {
+            // We must update session storage because changing format triggers a re-load from session
+            const parsed = isYaml ? YAML.load(data.content) : JSON.parse(data.content);
+            saveSchemaJSON(SESSION_SCHEMA_KEY, parsed as JSONSchema);
+          } catch (e) {
+            console.warn("CLI Schema parsing failed, session storage not updated", e);
+          }
+
+          setSchemaText(data.content);
+
+          if (isYaml) {
+            changeSchemaFormat('yaml');
+          } else {
+            changeSchemaFormat('json');
+          }
+        }
+      })
+      .catch(() => {
+        // Normal web app behavior, ignore
+      });
+  }, []);
 
   useEffect(() => {
     saveFormat(SESSION_FORMAT_KEY, schemaFormat);
@@ -155,13 +190,13 @@ const MonacoEditor = () => {
         setSchemaValidation(
           !dialect && typeof parsedSchema !== "boolean"
             ? {
-                status: "warning",
-                message: VALIDATION_UI["warning"].message,
-              }
+              status: "warning",
+              message: VALIDATION_UI["warning"].message,
+            }
             : {
-                status: "success",
-                message: VALIDATION_UI["success"].message,
-              }
+              status: "success",
+              message: VALIDATION_UI["success"].message,
+            }
         );
 
         saveSchemaJSON(SESSION_SCHEMA_KEY, copy);
