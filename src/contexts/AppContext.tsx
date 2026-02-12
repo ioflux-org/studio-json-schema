@@ -12,6 +12,12 @@ type AppContextType = {
 
   schemaFormat: SchemaFormat;
   changeSchemaFormat: (format: SchemaFormat) => void;
+
+  selectedNodeId: string | null;
+  setSelectedNodeId: (nodeId: string | null) => void;
+
+  breadcrumbNodeId: string | null;
+  setBreadcrumbNodeId: (nodeId: string | null) => void;
 };
 
 export const AppContext = createContext<AppContextType>({} as AppContextType);
