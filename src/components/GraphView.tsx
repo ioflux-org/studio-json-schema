@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useState, useMemo } from "react";
+import { useCallback, useEffect, useState, useMemo, useContext } from "react";
 import type { CompiledSchema } from "@hyperjump/json-schema/experimental";
 import "@xyflow/react/dist/style.css";
 import dagre from "@dagrejs/dagre";
@@ -14,7 +14,8 @@ import {
 } from "@xyflow/react";
 
 import CustomNode from "./CustomReactFlowNode";
-import NodeDetailsPopup from "./NodeDetailsPopup";
+import NodeDetailsDraggable from "./NodeDetailsDraggable";
+import { AppContext } from "../contexts/AppContext";
 import {
   processAST,
   type GraphEdge,
@@ -35,10 +36,7 @@ const GraphView = ({
 }: {
   compiledSchema: CompiledSchema | null;
 }) => {
-  const [expandedNode, setExpandedNode] = useState<{
-    nodeId: string;
-    data: Record<string, unknown>;
-  } | null>(null);
+  const { setSelectedNodeId } = useContext(AppContext);
 
   const [nodes, setNodes, onNodeChange] = useNodesState<GraphNode>([]);
   const [edges, setEdges, onEdgeChange] = useEdgesState<GraphEdge>([]);
@@ -46,11 +44,12 @@ const GraphView = ({
   const [hoveredEdgeId, setHoveredEdgeId] = useState<string | null>(null);
 
   const onNodeClick: NodeMouseHandler = useCallback((_event, node) => {
-    setExpandedNode({
-      nodeId: node.id,
-      data: node.data,
-    });
-  }, []);
+    setSelectedNodeId(node.id);
+  }, [setSelectedNodeId]);
+
+  const onPaneClick = useCallback(() => {
+    setSelectedNodeId(null);
+  }, [setSelectedNodeId]);
 
   const generateNodesAndEdges = useCallback(
     (
@@ -199,6 +198,7 @@ const GraphView = ({
         nodes={nodes}
         edges={animatedEdges}
         onNodeClick={onNodeClick}
+        onPaneClick={onPaneClick}
         onNodesChange={onNodeChange}
         onEdgesChange={onEdgeChange}
         deleteKeyCode={null}
@@ -225,13 +225,7 @@ const GraphView = ({
         />
         <Controls />
       </ReactFlow>
-
-      {expandedNode && (
-        <NodeDetailsPopup
-          data={expandedNode.data}
-          onClose={() => setExpandedNode(null)}
-        />
-      )}
+      <NodeDetailsDraggable nodes={nodes} />
     </div>
   );
 };
