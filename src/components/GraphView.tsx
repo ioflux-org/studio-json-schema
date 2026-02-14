@@ -25,6 +25,7 @@ import { sortAST } from "../utils/sortAST";
 import { resolveCollisions } from "../utils/resolveCollisions";
 import { MdNavigateBefore, MdNavigateNext } from "react-icons/md";
 import { CgClose } from "react-icons/cg";
+import { extractKeywords } from "../utils/searchNodeHelpers";
 
 const nodeTypes = { customNode: CustomNode };
 const dagreGraph = new dagre.graphlib.Graph().setDefaultEdgeLabel(() => ({}));
@@ -32,14 +33,6 @@ const dagreGraph = new dagre.graphlib.Graph().setDefaultEdgeLabel(() => ({}));
 const NODE_WIDTH = 172;
 const NODE_HEIGHT = 36;
 const HORIZONTAL_GAP = 150;
-
-// Change 4: Exported interface so parent component can type the ref correctly
-// Change 16: Added getMatchInfo and navigateMatch methods for multi-match navigation
-export interface GraphViewHandle {
-  searchNode: (searchString: string) => boolean;
-  getMatchInfo: () => { count: number; currentIndex: number };
-  navigateMatch: (direction: "next" | "prev") => void;
-}
 
 const GraphView = ({
   compiledSchema,
@@ -56,114 +49,46 @@ const GraphView = ({
   const [edges, setEdges, onEdgeChange] = useEdgesState<GraphEdge>([]);
   const [collisionResolved, setCollisionResolved] = useState(false);
   const [hoveredEdgeId, setHoveredEdgeId] = useState<string | null>(null);
-  // Change 9: Track matched nodes and current index for multi-match navigation
   const [matchedNodes, setMatchedNodes] = useState<GraphNode[]>([]);
   const [currentMatchIndex, setCurrentMatchIndex] = useState(0);
-  const [currentIndex, setCurrentIndex] = useState(0);
+  const matchCount = matchedNodes.length;
+  const [searchString, setSearchString] = useState("");
   const [errorMessage, setErrorMessage] = useState("");
-  const [matchCount, setMatchCount] = useState(0);
   const [showErrorPopup, setShowErrorPopup] = useState(true);
 
-  // Change 7: New searchNode function that finds a node and centers the view on it
-  const searchNode = useCallback(
-    (searchString: string): boolean => {
-      const searchLower = searchString.toLowerCase();
-      // Change 10: Use nodeLabel property for searching (as per PR feedback)
-      const foundNodes = nodes.filter((node) => {
-        const nodeLabel = node.data?.nodeLabel?.toString().toLowerCase() || "";
-        return nodeLabel.includes(searchLower);
-      });
+  const navigateMatch = useCallback(
+    (direction: "next" | "prev") => {
+      if (!matchCount) return;
 
-      // Change 11: Sort by depth (hierarchical order) - shallowest first
-      const sortedNodes = foundNodes.sort((a, b) => a.depth - b.depth);
+      setCurrentMatchIndex((prevIndex) => {
+        const newIndex =
+          direction === "next"
+            ? (prevIndex + 1) % matchCount
+            : (prevIndex - 1 + matchCount) % matchCount;
 
-      setMatchedNodes(sortedNodes);
-      setCurrentMatchIndex(0);
+        const foundNode = matchedNodes[newIndex];
 
-      if (sortedNodes.length > 0) {
-        const foundNode = sortedNodes[0];
-        // Change 12: Removed unnecessary width/height check (as per PR feedback)
         const x = foundNode.position.x + NODE_WIDTH / 2;
         const y = foundNode.position.y + NODE_HEIGHT / 2;
+
         setCenter(x, y, { zoom: Math.max(getZoom(), 1), duration: 500 });
 
-        // Change 13: Highlight the found node by selecting it
         setNodes((nds) =>
           nds.map((n) => ({
             ...n,
             selected: n.id === foundNode.id,
           }))
         );
-        return true;
-      }
 
-      setMatchedNodes([]);
-      return false;
+        return newIndex;
+      });
     },
-    [nodes, setCenter, getZoom, setNodes]
+    [matchedNodes, setCenter, getZoom, setNodes]
   );
 
-  const handleChange = (event: React.ChangeEvent<HTMLInputElement>) => {
-    const searchString = event.target.value.trim();
-    if (!searchString) {
-      setErrorMessage("");
-      // Change 19: Reset match count when search is cleared
-      setMatchCount(0);
-      return;
-    }
-    // Change 4: Call the actual searchNode function via ref instead of the stub
-    const found = searchNode(searchString);
-    if (!found) {
-      setErrorMessage(`${searchString} is not in schema`);
-      setMatchCount(0);
-    } else {
-      setErrorMessage("");
-      // Change 20: Get match information to display navigation controls
-      const matchInfo = getMatchInfo();
-      if (matchInfo) {
-        setMatchCount(matchInfo.count);
-        setCurrentIndex(matchInfo.currentIndex);
-      }
-    }
-  };
-
-  // Change 14: Function to get current match information for parent component
-  const getMatchInfo = useCallback(() => {
-    return {
-      count: matchedNodes.length,
-      currentIndex: currentMatchIndex,
-    };
-  }, [matchedNodes.length, currentMatchIndex]);
-
-  // Change 15: Function to navigate between multiple matches
-  const navigateMatch = useCallback(
-    (direction: "next" | "prev") => {
-      if (matchedNodes.length === 0) return;
-
-      let newIndex = currentMatchIndex;
-      if (direction === "next") {
-        newIndex = (currentMatchIndex + 1) % matchedNodes.length;
-      } else {
-        newIndex =
-          (currentMatchIndex - 1 + matchedNodes.length) % matchedNodes.length;
-      }
-
-      setCurrentMatchIndex(newIndex);
-      const foundNode = matchedNodes[newIndex];
-
-      const x = foundNode.position.x + NODE_WIDTH / 2;
-      const y = foundNode.position.y + NODE_HEIGHT / 2;
-      setCenter(x, y, { zoom: Math.max(getZoom(), 1), duration: 500 });
-
-      setNodes((nds) =>
-        nds.map((n) => ({
-          ...n,
-          selected: n.id === foundNode.id,
-        }))
-      );
-    },
-    [matchedNodes, currentMatchIndex, setCenter, getZoom, setNodes]
-  );
+  const handleChange = useCallback((e: React.ChangeEvent<HTMLInputElement>) => {
+    setSearchString(e.target.value);
+  }, []);
 
   const onNodeClick: NodeMouseHandler = useCallback((_event, node) => {
     setExpandedNode({
@@ -269,15 +194,6 @@ const GraphView = ({
     [orderedEdges, hoveredEdgeId]
   );
 
-  // Change 21: Handle navigation between multiple matches
-  const handleNavigate = (direction: "next" | "prev") => {
-    navigateMatch(direction);
-    const matchInfo = getMatchInfo();
-    if (matchInfo) {
-      setCurrentIndex(matchInfo.currentIndex);
-    }
-  };
-
   useEffect(() => {
     try {
       const result = generateNodesAndEdges(compiledSchema);
@@ -333,6 +249,45 @@ const GraphView = ({
       setShowErrorPopup(false);
     }
   }, [errorMessage]);
+
+  useEffect(() => {
+    const trimmed = searchString.trim();
+
+    const timeout = setTimeout(() => {
+      if (!trimmed) {
+        setMatchedNodes([]);
+        setCurrentMatchIndex(0);
+        setErrorMessage("");
+        return;
+      }
+
+      const searchWords = trimmed.toLowerCase().match(/[a-zA-Z0-9_]+/g) || [];
+
+      const foundNodes = nodes.filter((node) => {
+        const labelWords = extractKeywords(node.data.nodeLabel);
+        return searchWords.every((word) => labelWords.includes(word));
+      });
+
+      setMatchedNodes(foundNodes);
+
+      if (foundNodes.length > 0) {
+        const firstNode = foundNodes[currentMatchIndex % foundNodes.length];
+        const x = firstNode.position.x + NODE_WIDTH / 2;
+        const y = firstNode.position.y + NODE_HEIGHT / 2;
+
+        setCenter(x, y, { zoom: Math.max(getZoom(), 1), duration: 500 });
+        setNodes((nds) =>
+          nds.map((n) => ({ ...n, selected: n.id === firstNode.id }))
+        );
+
+        setErrorMessage("");
+      } else {
+        setErrorMessage(`${trimmed} is not in schema`);
+      }
+    }, 300);
+
+    return () => clearTimeout(timeout);
+  }, [searchString, nodes]);
 
   return (
     <div className="relative w-full h-full">
@@ -400,7 +355,7 @@ const GraphView = ({
         {matchCount > 1 && (
           <div className="flex items-center gap-1 bg-[var(--node-bg-color)] px-2 py-1 rounded border border-[var(--text-color)] opacity-80">
             <button
-              onClick={() => handleNavigate("prev")}
+              onClick={() => navigateMatch("prev")}
               className="hover:bg-[var(--text-color)] hover:bg-opacity-20 rounded p-1 transition-colors"
               title="Previous match"
             >
@@ -410,13 +365,12 @@ const GraphView = ({
               />
             </button>
 
-            {/* Change 23: Display current match position out of total matches */}
             <span className="text-xs text-[var(--text-color)] min-w-[40px] text-center">
-              {currentIndex + 1}/{matchCount}
+              {currentMatchIndex + 1}/{matchCount}
             </span>
 
             <button
-              onClick={() => handleNavigate("next")}
+              onClick={() => navigateMatch("next")}
               className="hover:bg-[var(--text-color)] hover:bg-opacity-20 rounded p-1 transition-colors"
               title="Next match"
             >
