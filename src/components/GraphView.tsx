@@ -44,12 +44,14 @@ const GraphView = ({
   const [edges, setEdges, onEdgeChange] = useEdgesState<GraphEdge>([]);
   const [collisionResolved, setCollisionResolved] = useState(false);
   const [hoveredEdgeId, setHoveredEdgeId] = useState<string | null>(null);
+  const [selectedNodeId, setSelectedNodeId] = useState<string | null>(null);
 
   const onNodeClick: NodeMouseHandler = useCallback((_event, node) => {
     setExpandedNode({
       nodeId: node.id,
       data: node.data,
     });
+    setSelectedNodeId(node.id);
   }, []);
 
   const generateNodesAndEdges = useCallback(
@@ -121,32 +123,39 @@ const GraphView = ({
     const selected: typeof edges = [];
 
     for (const edge of edges) {
-      if (edge.selected) selected.push(edge);
+      const isConnectedToSelectedNode =
+        selectedNodeId && (edge.source === selectedNodeId || edge.target === selectedNodeId);
+
+      if (edge.selected || isConnectedToSelectedNode) selected.push(edge);
       else normal.push(edge);
     }
 
     return [...normal, ...selected];
-  }, [edges]);
+  }, [edges, selectedNodeId]);
 
   const animatedEdges = useMemo(
     () =>
       orderedEdges.map((edge) => {
         const isHovered = edge.id === hoveredEdgeId;
         const isSelected = edge.selected;
-        const isActive = isHovered || isSelected;
+        const isConnectedToSelectedNode =
+          selectedNodeId && (edge.source === selectedNodeId || edge.target === selectedNodeId);
+
+        const isActive = isHovered || isSelected || isConnectedToSelectedNode;
         const strokeColor = isActive ? edge.data.color : "#666";
         const strokeWidth = isActive ? 2.5 : 1;
         return {
           ...edge,
-          animated: isActive,
+          animated: !!isActive,
           style: {
             ...edge.style,
             stroke: strokeColor,
             strokeWidth: strokeWidth,
+            zIndex: isActive ? 1000 : 0,
           },
         };
       }),
-    [orderedEdges, hoveredEdgeId]
+    [orderedEdges, hoveredEdgeId, selectedNodeId]
   );
 
   useEffect(() => {
@@ -208,6 +217,13 @@ const GraphView = ({
         maxZoom={5}
         onEdgeMouseEnter={(_, edge) => setHoveredEdgeId(edge.id)}
         onEdgeMouseLeave={() => setHoveredEdgeId(null)}
+        onPaneClick={() => {
+          if (expandedNode) {
+            setExpandedNode(null);
+          } else {
+            setSelectedNodeId(null);
+          }
+        }}
       >
         <Background
           id="main-grid"
@@ -229,7 +245,9 @@ const GraphView = ({
       {expandedNode && (
         <NodeDetailsPopup
           data={expandedNode.data}
-          onClose={() => setExpandedNode(null)}
+          onClose={() => {
+            setExpandedNode(null);
+          }}
         />
       )}
     </div>
