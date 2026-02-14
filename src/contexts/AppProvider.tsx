@@ -25,6 +25,8 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
     ) as SchemaFormat) ?? "json"
   );
 
+  const [selectedNodeId, setSelectedNodeId] = useState<string | null>(null);
+
   const toggleTheme = () => {
     setTheme((prev) => {
       const next = prev === "light" ? "dark" : "light";
@@ -77,6 +79,8 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
     toggleFullScreen,
     schemaFormat,
     changeSchemaFormat,
+    selectedNodeId,
+    setSelectedNodeId,
   };
 
   return <AppContext.Provider value={value}>{children}</AppContext.Provider>;
