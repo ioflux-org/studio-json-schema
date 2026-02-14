@@ -3,7 +3,7 @@ import { parseTree, findNodeAtLocation } from "jsonc-parser";
 import { Panel, PanelGroup, PanelResizeHandle } from "react-resizable-panels";
 // INFO: modifying the following import statement to (import type { SchemaObject } from "@hyperjump/json-schema/draft-2020-12") creates error;
 import { type SchemaObject } from "@hyperjump/json-schema/draft-2020-12";
-import "@hyperjump/json-schema/draft-2020-12";
+// Side-effect import removed
 import {
   getSchema,
   compile,
@@ -12,7 +12,8 @@ import {
   type SchemaDocument,
 } from "@hyperjump/json-schema/experimental";
 
-import Editor from "@monaco-editor/react";
+import Editor, { type OnMount } from "@monaco-editor/react";
+import type { editor } from "monaco-editor";
 import defaultSchema from "../data/defaultJSONSchema.json";
 import { AppContext } from "../contexts/AppContext";
 import SchemaVisualization from "./SchemaVisualization";
@@ -86,11 +87,9 @@ const MonacoEditor = () => {
   const { theme, isFullScreen, containerRef, schemaFormat, selectedNodeId } =
     useContext(AppContext);
 
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const editorRef = useRef<any>(null);
+  const editorRef = useRef<editor.IStandaloneCodeEditor | null>(null);
 
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const handleEditorDidMount = (editor: any) => {
+  const handleEditorDidMount: OnMount = (editor) => {
     editorRef.current = editor;
   };
 
@@ -112,10 +111,18 @@ const MonacoEditor = () => {
   });
 
   useEffect(() => {
-    if (!selectedNodeId || !editorRef.current) return;
-
+    if (!editorRef.current) return;
     const model = editorRef.current.getModel();
     if (!model) return;
+
+    if (!selectedNodeId) {
+      const oldDecorations = model
+        .getAllDecorations()
+        .filter((d: any) => d.options.className === "monaco-highlight-line")
+        .map((d: any) => d.id);
+      model.deltaDecorations(oldDecorations, []);
+      return;
+    }
 
     // Use jsonc-parser to find the location in the text
     const text = model.getValue();
@@ -129,7 +136,10 @@ const MonacoEditor = () => {
     const path = fragment
       .split("/")
       .filter((segment) => segment !== "")
-      .map((segment) => decodeURIComponent(segment));
+      .map((segment) => {
+        const decoded = decodeURIComponent(segment);
+        return /^\d+$/.test(decoded) ? parseInt(decoded, 10) : decoded;
+      });
 
     // Get AST using jsonc-parser
     const tree = parseTree(text);

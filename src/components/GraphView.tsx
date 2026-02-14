@@ -142,12 +142,11 @@ const GraphView = ({
         const strokeWidth = isActive ? 2.5 : 1;
         return {
           ...edge,
-          animated: !!isActive,
+          animated: isActive,
           style: {
             ...edge.style,
             stroke: strokeColor,
             strokeWidth: strokeWidth,
-            zIndex: isActive ? 1000 : 0,
           },
         };
       }),
