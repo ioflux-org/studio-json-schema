@@ -45,20 +45,20 @@ const JSON_SCHEMA_DIALECTS = [
 ];
 const SUPPORTED_DIALECTS = ["https://json-schema.org/draft/2020-12/schema"];
 
-const VALIDATION_UI = {
+const getValidationUI = (theme: "light" | "dark") => ({
   success: {
     message: "✓ Valid JSON Schema",
     className: "text-green-400 font-semibold",
   },
   warning: {
     message: `⚠ Schema dialect not provided. Using default dialect: ${DEFAULT_SCHEMA_DIALECT}`,
-    className: "text-yellow-400",
+    className: theme === "dark" ? "text-yellow-400" : "text-amber-800",
   },
   error: {
     message: "✗ ",
     className: "text-red-400",
   },
-};
+});
 
 type SchemaFormat = "json" | "yaml";
 
@@ -95,6 +95,8 @@ const MonacoEditor = () => {
       ? YAML.dump(initialSchemaJSON)
       : JSON.stringify(initialSchemaJSON, null, 2)
   );
+
+  const VALIDATION_UI = getValidationUI(theme);
 
   const [schemaValidation, setSchemaValidation] = useState<ValidationStatus>({
     status: "success",
@@ -157,11 +159,11 @@ const MonacoEditor = () => {
             ? {
                 status: "warning",
                 message: VALIDATION_UI["warning"].message,
-            }
+              }
             : {
                 status: "success",
                 message: VALIDATION_UI["success"].message,
-            }
+              }
         );
 
         saveSchemaJSON(SESSION_SCHEMA_KEY, copy);
@@ -202,15 +204,7 @@ const MonacoEditor = () => {
             onChange={(value) => setSchemaText(value ?? "")}
           />
           <div className="flex-1 p-2 bg-[var(--validation-bg-color)] text-sm overflow-y-auto">
-            <div
-              className={
-                schemaValidation.status === "warning"
-                  ? theme === "dark"
-                    ? "text-yellow-400"
-                    : "text-amber-800"
-                  : VALIDATION_UI[schemaValidation.status].className
-              }
-            >
+            <div className={VALIDATION_UI[schemaValidation.status].className}>
               {schemaValidation.message}
             </div>
           </div>
