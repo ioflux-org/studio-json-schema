@@ -199,7 +199,7 @@ const GraphView = ({
 
     // Auto-center the graph after layout update
     setTimeout(() => {
-      rfInstance?.fitView({ duration: 800, padding: 0.2 });
+      rfInstance?.fitView({ duration: 800, padding: 0.05});
     }, 50);
 
   }, [nodes, collisionResolved, allNodesMeasured, setNodes, rfInstance]);
@@ -215,7 +215,6 @@ const GraphView = ({
         onInit={setRfInstance}
         deleteKeyCode={null}
         nodeTypes={nodeTypes}
-        fitView
         minZoom={0.05}
         maxZoom={5}
         onEdgeMouseEnter={(_, edge) => setHoveredEdgeId(edge.id)}
