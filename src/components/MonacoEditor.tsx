@@ -155,13 +155,13 @@ const MonacoEditor = () => {
         setSchemaValidation(
           !dialect && typeof parsedSchema !== "boolean"
             ? {
-                status: "warning",
-                message: VALIDATION_UI["warning"].message,
-              }
+              status: "warning",
+              message: VALIDATION_UI["warning"].message,
+            }
             : {
-                status: "success",
-                message: VALIDATION_UI["success"].message,
-              }
+              status: "success",
+              message: VALIDATION_UI["success"].message,
+            }
         );
 
         saveSchemaJSON(SESSION_SCHEMA_KEY, copy);
@@ -202,7 +202,15 @@ const MonacoEditor = () => {
             onChange={(value) => setSchemaText(value ?? "")}
           />
           <div className="flex-1 p-2 bg-[var(--validation-bg-color)] text-sm overflow-y-auto">
-            <div className={VALIDATION_UI[schemaValidation.status].className}>
+            <div
+              className={
+                schemaValidation.status === "warning"
+                  ? theme === "dark"
+                    ? "text-yellow-400"
+                    : "text-amber-800"
+                  : VALIDATION_UI[schemaValidation.status].className
+              }
+            >
               {schemaValidation.message}
             </div>
           </div>
