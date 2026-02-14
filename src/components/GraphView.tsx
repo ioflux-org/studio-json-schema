@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useState, useMemo } from "react";
+import { useCallback, useEffect, useState, useMemo, useContext } from "react";
 import type { CompiledSchema } from "@hyperjump/json-schema/experimental";
 import "@xyflow/react/dist/style.css";
 import dagre from "@dagrejs/dagre";
@@ -14,7 +14,6 @@ import {
 } from "@xyflow/react";
 
 import CustomNode from "./CustomReactFlowNode";
-import NodeDetailsPopup from "./NodeDetailsPopup";
 import {
   processAST,
   type GraphEdge,
@@ -30,26 +29,24 @@ const NODE_WIDTH = 172;
 const NODE_HEIGHT = 36;
 const HORIZONTAL_GAP = 150;
 
+import { AppContext } from "../contexts/AppContext";
+
+// ... (existing imports, but AppContext should be added if not present)
+
 const GraphView = ({
   compiledSchema,
 }: {
   compiledSchema: CompiledSchema | null;
 }) => {
-  const [expandedNode, setExpandedNode] = useState<{
-    nodeId: string;
-    data: Record<string, unknown>;
-  } | null>(null);
-
+  const { setSelectedNodeId, selectedNodeId } = useContext(AppContext);
   const [nodes, setNodes, onNodeChange] = useNodesState<GraphNode>([]);
   const [edges, setEdges, onEdgeChange] = useEdgesState<GraphEdge>([]);
   const [collisionResolved, setCollisionResolved] = useState(false);
   const [hoveredEdgeId, setHoveredEdgeId] = useState<string | null>(null);
 
   const onNodeClick: NodeMouseHandler = useCallback((_event, node) => {
-    setExpandedNode({
-      nodeId: node.id,
-      data: node.data,
-    });
+    // Popup logic removed as per user request
+    setSelectedNodeId(node.id);
   }, []);
 
   const generateNodesAndEdges = useCallback(
@@ -133,20 +130,25 @@ const GraphView = ({
       orderedEdges.map((edge) => {
         const isHovered = edge.id === hoveredEdgeId;
         const isSelected = edge.selected;
-        const isActive = isHovered || isSelected;
+        const isConnectedToSelectedNode =
+          selectedNodeId && (edge.source === selectedNodeId || edge.target === selectedNodeId);
+
+        const isActive = isHovered || isSelected || isConnectedToSelectedNode;
         const strokeColor = isActive ? edge.data.color : "#666";
         const strokeWidth = isActive ? 2.5 : 1;
+
         return {
           ...edge,
-          animated: isActive,
+          animated: !!isActive, // Ensure boolean for animated prop if needed, or just isActive
           style: {
             ...edge.style,
             stroke: strokeColor,
             strokeWidth: strokeWidth,
+            zIndex: isActive ? 1000 : 0
           },
         };
       }),
-    [orderedEdges, hoveredEdgeId]
+    [orderedEdges, hoveredEdgeId, selectedNodeId]
   );
 
   useEffect(() => {
@@ -226,12 +228,6 @@ const GraphView = ({
         <Controls />
       </ReactFlow>
 
-      {expandedNode && (
-        <NodeDetailsPopup
-          data={expandedNode.data}
-          onClose={() => setExpandedNode(null)}
-        />
-      )}
     </div>
   );
 };

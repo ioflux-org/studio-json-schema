@@ -1,12 +1,42 @@
-import { BsGithub, BsMoonStars, BsBook, BsSun } from "react-icons/bs";
-import { useContext } from "react";
+import { BsGithub, BsMoonStars, BsBook, BsSun, BsUpload } from "react-icons/bs";
+import { useContext, useRef } from "react";
 import { Tooltip } from "react-tooltip";
 import { AppContext, type SchemaFormat } from "../contexts/AppContext";
 import FullscreenToggleButton from "./FullscreenToggleButton";
 
 const NavigationBar = () => {
-  const { theme, toggleTheme, schemaFormat, changeSchemaFormat } =
-    useContext(AppContext);
+  const {
+    theme,
+    toggleTheme,
+    schemaFormat,
+    changeSchemaFormat,
+    setSchemaText,
+  } = useContext(AppContext);
+
+  const fileInputRef = useRef<HTMLInputElement>(null);
+
+  const handleFileUpload = (event: React.ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0];
+    if (!file) return;
+
+    const reader = new FileReader();
+    reader.onload = (e) => {
+      const content = e.target?.result as string;
+      if (!content) return;
+
+      if (file.name.endsWith(".json")) {
+        changeSchemaFormat("json");
+      } else if (
+        file.name.endsWith(".yaml") ||
+        file.name.endsWith(".yml")
+      ) {
+        changeSchemaFormat("yaml");
+      }
+
+      setSchemaText(content);
+    };
+    reader.readAsText(file);
+  };
 
   return (
     <nav className="h-[8vh] flex justify-between items-center shadow-lg relative z-10">
@@ -29,6 +59,27 @@ const NavigationBar = () => {
       </div>
 
       <ul className="flex gap-5 mr-10">
+        <li>
+          <input
+            type="file"
+            ref={fileInputRef}
+            onChange={handleFileUpload}
+            accept=".json,.yaml,.yml"
+            className="hidden"
+          />
+          <button
+            className="text-xl cursor-pointer"
+            onClick={() => fileInputRef.current?.click()}
+            data-tooltip-id="upload-file"
+          >
+            <BsUpload className="text-[var(--navigation-text-color)]" />
+          </button>
+          <Tooltip
+            id="upload-file"
+            content="Upload JSON/YAML"
+            style={{ fontSize: "10px" }}
+          />
+        </li>
         <li>
           <select
             onChange={(e) => changeSchemaFormat(e.target.value as SchemaFormat)}

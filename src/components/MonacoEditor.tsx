@@ -1,4 +1,4 @@
-import { useContext, useState, useEffect } from "react";
+import { useContext, useState, useEffect, useRef } from "react";
 import { Panel, PanelGroup, PanelResizeHandle } from "react-resizable-panels";
 // INFO: modifying the following import statement to (import type { SchemaObject } from "@hyperjump/json-schema/draft-2020-12") creates error;
 import { type SchemaObject } from "@hyperjump/json-schema/draft-2020-12";
@@ -11,12 +11,10 @@ import {
 } from "@hyperjump/json-schema/experimental";
 
 import Editor from "@monaco-editor/react";
-import defaultSchema from "../data/defaultJSONSchema.json";
 import { AppContext } from "../contexts/AppContext";
 import SchemaVisualization from "./SchemaVisualization";
 import FullscreenToggleButton from "./FullscreenToggleButton";
 import { parseSchema } from "../utils/parseSchema";
-import YAML from "js-yaml";
 import type { JSONSchema } from "@apidevtools/json-schema-ref-parser";
 
 type ValidationStatus = {
@@ -66,34 +64,23 @@ const saveFormat = (key: string, format: SchemaFormat) => {
   sessionStorage.setItem(key, format);
 };
 
-const loadSchemaJSON = (key: string): any => {
-  const raw = sessionStorage.getItem(key);
-  if (!raw) return defaultSchema;
-  try {
-    return JSON.parse(raw);
-  } catch {
-    return defaultSchema;
-  }
-};
-
 const saveSchemaJSON = (key: string, schema: JSONSchema) => {
   sessionStorage.setItem(key, JSON.stringify(schema, null, 2));
 };
 
 const MonacoEditor = () => {
-  const { theme, isFullScreen, containerRef, schemaFormat } =
-    useContext(AppContext);
+  const {
+    theme,
+    isFullScreen,
+    containerRef,
+    schemaFormat,
+    schemaText,
+    setSchemaText,
+    selectedNodeId,
+  } = useContext(AppContext);
 
   const [compiledSchema, setCompiledSchema] = useState<CompiledSchema | null>(
     null
-  );
-
-  const initialSchemaJSON = loadSchemaJSON(SESSION_SCHEMA_KEY);
-
-  const [schemaText, setSchemaText] = useState<string>(
-    schemaFormat === "yaml"
-      ? YAML.dump(initialSchemaJSON)
-      : JSON.stringify(initialSchemaJSON, null, 2)
   );
 
   const [schemaValidation, setSchemaValidation] = useState<ValidationStatus>({
@@ -101,17 +88,70 @@ const MonacoEditor = () => {
     message: VALIDATION_UI["success"].message,
   });
 
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const editorRef = useRef<any>(null);
+
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const handleEditorDidMount = (editor: any) => {
+    editorRef.current = editor;
+  };
+
   useEffect(() => {
     saveFormat(SESSION_FORMAT_KEY, schemaFormat);
-
-    const schemaJSON = loadSchemaJSON(SESSION_SCHEMA_KEY);
-
-    setSchemaText(
-      schemaFormat === "yaml"
-        ? YAML.dump(schemaJSON)
-        : JSON.stringify(schemaJSON, null, 2)
-    );
   }, [schemaFormat]);
+
+  useEffect(() => {
+    if (!selectedNodeId || !editorRef.current) return;
+
+    // simplistic path finding for now
+    // Example ID: "https://studio.ioflux.org/schema#/properties/address"
+    const fragment = selectedNodeId.split("#")[1];
+    if (!fragment) return;
+
+    // Remove empty parts and standard keywords that might not appear as keys in short form or are hard to find
+    const pathParts = fragment
+      .split("/")
+      .filter((p) => p && p !== "properties" && p !== "$defs" && p !== "definitions");
+
+    // Fallback: just find the last part of the path
+    const targetKey = pathParts[pathParts.length - 1];
+    if (!targetKey) return;
+
+    const model = editorRef.current.getModel();
+    if (!model) return;
+
+    const text = model.getValue();
+    const lines = text.split("\n");
+
+    // Only finds the first occurrence - basic implementation
+    let targetLine = -1;
+    for (let i = 0; i < lines.length; i++) {
+      const line = lines[i];
+      if (line.includes(`"${targetKey}"`) || line.includes(`${targetKey}:`)) {
+        targetLine = i + 1;
+        break;
+      }
+    }
+
+    if (targetLine !== -1) {
+      editorRef.current.revealLineInCenter(targetLine);
+      editorRef.current.setPosition({ lineNumber: targetLine, column: 1 });
+
+      const decoration = {
+        range: new (window as any).monaco.Range(targetLine, 1, targetLine, 1),
+        options: {
+          isWholeLine: true,
+          className: "monaco-highlight-line",
+        }
+      };
+
+      const oldDecorations = editorRef.current.getModel().getAllDecorations()
+        .filter((d: any) => d.options.className === "monaco-highlight-line")
+        .map((d: any) => d.id);
+
+      editorRef.current.deltaDecorations(oldDecorations, [decoration]);
+    }
+  }, [selectedNodeId]);
 
   useEffect(() => {
     if (!schemaText.trim()) return;
@@ -155,13 +195,13 @@ const MonacoEditor = () => {
         setSchemaValidation(
           !dialect && typeof parsedSchema !== "boolean"
             ? {
-                status: "warning",
-                message: VALIDATION_UI["warning"].message,
-              }
+              status: "warning",
+              message: VALIDATION_UI["warning"].message,
+            }
             : {
-                status: "success",
-                message: VALIDATION_UI["success"].message,
-              }
+              status: "success",
+              message: VALIDATION_UI["success"].message,
+            }
         );
 
         saveSchemaJSON(SESSION_SCHEMA_KEY, copy);
@@ -200,6 +240,7 @@ const MonacoEditor = () => {
               occurrencesHighlight: "off",
             }}
             onChange={(value) => setSchemaText(value ?? "")}
+            onMount={handleEditorDidMount}
           />
           <div className="flex-1 p-2 bg-[var(--validation-bg-color)] text-sm overflow-y-auto">
             <div className={VALIDATION_UI[schemaValidation.status].className}>

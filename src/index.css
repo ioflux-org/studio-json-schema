@@ -1,1 +1,17 @@
 @import "tailwindcss";
+
+@keyframes fadeInGreen {
+  from {
+    background-color: rgba(0, 255, 0, 0.4);
+  }
+
+  to {
+    background-color: rgba(0, 255, 0, 0.2);
+  }
+}
+
+.monaco-highlight-line {
+  background-color: rgba(0, 255, 0, 0.2);
+  /* Persistent subtle green */
+  animation: fadeInGreen 0.5s ease-out;
+}

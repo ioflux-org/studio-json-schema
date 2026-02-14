@@ -7,6 +7,21 @@ import {
 } from "react";
 import { AppContext, type SchemaFormat } from "./AppContext";
 
+import defaultSchema from "../data/defaultJSONSchema.json";
+import YAML from "js-yaml";
+
+const SESSION_SCHEMA_KEY = "ioflux.schema.editor.content";
+
+const loadSchemaJSON = (key: string): any => {
+  const raw = sessionStorage.getItem(key);
+  if (!raw) return defaultSchema;
+  try {
+    return JSON.parse(raw);
+  } catch {
+    return defaultSchema;
+  }
+};
+
 export const AppProvider = ({ children }: { children: ReactNode }) => {
   const containerRef = useRef<HTMLDivElement>(null);
   const [isFullScreen, setIsFullScreen] = useState(false);
@@ -24,6 +39,26 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
       "ioflux.schema.editor.format"
     ) as SchemaFormat) ?? "json"
   );
+
+  const initialSchemaJSON = loadSchemaJSON(SESSION_SCHEMA_KEY);
+
+  const [schemaText, setSchemaText] = useState<string>(
+    schemaFormat === "yaml"
+      ? YAML.dump(initialSchemaJSON)
+      : JSON.stringify(initialSchemaJSON, null, 2)
+  );
+
+  // Update schemaText when format changes
+  useEffect(() => {
+    const schemaJSON = loadSchemaJSON(SESSION_SCHEMA_KEY);
+    setSchemaText(
+      schemaFormat === "yaml"
+        ? YAML.dump(schemaJSON)
+        : JSON.stringify(schemaJSON, null, 2)
+    );
+  }, [schemaFormat]);
+
+  const [selectedNodeId, setSelectedNodeId] = useState<string | null>(null);
 
   const toggleTheme = () => {
     setTheme((prev) => {
@@ -77,6 +112,10 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
     toggleFullScreen,
     schemaFormat,
     changeSchemaFormat,
+    schemaText,
+    setSchemaText,
+    selectedNodeId,
+    setSelectedNodeId,
   };
 
   return <AppContext.Provider value={value}>{children}</AppContext.Provider>;
