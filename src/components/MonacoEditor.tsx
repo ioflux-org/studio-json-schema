@@ -11,12 +11,10 @@ import {
 } from "@hyperjump/json-schema/experimental";
 
 import Editor from "@monaco-editor/react";
-import defaultSchema from "../data/defaultJSONSchema.json";
 import { AppContext } from "../contexts/AppContext";
 import SchemaVisualization from "./SchemaVisualization";
 import FullscreenToggleButton from "./FullscreenToggleButton";
 import { parseSchema } from "../utils/parseSchema";
-import YAML from "js-yaml";
 import type { JSONSchema } from "@apidevtools/json-schema-ref-parser";
 
 type ValidationStatus = {
@@ -66,34 +64,16 @@ const saveFormat = (key: string, format: SchemaFormat) => {
   sessionStorage.setItem(key, format);
 };
 
-const loadSchemaJSON = (key: string): any => {
-  const raw = sessionStorage.getItem(key);
-  if (!raw) return defaultSchema;
-  try {
-    return JSON.parse(raw);
-  } catch {
-    return defaultSchema;
-  }
-};
-
 const saveSchemaJSON = (key: string, schema: JSONSchema) => {
   sessionStorage.setItem(key, JSON.stringify(schema, null, 2));
 };
 
 const MonacoEditor = () => {
-  const { theme, isFullScreen, containerRef, schemaFormat } =
+  const { theme, isFullScreen, containerRef, schemaFormat, schemaText, setSchemaText } =
     useContext(AppContext);
 
   const [compiledSchema, setCompiledSchema] = useState<CompiledSchema | null>(
     null
-  );
-
-  const initialSchemaJSON = loadSchemaJSON(SESSION_SCHEMA_KEY);
-
-  const [schemaText, setSchemaText] = useState<string>(
-    schemaFormat === "yaml"
-      ? YAML.dump(initialSchemaJSON)
-      : JSON.stringify(initialSchemaJSON, null, 2)
   );
 
   const [schemaValidation, setSchemaValidation] = useState<ValidationStatus>({
@@ -103,14 +83,6 @@ const MonacoEditor = () => {
 
   useEffect(() => {
     saveFormat(SESSION_FORMAT_KEY, schemaFormat);
-
-    const schemaJSON = loadSchemaJSON(SESSION_SCHEMA_KEY);
-
-    setSchemaText(
-      schemaFormat === "yaml"
-        ? YAML.dump(schemaJSON)
-        : JSON.stringify(schemaJSON, null, 2)
-    );
   }, [schemaFormat]);
 
   useEffect(() => {
@@ -155,13 +127,13 @@ const MonacoEditor = () => {
         setSchemaValidation(
           !dialect && typeof parsedSchema !== "boolean"
             ? {
-                status: "warning",
-                message: VALIDATION_UI["warning"].message,
-              }
+              status: "warning",
+              message: VALIDATION_UI["warning"].message,
+            }
             : {
-                status: "success",
-                message: VALIDATION_UI["success"].message,
-              }
+              status: "success",
+              message: VALIDATION_UI["success"].message,
+            }
         );
 
         saveSchemaJSON(SESSION_SCHEMA_KEY, copy);
