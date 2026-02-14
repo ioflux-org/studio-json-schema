@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useState, useMemo, forwardRef } from "react";
+import { useCallback, useEffect, useState, useMemo } from "react";
 import type { CompiledSchema } from "@hyperjump/json-schema/experimental";
 import "@xyflow/react/dist/style.css";
 import dagre from "@dagrejs/dagre";
@@ -12,6 +12,7 @@ import {
   BackgroundVariant,
   useReactFlow,
   type NodeMouseHandler,
+  type ReactFlowInstance,
 } from "@xyflow/react";
 
 import CustomNode from "./CustomReactFlowNode";
@@ -51,10 +52,10 @@ const GraphView = ({
   const [hoveredEdgeId, setHoveredEdgeId] = useState<string | null>(null);
   const [matchedNodes, setMatchedNodes] = useState<GraphNode[]>([]);
   const [currentMatchIndex, setCurrentMatchIndex] = useState(0);
-  const matchCount = matchedNodes.length;
   const [searchString, setSearchString] = useState("");
   const [errorMessage, setErrorMessage] = useState("");
   const [showErrorPopup, setShowErrorPopup] = useState(true);
+  const matchCount = matchedNodes.length;
 
   const navigateMatch = useCallback(
     (direction: "next" | "prev") => {
@@ -83,7 +84,7 @@ const GraphView = ({
         return newIndex;
       });
     },
-    [matchedNodes, setCenter, getZoom, setNodes]
+    [matchedNodes]
   );
 
   const handleChange = useCallback((e: React.ChangeEvent<HTMLInputElement>) => {
@@ -274,9 +275,15 @@ const GraphView = ({
         const y = firstNode.position.y + NODE_HEIGHT / 2;
 
         setCenter(x, y, { zoom: Math.max(getZoom(), 1), duration: 500 });
-        setNodes((nds) =>
-          nds.map((n) => ({ ...n, selected: n.id === firstNode.id }))
-        );
+        setNodes((nds) => {
+          let changed = false;
+          const newNodes = nds.map((n) => {
+            const selected = n.id === firstNode.id;
+            if (n.selected !== selected) changed = true;
+            return { ...n, selected };
+          });
+          return changed ? newNodes : nds;
+        });
 
         setErrorMessage("");
       } else {
