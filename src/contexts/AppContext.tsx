@@ -12,6 +12,9 @@ type AppContextType = {
 
   schemaFormat: SchemaFormat;
   changeSchemaFormat: (format: SchemaFormat) => void;
+
+  schemaContent: string;
+  setSchemaContent: (content: string) => void;
 };
 
 export const AppContext = createContext<AppContextType>({} as AppContextType);

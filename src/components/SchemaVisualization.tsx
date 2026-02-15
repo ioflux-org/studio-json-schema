@@ -15,7 +15,7 @@ const SchemaVisualization = ({
       </ReactFlowProvider>
       <div className="absolute bottom-[10px] right-[10px] z-10">
         <img
-          src="trust-badge.svg"
+          src="/trust-badge.svg"
           alt="Local-only processing"
           className="w-9 h-9"
           draggable="false"

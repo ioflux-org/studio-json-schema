@@ -6,10 +6,58 @@ import {
   type ReactNode,
 } from "react";
 import { AppContext, type SchemaFormat } from "./AppContext";
+import YAML from "js-yaml";
+import {
+  decodeSchemaFromURL,
+  hasSchemaInURL,
+  updateURLWithSchema,
+} from "../utils/urlSchemaCodec";
+import defaultSchema from "../data/defaultJSONSchema.json";
+
+const SESSION_SCHEMA_KEY = "ioflux.schema.editor.content";
+const SESSION_FORMAT_KEY = "ioflux.schema.editor.format";
+
+const loadSchemaJSON = (key: string): any => {
+  const raw = sessionStorage.getItem(key);
+  if (!raw) return defaultSchema;
+  try {
+    return JSON.parse(raw);
+  } catch {
+    return defaultSchema;
+  }
+};
+
+const loadInitialSchemaText = (
+  schemaFormat: SchemaFormat
+): string => {
+  const pathname = window.location.pathname;
+  
+  // If URL is root path (/), load from sessionStorage or default
+  if (pathname === '/' || pathname === '') {
+    const schemaJSON = loadSchemaJSON(SESSION_SCHEMA_KEY);
+    return schemaFormat === "yaml"
+      ? YAML.dump(schemaJSON)
+      : JSON.stringify(schemaJSON, null, 2);
+  }
+  
+  // Otherwise, check if there's an encoded schema in the URL
+  if (hasSchemaInURL()) {
+    const urlSchema = decodeSchemaFromURL(pathname);
+    if (urlSchema) {
+      return urlSchema;
+    }
+  }
+
+  const schemaJSON = loadSchemaJSON(SESSION_SCHEMA_KEY);
+  return schemaFormat === "yaml"
+    ? YAML.dump(schemaJSON)
+    : JSON.stringify(schemaJSON, null, 2);
+};
 
 export const AppProvider = ({ children }: { children: ReactNode }) => {
   const containerRef = useRef<HTMLDivElement>(null);
   const [isFullScreen, setIsFullScreen] = useState(false);
+  const isInitialLoadRef = useRef(true);
 
   const [theme, setTheme] = useState<"light" | "dark">(() => {
     const savedTheme = localStorage.getItem("theme");
@@ -21,9 +69,13 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
 
   const [schemaFormat, setSchemaFormat] = useState<SchemaFormat>(
     (window.sessionStorage.getItem(
-      "ioflux.schema.editor.format"
+      SESSION_FORMAT_KEY
     ) as SchemaFormat) ?? "json"
   );
+
+  const [schemaContent, setSchemaContent] = useState<string>(() => {
+    return loadInitialSchemaText(schemaFormat);
+  });
 
   const toggleTheme = () => {
     setTheme((prev) => {
@@ -69,6 +121,30 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
     document.documentElement.setAttribute("data-theme", theme);
   }, [theme]);
 
+  useEffect(() => {
+    if (isInitialLoadRef.current) {
+      isInitialLoadRef.current = false;
+      return;
+    }
+    updateURLWithSchema(schemaContent);
+  }, [schemaContent]);
+
+  useEffect(() => {
+    const handlePopState = () => {
+      if (hasSchemaInURL()) {
+        const urlSchema = decodeSchemaFromURL(window.location.pathname);
+        if (urlSchema) {
+          setSchemaContent(urlSchema);
+        }
+      }
+    };
+
+    window.addEventListener("popstate", handlePopState);
+    return () => {
+      window.removeEventListener("popstate", handlePopState);
+    };
+  }, []);
+
   const value = {
     containerRef,
     isFullScreen,
@@ -77,7 +153,10 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
     toggleFullScreen,
     schemaFormat,
     changeSchemaFormat,
+    schemaContent,
+    setSchemaContent,
   };
 
   return <AppContext.Provider value={value}>{children}</AppContext.Provider>;
 };
+

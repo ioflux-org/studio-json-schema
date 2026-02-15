@@ -12,7 +12,7 @@ const NavigationBar = () => {
     <nav className="h-[8vh] flex justify-between items-center shadow-lg relative z-10">
       <div className="flex items-center text-center select-none">
         <img
-          src={theme === "dark" ? "logo-dark.svg" : "logo-light.svg"}
+          src={theme === "dark" ? "/logo-dark.svg" : "/logo-light.svg"}
           alt="Studio JSON Schema"
           className="w-15 h-15 md:w-15 md:h-15"
           draggable="false"

@@ -11,7 +11,6 @@ import {
 } from "@hyperjump/json-schema/experimental";
 
 import Editor from "@monaco-editor/react";
-import defaultSchema from "../data/defaultJSONSchema.json";
 import { AppContext } from "../contexts/AppContext";
 import SchemaVisualization from "./SchemaVisualization";
 import FullscreenToggleButton from "./FullscreenToggleButton";
@@ -34,7 +33,6 @@ type CreateBrowser = (
 const DEFAULT_SCHEMA_ID = "https://studio.ioflux.org/schema";
 const DEFAULT_SCHEMA_DIALECT = "https://json-schema.org/draft/2020-12/schema";
 const SESSION_SCHEMA_KEY = "ioflux.schema.editor.content";
-const SESSION_FORMAT_KEY = "ioflux.schema.editor.format";
 
 const JSON_SCHEMA_DIALECTS = [
   "https://json-schema.org/draft/2020-12/schema",
@@ -60,40 +58,16 @@ const VALIDATION_UI = {
   },
 };
 
-type SchemaFormat = "json" | "yaml";
-
-const saveFormat = (key: string, format: SchemaFormat) => {
-  sessionStorage.setItem(key, format);
-};
-
-const loadSchemaJSON = (key: string): any => {
-  const raw = sessionStorage.getItem(key);
-  if (!raw) return defaultSchema;
-  try {
-    return JSON.parse(raw);
-  } catch {
-    return defaultSchema;
-  }
-};
-
 const saveSchemaJSON = (key: string, schema: JSONSchema) => {
   sessionStorage.setItem(key, JSON.stringify(schema, null, 2));
 };
 
 const MonacoEditor = () => {
-  const { theme, isFullScreen, containerRef, schemaFormat } =
+  const { theme, isFullScreen, containerRef, schemaFormat, schemaContent, setSchemaContent } =
     useContext(AppContext);
 
   const [compiledSchema, setCompiledSchema] = useState<CompiledSchema | null>(
     null
-  );
-
-  const initialSchemaJSON = loadSchemaJSON(SESSION_SCHEMA_KEY);
-
-  const [schemaText, setSchemaText] = useState<string>(
-    schemaFormat === "yaml"
-      ? YAML.dump(initialSchemaJSON)
-      : JSON.stringify(initialSchemaJSON, null, 2)
   );
 
   const [schemaValidation, setSchemaValidation] = useState<ValidationStatus>({
@@ -102,24 +76,27 @@ const MonacoEditor = () => {
   });
 
   useEffect(() => {
-    saveFormat(SESSION_FORMAT_KEY, schemaFormat);
+    if (!schemaContent.trim()) return;
 
-    const schemaJSON = loadSchemaJSON(SESSION_SCHEMA_KEY);
-
-    setSchemaText(
-      schemaFormat === "yaml"
-        ? YAML.dump(schemaJSON)
-        : JSON.stringify(schemaJSON, null, 2)
-    );
-  }, [schemaFormat]);
+    try {
+      const parsed = parseSchema(schemaContent, schemaFormat === "yaml" ? "yaml" : "json");
+      const converted = schemaFormat === "yaml"
+        ? YAML.dump(parsed)
+        : JSON.stringify(parsed, null, 2);
+      
+      setSchemaContent(converted);
+    } catch (err) {
+      console.error("Failed to convert schema format:", err);
+    }
+  }, [schemaFormat, setSchemaContent]);
 
   useEffect(() => {
-    if (!schemaText.trim()) return;
+    if (!schemaContent.trim()) return;
 
     const timeout = setTimeout(async () => {
       try {
         // INFO: parsedSchema is mutated by buildSchemaDocument function
-        const parsedSchema = parseSchema(schemaText, schemaFormat);
+        const parsedSchema = parseSchema(schemaContent, schemaFormat);
         const copy = structuredClone(parsedSchema);
 
         const dialect = parsedSchema.$schema;
@@ -176,7 +153,7 @@ const MonacoEditor = () => {
     }, 300);
 
     return () => clearTimeout(timeout);
-  }, [schemaText, schemaFormat]);
+  }, [schemaContent, schemaFormat]);
 
   return (
     <div ref={containerRef} className="h-[92vh] flex flex-col">
@@ -193,13 +170,13 @@ const MonacoEditor = () => {
             height="90%"
             width="100%"
             language={schemaFormat}
-            value={schemaText}
+            value={schemaContent}
             theme={theme === "light" ? "vs-light" : "vs-dark"}
             options={{
               minimap: { enabled: false },
               occurrencesHighlight: "off",
             }}
-            onChange={(value) => setSchemaText(value ?? "")}
+            onChange={(value) => setSchemaContent(value ?? "")}
           />
           <div className="flex-1 p-2 bg-[var(--validation-bg-color)] text-sm overflow-y-auto">
             <div className={VALIDATION_UI[schemaValidation.status].className}>
@@ -219,3 +196,4 @@ const MonacoEditor = () => {
   );
 };
 export default MonacoEditor;
+
