@@ -3,7 +3,7 @@ import type { RFNodeData } from "../utils/processAST";
 import { useContext, useLayoutEffect, useRef, useState } from "react";
 import { AppContext } from "../contexts/AppContext";
 
-const CustomNode = ({ data, id }: { data: RFNodeData; id: string }) => {
+const CustomNode = ({ data, id, selected }: { data: RFNodeData; id: string; selected: boolean }) => {
   const { theme } = useContext(AppContext);
 
   const rowRefs = useRef<
@@ -40,6 +40,8 @@ const CustomNode = ({ data, id }: { data: RFNodeData; id: string }) => {
         }
         relative transition-shadow duration-300 text-sm bg-[var(--node-bg-color)] text-[var(--text-color)]
         min-w-[100px] max-w-[400px] hover:shadow-[0_0_10px_var(--color)]
+        ${/* Change 25: Apply visual highlighting (shadow and ring) when node is selected */ ""}
+        ${selected ? "shadow-[0_0_15px_var(--color)] ring-2 ring-[var(--color)]" : ""}
       `}
       style={{
         ["--color" as string]: data.nodeStyle.color,
