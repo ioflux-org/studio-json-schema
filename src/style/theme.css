@@ -28,6 +28,14 @@
 
   /* Monaco Editor Highlight */
   --monaco-highlight-bg: rgba(255, 255, 0, 0.3);
+  /* Popup */
+  --popup-bg-color: #ffffff;
+  --popup-text-color: #111111;
+  --popup-border-color: #d1d5db;
+  --popup-header-bg-color: #f3f4f6;
+  --popup-header-text-color: #374151;
+  --popup-close-btn-hover-color: #717479;
+  --popup-backdrop-color: rgba(255, 255, 255, 0.1);
 }
 
 [data-theme="dark"] {
@@ -60,6 +68,14 @@
 
   /* Monaco Editor Highlight */
   --monaco-highlight-bg: rgba(255, 255, 0, 0.1);
+  /* Popup */
+  --popup-bg-color: #2d2d2d;
+  --popup-text-color: #f0f0f0;
+  --popup-border-color: #444444;
+  --popup-header-bg-color: #1f1f1f;
+  --popup-header-text-color: #e0e0e0;
+  --popup-close-btn-hover-color: #777575;
+  --popup-backdrop-color: rgba(0, 0, 0, 0.5);
 }
 
 .monaco-highlight-line {
