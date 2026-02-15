@@ -12,6 +12,7 @@ import {
   BackgroundVariant,
   useReactFlow,
   type NodeMouseHandler,
+  type ReactFlowInstance,
 } from "@xyflow/react";
 
 import CustomNode from "./CustomReactFlowNode";
@@ -49,6 +50,10 @@ const GraphView = ({
   const [edges, setEdges, onEdgeChange] = useEdgesState<GraphEdge>([]);
   const [collisionResolved, setCollisionResolved] = useState(false);
   const [hoveredEdgeId, setHoveredEdgeId] = useState<string | null>(null);
+  const [rfInstance, setRfInstance] = useState<ReactFlowInstance<
+    GraphNode,
+    GraphEdge
+  > | null>(null);
   const [matchedNodes, setMatchedNodes] = useState<GraphNode[]>([]);
   const [currentMatchIndex, setCurrentMatchIndex] = useState(0);
   const [searchString, setSearchString] = useState("");
@@ -247,7 +252,13 @@ const GraphView = ({
     });
     setNodes(resolved);
     setCollisionResolved(true);
-  }, [nodes, collisionResolved, allNodesMeasured, setNodes]);
+
+    // Auto-center the graph after layout update
+    setTimeout(() => {
+      rfInstance?.fitView({ duration: 800, padding: 0.05});
+    }, 50);
+
+  }, [nodes, collisionResolved, allNodesMeasured, setNodes, rfInstance]);
 
   useEffect(() => {
     if (errorMessage) {
@@ -308,15 +319,15 @@ const GraphView = ({
 
   return (
     <div className="relative w-full h-full">
-      <ReactFlow
+      <ReactFlow<GraphNode, GraphEdge>
         nodes={nodes}
         edges={animatedEdges}
         onNodeClick={onNodeClick}
         onNodesChange={onNodeChange}
         onEdgesChange={onEdgeChange}
+        onInit={setRfInstance}
         deleteKeyCode={null}
         nodeTypes={nodeTypes}
-        fitView
         minZoom={0.05}
         maxZoom={5}
         onEdgeMouseEnter={(_, edge) => setHoveredEdgeId(edge.id)}
