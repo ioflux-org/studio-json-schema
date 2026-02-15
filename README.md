@@ -203,6 +203,26 @@ These issues will be addressed as time permits. If you encounter any other probl
 
 ---
 
+### Getting started
+
+- Fork the repository
+ ```bash
+    $ git clone https://github.com/ioflux-org/studio-json-schema.git
+  ```  
+- Create a new branch  
+  `$ git checkout -b feature/my-feature`
+- Make your changes
+- Create a Pull Request
+  - After making changes, don't forget to commit with the sign-off flag (-s)
+  ```bash
+   $ git commit -s -m “commit message”
+  ``` 
+  - Once all the changes have been commited, push the changes.
+  ```bash
+    $ git push origin <branch-name>
+  ```
+    
+
 ## Run locally
 
 You can run the application locally either directly or using Docker (recommended for consistent environment).
@@ -310,14 +330,7 @@ These PRs are treated as non-release changes and will not trigger deployments or
 >
 > This ensures every release is clean, predictable, and traceable.
 
-### Getting started
 
-- Fork the repository
-- Create a new branch  
-  `git checkout -b feature/my-feature`
-- Make your changes
-- Commit with a clear message
-- Open a Pull Request
 
 ---
 

@@ -25,6 +25,15 @@
   --dropdown-text-color: #444444;
   --view-text-color: #6b7280;
   --validation-text-color: #444444;
+
+  /* Popup */
+  --popup-bg-color: #ffffff;
+  --popup-text-color: #111111;
+  --popup-border-color: #d1d5db;
+  --popup-header-bg-color: #f3f4f6;
+  --popup-header-text-color: #374151;
+  --popup-close-btn-hover-color: #717479;
+  --popup-backdrop-color: rgba(255, 255, 255, 0.1);
 }
 
 [data-theme="dark"] {
@@ -54,4 +63,18 @@
   --dropdown-text-color: #ffffff;
   --view-text-color: #fff;
   --validation-text-color: #fff;
+
+  /* Popup */
+  --popup-bg-color: #2d2d2d;
+  --popup-text-color: #f0f0f0;
+  --popup-border-color: #444444;
+  --popup-header-bg-color: #1f1f1f;
+  --popup-header-text-color: #e0e0e0;
+  --popup-close-btn-hover-color: #777575;
+  --popup-backdrop-color: rgba(0, 0, 0, 0.5);
+}
+
+/* Smooth transition for editor panel toggle — only when triggered by button */
+.panel-animating [data-panel] {
+    transition: flex-basis 300ms ease, flex-grow 300ms ease;
 }
