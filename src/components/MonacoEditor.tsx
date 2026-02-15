@@ -110,9 +110,12 @@ const MonacoEditor = () => {
   });
 
   const [editorVisible, setEditorVisible] = useState(true);
+  const [isAnimating, setIsAnimating] = useState(false);
 
   const toggleEditorVisibility = () => {
     if (!editorPanelRef.current) return;
+
+    setIsAnimating(true);
 
     if (editorVisible) {
       editorPanelRef.current.collapse();
@@ -121,6 +124,10 @@ const MonacoEditor = () => {
     }
 
     setEditorVisible((prev) => !prev);
+
+    setTimeout(() => {
+      setIsAnimating(false);
+    }, 300);
   };
 
   useEffect(() => {
@@ -177,13 +184,13 @@ const MonacoEditor = () => {
         setSchemaValidation(
           !dialect && typeof parsedSchema !== "boolean"
             ? {
-                status: "warning",
-                message: VALIDATION_UI["warning"].message,
-              }
+              status: "warning",
+              message: VALIDATION_UI["warning"].message,
+            }
             : {
-                status: "success",
-                message: VALIDATION_UI["success"].message,
-              }
+              status: "success",
+              message: VALIDATION_UI["success"].message,
+            }
         );
 
         saveSchemaJSON(SESSION_SCHEMA_KEY, copy);
@@ -201,7 +208,11 @@ const MonacoEditor = () => {
   }, [schemaText, schemaFormat]);
 
   return (
-    <div ref={containerRef} className="h-[92vh] flex flex-col">
+    <div
+      ref={containerRef}
+      className={`h-[92vh] flex flex-col ${isAnimating ? "panel-animating" : ""
+        }`}
+    >
       {isFullScreen && (
         <div className="w-full px-1 bg-[var(--view-bg-color)] justify-items-end">
           <div className="text-[var(--view-text-color)]">

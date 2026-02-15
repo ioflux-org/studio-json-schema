@@ -55,3 +55,8 @@
   --view-text-color: #fff;
   --validation-text-color: #fff;
 }
+
+/* Smooth transition for editor panel toggle — only when triggered by button */
+.panel-animating [data-panel] {
+    transition: flex-basis 300ms ease, flex-grow 300ms ease;
+}
