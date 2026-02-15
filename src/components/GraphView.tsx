@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useState, useMemo } from "react";
+import { useCallback, useEffect, useState, useMemo, useContext } from "react";
 import type { CompiledSchema } from "@hyperjump/json-schema/experimental";
 import "@xyflow/react/dist/style.css";
 import dagre from "@dagrejs/dagre";
@@ -12,10 +12,14 @@ import {
   BackgroundVariant,
   useReactFlow,
   type NodeMouseHandler,
+  useReactFlow,
+  ReactFlowProvider,
 } from "@xyflow/react";
 
 import CustomNode from "./CustomReactFlowNode";
 import NodeDetailsPopup from "./NodeDetailsPopup";
+import GraphBreadcrumbs from "./GraphBreadcrumbs";
+import { AppContext } from "../contexts/AppContext";
 import {
   processAST,
   type GraphEdge,
@@ -34,7 +38,7 @@ const NODE_WIDTH = 172;
 const NODE_HEIGHT = 36;
 const HORIZONTAL_GAP = 150;
 
-const GraphView = ({
+const GraphViewContent = ({
   compiledSchema,
 }: {
   compiledSchema: CompiledSchema | null;
@@ -44,6 +48,9 @@ const GraphView = ({
     nodeId: string;
     data: Record<string, unknown>;
   } | null>(null);
+
+  const { setSelectedNodeId, setBreadcrumbNodeId } = useContext(AppContext);
+  const { fitView } = useReactFlow();
 
   const [nodes, setNodes, onNodeChange] = useNodesState<GraphNode>([]);
   const [edges, setEdges, onEdgeChange] = useEdgesState<GraphEdge>([]);
@@ -95,7 +102,16 @@ const GraphView = ({
       nodeId: node.id,
       data: node.data,
     });
-  }, []);
+    setSelectedNodeId(node.id);
+    setBreadcrumbNodeId(node.id); // Update breadcrumb trail on node click
+  }, [setSelectedNodeId, setBreadcrumbNodeId]);
+
+  const onPaneClick = useCallback(() => {
+    setSelectedNodeId(null); // Clear highlight
+    // setBreadcrumbNodeId(null); // Keep breadcrumb trail visual
+    setExpandedNode(null);
+    fitView({ duration: 500, padding: 0.1 });
+  }, [setSelectedNodeId, fitView]);
 
   const generateNodesAndEdges = useCallback(
     (
@@ -310,6 +326,7 @@ const GraphView = ({
         maxZoom={5}
         onEdgeMouseEnter={(_, edge) => setHoveredEdgeId(edge.id)}
         onEdgeMouseLeave={() => setHoveredEdgeId(null)}
+        onPaneClick={onPaneClick}
       >
         <Background
           id="main-grid"
@@ -326,6 +343,7 @@ const GraphView = ({
           color="var(--reactflow-bg-sub-pattern-color)"
         />
         <Controls />
+        <GraphBreadcrumbs />
       </ReactFlow>
 
       {expandedNode && (
@@ -386,6 +404,18 @@ const GraphView = ({
         )}
       </div>
     </div>
+  );
+};
+
+const GraphView = ({
+  compiledSchema,
+}: {
+  compiledSchema: CompiledSchema | null;
+}) => {
+  return (
+    <ReactFlowProvider>
+      <GraphViewContent compiledSchema={compiledSchema} />
+    </ReactFlowProvider>
   );
 };
 
