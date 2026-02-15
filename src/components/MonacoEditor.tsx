@@ -51,20 +51,20 @@ const JSON_SCHEMA_DIALECTS = [
 ];
 const SUPPORTED_DIALECTS = ["https://json-schema.org/draft/2020-12/schema"];
 
-const VALIDATION_UI = {
+const getValidationUI = (theme: "light" | "dark") => ({
   success: {
     message: "✓ Valid JSON Schema",
     className: "text-green-400 font-semibold",
   },
   warning: {
     message: `⚠ Schema dialect not provided. Using default dialect: ${DEFAULT_SCHEMA_DIALECT}`,
-    className: "text-yellow-400",
+    className: theme === "dark" ? "text-yellow-400" : "text-amber-800",
   },
   error: {
     message: "✗ ",
     className: "text-red-400",
   },
-};
+});
 
 type SchemaFormat = "json" | "yaml";
 
@@ -103,6 +103,8 @@ const MonacoEditor = () => {
       ? YAML.dump(initialSchemaJSON)
       : JSON.stringify(initialSchemaJSON, null, 2)
   );
+
+  const VALIDATION_UI = getValidationUI(theme);
 
   const [schemaValidation, setSchemaValidation] = useState<ValidationStatus>({
     status: "success",
