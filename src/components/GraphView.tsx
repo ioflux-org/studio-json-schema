@@ -195,6 +195,14 @@ const GraphView = ({
   );
 
   useEffect(() => {
+    if (!compiledSchema) {
+      setNodes([]);
+      setEdges([]);
+      setExpandedNode(null);
+      setHoveredEdgeId(null);
+      return;
+    }
+
     try {
       const result = generateNodesAndEdges(compiledSchema);
       if (!result) return;
