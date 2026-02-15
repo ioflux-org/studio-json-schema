@@ -1,5 +1,11 @@
 import { useContext, useState, useEffect, useRef } from "react";
-import { Panel, PanelGroup, PanelResizeHandle } from "react-resizable-panels";
+import {
+  Panel,
+  PanelGroup,
+  PanelResizeHandle,
+  type ImperativePanelHandle,
+} from "react-resizable-panels";
+// INFO: modifying the following import statement to (import type { SchemaObject } from "@hyperjump/json-schema/draft-2020-12") creates error;
 import { type SchemaObject } from "@hyperjump/json-schema/draft-2020-12";
 import {
   getSchema,
@@ -32,8 +38,7 @@ type CreateBrowser = (
 };
 
 const DEFAULT_SCHEMA_ID = "https://studio.ioflux.org/schema";
-const DEFAULT_SCHEMA_DIALECT =
-  "https://json-schema.org/draft/2020-12/schema";
+const DEFAULT_SCHEMA_DIALECT = "https://json-schema.org/draft/2020-12/schema";
 const SESSION_SCHEMA_KEY = "ioflux.schema.editor.content";
 const SESSION_FORMAT_KEY = "ioflux.schema.editor.format";
 
@@ -44,10 +49,7 @@ const JSON_SCHEMA_DIALECTS = [
   "http://json-schema.org/draft-06/schema#",
   "http://json-schema.org/draft-04/schema#",
 ];
-
-const SUPPORTED_DIALECTS = [
-  "https://json-schema.org/draft/2020-12/schema",
-];
+const SUPPORTED_DIALECTS = ["https://json-schema.org/draft/2020-12/schema"];
 
 const VALIDATION_UI = {
   success: {
@@ -85,21 +87,14 @@ const saveSchemaJSON = (key: string, schema: JSONSchema) => {
 };
 
 const MonacoEditor = () => {
-  const {
-    theme,
-    isFullScreen,
-    containerRef,
-    schemaFormat,
-    isEditorVisible,
-    toggleEditorVisibility,
-  } = useContext(AppContext);
+  const { theme, isFullScreen, containerRef, schemaFormat } =
+    useContext(AppContext);
 
-  const editorPanelRef = useRef<any>(null);
-  const wrapperRef = useRef<HTMLDivElement>(null);
+  const editorPanelRef = useRef<ImperativePanelHandle>(null);
 
-
-  const [compiledSchema, setCompiledSchema] =
-    useState<CompiledSchema | null>(null);
+  const [compiledSchema, setCompiledSchema] = useState<CompiledSchema | null>(
+    null
+  );
 
   const initialSchemaJSON = loadSchemaJSON(SESSION_SCHEMA_KEY);
 
@@ -109,30 +104,24 @@ const MonacoEditor = () => {
       : JSON.stringify(initialSchemaJSON, null, 2)
   );
 
-  const [schemaValidation, setSchemaValidation] =
-    useState<ValidationStatus>({
-      status: "success",
-      message: VALIDATION_UI.success.message,
-    });
+  const [schemaValidation, setSchemaValidation] = useState<ValidationStatus>({
+    status: "success",
+    message: VALIDATION_UI["success"].message,
+  });
 
-  /* 🔹 Resize editor instead of unmounting */
-  useEffect(() => {
+  const [editorVisible, setEditorVisible] = useState(true);
+
+  const toggleEditorVisibility = () => {
     if (!editorPanelRef.current) return;
 
-    wrapperRef.current?.classList.add("panel-animating");
-
-    if (isEditorVisible) {
-      editorPanelRef.current.resize(25);
+    if (editorVisible) {
+      editorPanelRef.current.collapse();
     } else {
-      editorPanelRef.current.resize(2);
+      editorPanelRef.current.expand();
     }
 
-    // Remove transition class after animation completes
-    const timer = setTimeout(() => {
-      wrapperRef.current?.classList.remove("panel-animating");
-    }, 310);
-    return () => clearTimeout(timer);
-  }, [isEditorVisible]);
+    setEditorVisible((prev) => !prev);
+  };
 
   useEffect(() => {
     saveFormat(SESSION_FORMAT_KEY, schemaFormat);
@@ -151,6 +140,7 @@ const MonacoEditor = () => {
 
     const timeout = setTimeout(async () => {
       try {
+        // INFO: parsedSchema is mutated by buildSchemaDocument function
         const parsedSchema = parseSchema(schemaText, schemaFormat);
         const copy = structuredClone(parsedSchema);
 
@@ -162,9 +152,7 @@ const MonacoEditor = () => {
           JSON_SCHEMA_DIALECTS.includes(dialectVersion) &&
           !SUPPORTED_DIALECTS.includes(dialectVersion)
         ) {
-          throw new Error(
-            `Dialect "${dialectVersion}" is not supported yet.`
-          );
+          throw new Error(`Dialect "${dialectVersion}" is not supported yet.`);
         }
 
         const schemaDocument = buildSchemaDocument(
@@ -173,39 +161,38 @@ const MonacoEditor = () => {
           dialectVersion
         );
 
-        const createBrowser: CreateBrowser = (id, schemaDoc) => ({
-          _cache: { [id]: schemaDoc },
-        });
+        const createBrowser: CreateBrowser = (id, schemaDoc) => {
+          return {
+            _cache: {
+              [id]: schemaDoc,
+            },
+          };
+        };
 
         const browser = createBrowser(schemaId, schemaDocument);
-
-        const schema = await getSchema(
-          schemaDocument.baseUri,
-          browser
-        );
+        // @ts-expect-error
+        const schema = await getSchema(schemaDocument.baseUri, browser);
 
         setCompiledSchema(await compile(schema));
-
         setSchemaValidation(
           !dialect && typeof parsedSchema !== "boolean"
             ? {
-              status: "warning",
-              message: VALIDATION_UI.warning.message,
-            }
+                status: "warning",
+                message: VALIDATION_UI["warning"].message,
+              }
             : {
-              status: "success",
-              message: VALIDATION_UI.success.message,
-            }
+                status: "success",
+                message: VALIDATION_UI["success"].message,
+              }
         );
 
         saveSchemaJSON(SESSION_SCHEMA_KEY, copy);
       } catch (err) {
-        const message =
-          err instanceof Error ? err.message : String(err);
+        const message = err instanceof Error ? err.message : String(err);
 
         setSchemaValidation({
           status: "error",
-          message: VALIDATION_UI.error.message + message,
+          message: VALIDATION_UI["error"].message + message,
         });
       }
     }, 300);
@@ -214,24 +201,20 @@ const MonacoEditor = () => {
   }, [schemaText, schemaFormat]);
 
   return (
-    <div ref={(el) => { wrapperRef.current = el; if (typeof containerRef === 'function') containerRef(el); else if (containerRef) (containerRef as React.MutableRefObject<HTMLDivElement | null>).current = el; }} className="h-[92vh] flex flex-col">
+    <div ref={containerRef} className="h-[92vh] flex flex-col">
       {isFullScreen && (
-        <div className="w-full px-1 bg-[var(--view-bg-color)]">
+        <div className="w-full px-1 bg-[var(--view-bg-color)] justify-items-end">
           <div className="text-[var(--view-text-color)]">
             <FullscreenToggleButton />
           </div>
         </div>
       )}
-
-
-
       <PanelGroup direction="horizontal">
-        {/* EDITOR PANEL (always mounted) */}
         <Panel
-          ref={editorPanelRef}
-          minSize={0}
-          defaultSize={25}
           className="flex flex-col"
+          defaultSize={25}
+          ref={editorPanelRef}
+          collapsible
         >
           <Editor
             height="90%"
@@ -245,25 +228,25 @@ const MonacoEditor = () => {
             }}
             onChange={(value) => setSchemaText(value ?? "")}
           />
-
           <div className="flex-1 p-2 bg-[var(--validation-bg-color)] text-sm overflow-y-auto">
             <div className={VALIDATION_UI[schemaValidation.status].className}>
               {schemaValidation.message}
             </div>
           </div>
         </Panel>
-
-        {/* RESIZE HANDLE with Toggle Button */}
         <PanelResizeHandle className="w-[1px] bg-gray-400 relative">
-          <div className="absolute top-2 left-1/2 -translate-x-1/2 z-10">
-            <EditorToggleButton />
+          <div>
+            <EditorToggleButton
+              className={"absolute top-2 left-2 z-10"}
+              editorVisible={editorVisible}
+              toggleEditorVisibility={toggleEditorVisibility}
+            />
           </div>
         </PanelResizeHandle>
 
-        {/* VISUALIZATION PANEL */}
         <Panel
           minSize={60}
-          className="flex flex-col bg-[var(--visualize-bg-color)]"
+          className="flex flex-col relative bg-[var(--visualize-bg-color)]"
         >
           <SchemaVisualization compiledSchema={compiledSchema} />
         </Panel>

@@ -12,9 +12,6 @@ type AppContextType = {
 
   schemaFormat: SchemaFormat;
   changeSchemaFormat: (format: SchemaFormat) => void;
-
-  isEditorVisible: boolean;
-  toggleEditorVisibility: () => void;
 };
 
 export const AppContext = createContext<AppContextType>({} as AppContextType);
