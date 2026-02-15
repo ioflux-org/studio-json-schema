@@ -37,6 +37,8 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
     setSchemaFormat(format);
   };
 
+  const [selectedNodeId, setSelectedNodeId] = useState<string | null>(null);
+
   const toggleFullScreen = useCallback(() => {
     const el = containerRef.current;
 
@@ -77,6 +79,8 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
     toggleFullScreen,
     schemaFormat,
     changeSchemaFormat,
+    selectedNodeId,
+    setSelectedNodeId,
   };
 
   return <AppContext.Provider value={value}>{children}</AppContext.Provider>;

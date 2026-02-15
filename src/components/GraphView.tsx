@@ -1,4 +1,5 @@
-import { useCallback, useEffect, useState, useMemo } from "react";
+import { useCallback, useEffect, useState, useMemo, useContext } from "react";
+import { AppContext } from "../contexts/AppContext";
 import type { CompiledSchema } from "@hyperjump/json-schema/experimental";
 import "@xyflow/react/dist/style.css";
 import dagre from "@dagrejs/dagre";
@@ -16,6 +17,7 @@ import {
 
 import CustomNode from "./CustomReactFlowNode";
 import NodeDetailsPopup from "./NodeDetailsPopup";
+
 import {
   processAST,
   type GraphEdge,
@@ -39,6 +41,7 @@ const GraphView = ({
 }: {
   compiledSchema: CompiledSchema | null;
 }) => {
+  const { setSelectedNodeId } = useContext(AppContext);
   const { setCenter, getZoom } = useReactFlow();
   const [expandedNode, setExpandedNode] = useState<{
     nodeId: string;
@@ -91,11 +94,12 @@ const GraphView = ({
   }, []);
 
   const onNodeClick: NodeMouseHandler = useCallback((_event, node) => {
+    setSelectedNodeId(node.id);
     setExpandedNode({
       nodeId: node.id,
       data: node.data,
     });
-  }, []);
+  }, [setSelectedNodeId]);
 
   const generateNodesAndEdges = useCallback(
     (
@@ -159,26 +163,12 @@ const GraphView = ({
     []
   );
 
-  // TODO: check if the following approach to bringing the selected edge to the top has any significant performance issues
-  // check if logic can be optimised
-  const orderedEdges = useMemo(() => {
-    const normal: typeof edges = [];
-    const selected: typeof edges = [];
-
-    for (const edge of edges) {
-      if (edge.selected) selected.push(edge);
-      else normal.push(edge);
-    }
-
-    return [...normal, ...selected];
-  }, [edges]);
-
   const animatedEdges = useMemo(
     () =>
-      orderedEdges.map((edge) => {
+      edges.map((edge) => {
         const isHovered = edge.id === hoveredEdgeId;
-        const isSelected = edge.selected;
-        const isActive = isHovered || isSelected;
+        // Only highlight on hover, ignore selection as per user request
+        const isActive = isHovered;
         const strokeColor = isActive ? edge.data.color : "#666";
         const strokeWidth = isActive ? 2.5 : 1;
         return {
@@ -191,7 +181,7 @@ const GraphView = ({
           },
         };
       }),
-    [orderedEdges, hoveredEdgeId]
+    [edges, hoveredEdgeId]
   );
 
   useEffect(() => {
@@ -310,6 +300,10 @@ const GraphView = ({
         maxZoom={5}
         onEdgeMouseEnter={(_, edge) => setHoveredEdgeId(edge.id)}
         onEdgeMouseLeave={() => setHoveredEdgeId(null)}
+        onPaneClick={() => {
+          setSelectedNodeId(null);
+          setExpandedNode(null);
+        }}
       >
         <Background
           id="main-grid"
@@ -331,7 +325,10 @@ const GraphView = ({
       {expandedNode && (
         <NodeDetailsPopup
           data={expandedNode.data}
-          onClose={() => setExpandedNode(null)}
+          onClose={() => {
+            setExpandedNode(null);
+            setSelectedNodeId(null);
+          }}
         />
       )}
       {/*Error Message */}

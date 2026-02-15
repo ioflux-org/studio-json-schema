@@ -1,7 +1,9 @@
-import { useContext, useState, useEffect } from "react";
+import { useContext, useState, useEffect, useRef } from "react";
+import { parseTree, findNodeAtLocation } from "jsonc-parser";
 import { Panel, PanelGroup, PanelResizeHandle } from "react-resizable-panels";
 // INFO: modifying the following import statement to (import type { SchemaObject } from "@hyperjump/json-schema/draft-2020-12") creates error;
 import { type SchemaObject } from "@hyperjump/json-schema/draft-2020-12";
+// Side-effect import removed
 import {
   getSchema,
   compile,
@@ -10,7 +12,8 @@ import {
   type SchemaDocument,
 } from "@hyperjump/json-schema/experimental";
 
-import Editor from "@monaco-editor/react";
+import Editor, { type OnMount } from "@monaco-editor/react";
+import type { editor } from "monaco-editor";
 import defaultSchema from "../data/defaultJSONSchema.json";
 import { AppContext } from "../contexts/AppContext";
 import SchemaVisualization from "./SchemaVisualization";
@@ -81,8 +84,14 @@ const saveSchemaJSON = (key: string, schema: JSONSchema) => {
 };
 
 const MonacoEditor = () => {
-  const { theme, isFullScreen, containerRef, schemaFormat } =
+  const { theme, isFullScreen, containerRef, schemaFormat, selectedNodeId } =
     useContext(AppContext);
+
+  const editorRef = useRef<editor.IStandaloneCodeEditor | null>(null);
+
+  const handleEditorDidMount: OnMount = (editor) => {
+    editorRef.current = editor;
+  };
 
   const [compiledSchema, setCompiledSchema] = useState<CompiledSchema | null>(
     null
@@ -100,6 +109,76 @@ const MonacoEditor = () => {
     status: "success",
     message: VALIDATION_UI["success"].message,
   });
+
+  useEffect(() => {
+    if (!editorRef.current) return;
+    const model = editorRef.current.getModel();
+    if (!model) return;
+
+    if (!selectedNodeId) {
+      const oldDecorations = model
+        .getAllDecorations()
+        .filter((d: any) => d.options.className === "monaco-highlight-line")
+        .map((d: any) => d.id);
+      model.deltaDecorations(oldDecorations, []);
+      return;
+    }
+
+    // Use jsonc-parser to find the location in the text
+    const text = model.getValue();
+
+    // Extract fragment from URI (e.g., #/properties/name)
+    const uriParts = selectedNodeId.split("#");
+    const fragment = uriParts.length > 1 ? uriParts[1] : "";
+
+    // Convert JSON Pointer string to path array for jsonc-parser
+    // e.g. "/properties/name" -> ["properties", "name"]
+    const path = fragment
+      .split("/")
+      .filter((segment) => segment !== "")
+      .map((segment) => {
+        const decoded = decodeURIComponent(segment);
+        return /^\d+$/.test(decoded) ? parseInt(decoded, 10) : decoded;
+      });
+
+    // Get AST using jsonc-parser
+    const tree = parseTree(text);
+    if (!tree) return;
+
+    // Find node at path
+    const node = findNodeAtLocation(tree, path);
+
+    // If node is found, scroll to it
+    if (node) {
+      const startPos = model.getPositionAt(node.offset);
+      const endPos = model.getPositionAt(node.offset + node.length);
+
+      editorRef.current.revealPositionInCenter(startPos);
+      editorRef.current.setPosition(startPos);
+      editorRef.current.focus();
+
+      const decoration = {
+        range: new (window as any).monaco.Range(
+          startPos.lineNumber,
+          1,
+          endPos.lineNumber,
+          1
+        ),
+        options: {
+          isWholeLine: true,
+          className: "monaco-highlight-line",
+        },
+      };
+
+      // Remove old decorations and add new one
+      const oldDecorations = model
+        .getAllDecorations()
+        .filter((d: any) => d.options.className === "monaco-highlight-line")
+        .map((d: any) => d.id);
+
+      model.deltaDecorations(oldDecorations, [decoration]);
+    }
+  }, [selectedNodeId]);
 
   useEffect(() => {
     saveFormat(SESSION_FORMAT_KEY, schemaFormat);
@@ -200,6 +279,7 @@ const MonacoEditor = () => {
               occurrencesHighlight: "off",
             }}
             onChange={(value) => setSchemaText(value ?? "")}
+            onMount={handleEditorDidMount}
           />
           <div className="flex-1 p-2 bg-[var(--validation-bg-color)] text-sm overflow-y-auto">
             <div className={VALIDATION_UI[schemaValidation.status].className}>
