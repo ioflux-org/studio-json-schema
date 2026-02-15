@@ -1,7 +1,6 @@
 import { BsX, BsCopy, BsCheck } from "react-icons/bs";
-import { useState, useContext } from "react";
+import { useState } from "react";
 import { type NodeData } from "../utils/processAST";
-import { AppContext } from "../contexts/AppContext";
 
 const NodeDetailsPopup = ({
   nodeId,
@@ -14,7 +13,6 @@ const NodeDetailsPopup = ({
   };
   onClose: () => void;
 }) => {
-  const { theme } = useContext(AppContext);
   const [copied, setCopied] = useState(false);
 
   const formatRoute = (nodeId: string) => {
@@ -63,13 +61,13 @@ const NodeDetailsPopup = ({
 
         <div className="relative pt-8 text-sm">
           {nodeId && (
-            <div className="mb-4 p-2 bg-gray-50 rounded border border-gray-200 flex items-center justify-between">
+            <div className="mb-4 p-2 bg-[var(--popup-header-bg-color)] rounded border border-[var(--popup-border-color)] flex items-center justify-between">
               <div className="overflow-x-auto max-h-[60px] overflow-y-auto pr-1 flex-1">
-                <div className="font-mono text-xs text-gray-800 whitespace-nowrap">{formatRoute(nodeId)}</div>
+                <div className="font-mono text-xs text-[var(--text-color)] whitespace-nowrap">{formatRoute(nodeId)}</div>
               </div>
               <button
                 onClick={copyPathToClipboard}
-                className="ml-2 p-1.5 text-gray-600 hover:text-gray-900 hover:bg-gray-200 rounded transition-colors flex-shrink-0"
+                className="ml-2 p-1.5 text-[var(--navigation-text-color)] hover:text-[var(--text-color)] hover:bg-[var(--validation-bg-color)] rounded transition-colors flex-shrink-0"
                 title="Copy path to clipboard"
               >
                 {copied ? (
