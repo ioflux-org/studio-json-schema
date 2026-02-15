@@ -73,8 +73,3 @@
   --popup-close-btn-hover-color: #777575;
   --popup-backdrop-color: rgba(0, 0, 0, 0.5);
 }
-
-/* Smooth transition for editor panel toggle — only when triggered by button */
-.panel-animating [data-panel] {
-    transition: flex-basis 300ms ease, flex-grow 300ms ease;
-}

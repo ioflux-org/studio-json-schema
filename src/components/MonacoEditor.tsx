@@ -1,10 +1,5 @@
-import { useContext, useState, useEffect, useRef } from "react";
-import {
-  Panel,
-  PanelGroup,
-  PanelResizeHandle,
-  type ImperativePanelHandle,
-} from "react-resizable-panels";
+import { useContext, useState, useEffect } from "react";
+import { Panel, PanelGroup, PanelResizeHandle } from "react-resizable-panels";
 // INFO: modifying the following import statement to (import type { SchemaObject } from "@hyperjump/json-schema/draft-2020-12") creates error;
 import { type SchemaObject } from "@hyperjump/json-schema/draft-2020-12";
 import {
@@ -20,7 +15,6 @@ import defaultSchema from "../data/defaultJSONSchema.json";
 import { AppContext } from "../contexts/AppContext";
 import SchemaVisualization from "./SchemaVisualization";
 import FullscreenToggleButton from "./FullscreenToggleButton";
-import EditorToggleButton from "./EditorToggleButton";
 import { parseSchema } from "../utils/parseSchema";
 import YAML from "js-yaml";
 import type { JSONSchema } from "@apidevtools/json-schema-ref-parser";
@@ -90,8 +84,6 @@ const MonacoEditor = () => {
   const { theme, isFullScreen, containerRef, schemaFormat } =
     useContext(AppContext);
 
-  const editorPanelRef = useRef<ImperativePanelHandle>(null);
-
   const [compiledSchema, setCompiledSchema] = useState<CompiledSchema | null>(
     null
   );
@@ -108,27 +100,6 @@ const MonacoEditor = () => {
     status: "success",
     message: VALIDATION_UI["success"].message,
   });
-
-  const [editorVisible, setEditorVisible] = useState(true);
-  const [isAnimating, setIsAnimating] = useState(false);
-
-  const toggleEditorVisibility = () => {
-    if (!editorPanelRef.current) return;
-
-    setIsAnimating(true);
-
-    if (editorVisible) {
-      editorPanelRef.current.collapse();
-    } else {
-      editorPanelRef.current.expand();
-    }
-
-    setEditorVisible((prev) => !prev);
-
-    setTimeout(() => {
-      setIsAnimating(false);
-    }, 300);
-  };
 
   useEffect(() => {
     saveFormat(SESSION_FORMAT_KEY, schemaFormat);
@@ -184,13 +155,13 @@ const MonacoEditor = () => {
         setSchemaValidation(
           !dialect && typeof parsedSchema !== "boolean"
             ? {
-               status: "warning",
-               message: VALIDATION_UI["warning"].message,
-             }
+                status: "warning",
+                message: VALIDATION_UI["warning"].message,
+              }
             : {
-               status: "success",
-               message: VALIDATION_UI["success"].message,
-             }
+                status: "success",
+                message: VALIDATION_UI["success"].message,
+              }
         );
 
         saveSchemaJSON(SESSION_SCHEMA_KEY, copy);
@@ -208,11 +179,7 @@ const MonacoEditor = () => {
   }, [schemaText, schemaFormat]);
 
   return (
-    <div
-      ref={containerRef}
-      className={`h-[92vh] flex flex-col ${isAnimating ? "panel-animating" : ""
-        }`}
-    >
+    <div ref={containerRef} className="h-[92vh] flex flex-col">
       {isFullScreen && (
         <div className="w-full px-1 bg-[var(--view-bg-color)] justify-items-end">
           <div className="text-[var(--view-text-color)]">
@@ -221,12 +188,7 @@ const MonacoEditor = () => {
         </div>
       )}
       <PanelGroup direction="horizontal">
-        <Panel
-          className="flex flex-col"
-          defaultSize={25}
-          ref={editorPanelRef}
-          collapsible
-        >
+        <Panel className="flex flex-col" minSize={10} defaultSize={25}>
           <Editor
             height="90%"
             width="100%"
@@ -245,16 +207,7 @@ const MonacoEditor = () => {
             </div>
           </div>
         </Panel>
-        <PanelResizeHandle className="w-[1px] bg-gray-400 relative">
-          <div>
-            <EditorToggleButton
-              className={"absolute top-2 left-2 z-10"}
-              editorVisible={editorVisible}
-              toggleEditorVisibility={toggleEditorVisibility}
-            />
-          </div>
-        </PanelResizeHandle>
-
+        <PanelResizeHandle className="w-[1px] bg-gray-400" />
         <Panel
           minSize={60}
           className="flex flex-col relative bg-[var(--visualize-bg-color)]"
@@ -265,5 +218,4 @@ const MonacoEditor = () => {
     </div>
   );
 };
-
 export default MonacoEditor;
