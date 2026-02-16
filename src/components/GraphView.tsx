@@ -39,7 +39,7 @@ const GraphView = ({
 }: {
   compiledSchema: CompiledSchema | null;
 }) => {
-  const { setCenter, getZoom } = useReactFlow();
+  const { setCenter, getZoom, fitView } = useReactFlow();
   const [expandedNode, setExpandedNode] = useState<{
     nodeId: string;
     data: Record<string, unknown>;
@@ -77,13 +77,13 @@ const GraphView = ({
           nds.map((n) => ({
             ...n,
             selected: n.id === foundNode.id,
-          }))
+          })),
         );
 
         return newIndex;
       });
     },
-    [matchedNodes]
+    [matchedNodes],
   );
 
   const handleChange = useCallback((e: React.ChangeEvent<HTMLInputElement>) => {
@@ -102,9 +102,9 @@ const GraphView = ({
         const isConnected = edge.source === node.id || edge.target === node.id;
         return {
           ...edge,
-          selected: isConnected
+          selected: isConnected,
         };
-      })
+      }),
     );
   }, []);
 
@@ -112,7 +112,7 @@ const GraphView = ({
     (
       compiledSchema: CompiledSchema | null,
       nodes: GraphNode[] = [],
-      edges: GraphEdge[] = []
+      edges: GraphEdge[] = [],
     ) => {
       if (!compiledSchema) return;
       const { ast, schemaUri } = compiledSchema;
@@ -129,7 +129,7 @@ const GraphView = ({
 
       return { nodes, edges };
     },
-    []
+    [],
   );
 
   const getLayoutedElements = useCallback(
@@ -167,7 +167,7 @@ const GraphView = ({
 
       return { nodes: newNodes, edges };
     },
-    []
+    [],
   );
 
   // TODO: check if the following approach to bringing the selected edge to the top has any significant performance issues
@@ -202,8 +202,18 @@ const GraphView = ({
           },
         };
       }),
-    [orderedEdges, hoveredEdgeId]
+    [orderedEdges, hoveredEdgeId],
   );
+
+  const resetSearchState = useCallback(() => {
+    setNodes((nds) =>
+      nds.map((n) => ({
+        ...n,
+        selected: false,
+      })),
+    );
+    fitView({ duration: 500 });
+  }, [setNodes, fitView]);
 
   useEffect(() => {
     try {
@@ -269,6 +279,7 @@ const GraphView = ({
         setMatchedNodes([]);
         setCurrentMatchIndex(0);
         setErrorMessage("");
+        resetSearchState();
         return;
       }
 
@@ -300,6 +311,7 @@ const GraphView = ({
         setErrorMessage("");
       } else {
         setErrorMessage(`${trimmed} is not in schema`);
+        resetSearchState();
       }
     }, 300);
 
