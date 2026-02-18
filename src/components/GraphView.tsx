@@ -365,7 +365,7 @@ const GraphView = ({
           type="text"
           maxLength={30}
           placeholder="search node"
-          className="outline-none text-[var(--bottom-bg-color)] border-b-2 text-center w-[150px]"
+          className="outline-none text-[var(--text-color)] border-b-2 border-[var(--text-color)] text-center w-[150px]"
           onChange={handleChange}
         />
 
