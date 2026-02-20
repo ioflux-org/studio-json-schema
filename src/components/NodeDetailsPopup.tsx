@@ -29,9 +29,7 @@ const NodeDetailsPopup = ({
 
   const handleCopySubschema = () => {
     try {
-      const rawSchema = window.sessionStorage.getItem(
-        "ioflux.schema.editor.content"
-      );
+      const rawSchema = window.sessionStorage.getItem("ioflux.schema.editor.content");
       if (!rawSchema) throw new Error();
 
       const rootSchema: unknown = JSON.parse(rawSchema);
@@ -39,13 +37,9 @@ const NodeDetailsPopup = ({
       const uriParts = id.split("#");
       const pointer = uriParts.length > 1 ? uriParts[1] : "";
 
-      const path = pointer
-        .split("/")
-        .filter((segment) => segment !== "")
-        .map((segment) => {
-          const decoded = decodeURIComponent(segment)
-            .replace(/~1/g, "/")
-            .replace(/~0/g, "~");
+      const path = pointer.split("/").filter((segment) => segment !== "").map((segment) => {
+
+          const decoded = decodeURIComponent(segment).replace(/~1/g, "/").replace(/~0/g, "~");
 
           return /^\d+$/.test(decoded) ? parseInt(decoded, 10) : decoded;
         });
@@ -54,9 +48,7 @@ const NodeDetailsPopup = ({
 
       for (const segment of path) {
         if (
-          subschema &&
-          typeof subschema === "object" &&
-          segment in (subschema as Record<string, unknown>)
+          subschema && typeof subschema === "object" && segment in (subschema as Record<string, unknown>)
         ) {
           subschema = (subschema as Record<string, unknown>)[segment];
         } else {
@@ -80,18 +72,12 @@ const NodeDetailsPopup = ({
       }
 
       const keyName =
-        path.length > 0 && typeof path[path.length - 1] === "string"
-          ? path[path.length - 1]
-          : null;
+        path.length > 0 && typeof path[path.length - 1] === "string" ? path[path.length - 1] : null;
 
       const finalOutput =
-        keyName && typeof subschema !== "undefined"
-          ? { [keyName]: subschema }
-          : subschema;
+        keyName && typeof subschema !== "undefined" ? { [keyName]: subschema } : subschema;
 
-      navigator.clipboard
-        .writeText(JSON.stringify(finalOutput, null, 2))
-        .then(() => {
+      navigator.clipboard.writeText(JSON.stringify(finalOutput, null, 2)).then(() => {
           setCopied(true);
           setTimeout(() => setCopied(false), 2000);
         });
