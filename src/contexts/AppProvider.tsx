@@ -5,7 +5,7 @@ import {
   useRef,
   type ReactNode,
 } from "react";
-import { AppContext, type SchemaFormat } from "./AppContext";
+import { AppContext, type SchemaFormat, type SelectedNode } from "./AppContext";
 
 export const AppProvider = ({ children }: { children: ReactNode }) => {
   const containerRef = useRef<HTMLDivElement>(null);
@@ -37,7 +37,7 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
     setSchemaFormat(format);
   };
 
-  const [selectedNodeId, setSelectedNodeId] = useState<string | null>(null);
+  const [selectedNode, setSelectedNode] = useState<SelectedNode | null>(null);
 
   const toggleFullScreen = useCallback(() => {
     const el = containerRef.current;
@@ -79,8 +79,8 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
     toggleFullScreen,
     schemaFormat,
     changeSchemaFormat,
-    selectedNodeId,
-    setSelectedNodeId,
+    selectedNode,
+    setSelectedNode,
   };
 
   return <AppContext.Provider value={value}>{children}</AppContext.Provider>;

@@ -41,12 +41,8 @@ const GraphView = ({
 }: {
   compiledSchema: CompiledSchema | null;
 }) => {
-  const { setSelectedNodeId } = useContext(AppContext);
+  const { selectedNode, setSelectedNode } = useContext(AppContext);
   const { setCenter, getZoom } = useReactFlow();
-  const [expandedNode, setExpandedNode] = useState<{
-    nodeId: string;
-    data: Record<string, unknown>;
-  } | null>(null);
 
   const [nodes, setNodes, onNodeChange] = useNodesState<GraphNode>([]);
   const [edges, setEdges, onEdgeChange] = useEdgesState<GraphEdge>([]);
@@ -94,9 +90,8 @@ const GraphView = ({
   }, []);
 
   const onNodeClick: NodeMouseHandler = useCallback((_event, node) => {
-    setSelectedNodeId(node.id);
-    setExpandedNode({
-      nodeId: node.id,
+    setSelectedNode({
+      id: node.id,
       data: node.data,
     });
     // Select connected edges programmatically to allow native selection handling
@@ -105,11 +100,11 @@ const GraphView = ({
         const isConnected = edge.source === node.id || edge.target === node.id;
         return {
           ...edge,
-          selected: isConnected
+          selected: isConnected,
         };
       })
     );
-  }, [setSelectedNodeId, setEdges]);
+  }, []);
 
   const generateNodesAndEdges = useCallback(
     (
@@ -325,8 +320,7 @@ const GraphView = ({
         onEdgeMouseEnter={(_, edge) => setHoveredEdgeId(edge.id)}
         onEdgeMouseLeave={() => setHoveredEdgeId(null)}
         onPaneClick={() => {
-          setSelectedNodeId(null);
-          setExpandedNode(null);
+          setSelectedNode(null);
         }}
       >
         <Background
@@ -346,12 +340,11 @@ const GraphView = ({
         <Controls />
       </ReactFlow>
 
-      {expandedNode && (
+      {selectedNode && (
         <NodeDetailsPopup
-          data={expandedNode.data}
+          data={selectedNode.data}
           onClose={() => {
-            setExpandedNode(null);
-            setSelectedNodeId(null);
+            setSelectedNode(null);
           }}
         />
       )}

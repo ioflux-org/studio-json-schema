@@ -8,7 +8,6 @@ import {
 } from "react-resizable-panels";
 // INFO: modifying the following import statement to (import type { SchemaObject } from "@hyperjump/json-schema/draft-2020-12") creates error;
 import { type SchemaObject } from "@hyperjump/json-schema/draft-2020-12";
-// Side-effect import removed
 import {
   getSchema,
   compile,
@@ -90,7 +89,7 @@ const saveSchemaJSON = (key: string, schema: JSONSchema) => {
 };
 
 const MonacoEditor = () => {
-  const { theme, isFullScreen, containerRef, schemaFormat, selectedNodeId } =
+  const { theme, isFullScreen, containerRef, schemaFormat, selectedNode } =
     useContext(AppContext);
 
   const editorRef = useRef<editor.IStandaloneCodeEditor | null>(null);
@@ -145,7 +144,7 @@ const MonacoEditor = () => {
     const model = editorRef.current.getModel();
     if (!model) return;
 
-    if (!selectedNodeId) {
+    if (!selectedNode?.id) {
       const oldDecorations = model
         .getAllDecorations()
         .filter((d: any) => d.options.className === "monaco-highlight-line")
@@ -156,13 +155,13 @@ const MonacoEditor = () => {
 
     const text = model.getValue();
 
-    const uriParts = selectedNodeId.split("#");
+    const uriParts = selectedNode.id.split("#");
     const fragment = uriParts.length > 1 ? uriParts[1] : "";
 
     const path = fragment
       .split("/")
-      .filter((segment) => segment !== "")
-      .map((segment) => {
+      .filter((segment: string) => segment !== "")
+      .map((segment: string) => {
         const decoded = decodeURIComponent(segment);
         return /^\d+$/.test(decoded) ? parseInt(decoded, 10) : decoded;
       });
@@ -200,7 +199,7 @@ const MonacoEditor = () => {
 
       model.deltaDecorations(oldDecorations, [decoration]);
     }
-  }, [selectedNodeId]);
+  }, [selectedNode?.id]);
 
   useEffect(() => {
     saveFormat(SESSION_FORMAT_KEY, schemaFormat);
@@ -256,13 +255,13 @@ const MonacoEditor = () => {
         setSchemaValidation(
           !dialect && typeof parsedSchema !== "boolean"
             ? {
-               status: "warning",
-               message: VALIDATION_UI["warning"].message,
-             }
+                status: "warning",
+                message: VALIDATION_UI["warning"].message,
+              }
             : {
-               status: "success",
-               message: VALIDATION_UI["success"].message,
-             }
+                status: "success",
+                message: VALIDATION_UI["success"].message,
+              }
         );
 
         saveSchemaJSON(SESSION_SCHEMA_KEY, copy);
@@ -282,8 +281,9 @@ const MonacoEditor = () => {
   return (
     <div
       ref={containerRef}
-      className={`h-[92vh] flex flex-col ${isAnimating ? "panel-animating" : ""
-        }`}
+      className={`h-[92vh] flex flex-col ${
+        isAnimating ? "panel-animating" : ""
+      }`}
     >
       {isFullScreen && (
         <div className="w-full px-1 bg-[var(--view-bg-color)] justify-items-end">
