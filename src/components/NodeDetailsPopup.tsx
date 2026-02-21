@@ -28,9 +28,6 @@ const NodeDetailsPopup = ({
   };
 
   const handleCopySubschema = () => {
-    // selectedNodeSubschema is already extracted by MonacoEditor using the same
-    // parseTree + findNodeAtLocation AST walk that powers bidirectional highlighting.
-    // We just copy the raw text slice directly — no re-parsing needed.
     if (!selectedNodeSubschema) return;
 
     navigator.clipboard.writeText(selectedNodeSubschema).then(() => {

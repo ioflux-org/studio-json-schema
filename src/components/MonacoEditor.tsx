@@ -198,9 +198,6 @@ const MonacoEditor = () => {
         .filter((d: any) => d.options.className === "monaco-highlight-line")
         .map((d: any) => d.id);
 
-      // Reuse the same AST node to extract the raw subschema text for copy-to-clipboard.
-      // If the node is a property value (e.g. "name": { ... }), go up to the property
-      // node so the copied result includes the key name, then wrap in { }.
       const propNode = node.parent?.type === "property" ? node.parent : null;
       const subschemaText = propNode
         ? `{\n  ${text.substring(propNode.offset, propNode.offset + propNode.length)}\n}`
@@ -265,13 +262,13 @@ const MonacoEditor = () => {
         setSchemaValidation(
           !dialect && typeof parsedSchema !== "boolean"
             ? {
-              status: "warning",
-              message: VALIDATION_UI["warning"].message,
-            }
+                status: "warning",
+                message: VALIDATION_UI["warning"].message,
+              }
             : {
-              status: "success",
-              message: VALIDATION_UI["success"].message,
-            }
+                status: "success",
+                message: VALIDATION_UI["success"].message,
+              }
         );
 
         saveSchemaJSON(SESSION_SCHEMA_KEY, copy);
