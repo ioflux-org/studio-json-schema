@@ -1,18 +1,18 @@
 import { BsX, BsCopy, BsCheck } from "react-icons/bs";
+import { useContext, useState } from "react";
 import { type NodeData } from "../utils/processAST";
-import { useState } from "react";
+import { AppContext } from "../contexts/AppContext";
 
 const NodeDetailsPopup = ({
-  id,
   data,
   onClose,
 }: {
-  id: string;
   data: {
     nodeData?: NodeData;
   };
   onClose: () => void;
 }) => {
+  const { selectedNodeSubschema } = useContext(AppContext);
   const [copied, setCopied] = useState(false);
 
   const formatValue = (value: string | string[]) => {
@@ -28,62 +28,15 @@ const NodeDetailsPopup = ({
   };
 
   const handleCopySubschema = () => {
-    try {
-      const rawSchema = window.sessionStorage.getItem("ioflux.schema.editor.content");
-      if (!rawSchema) throw new Error();
+    // selectedNodeSubschema is already extracted by MonacoEditor using the same
+    // parseTree + findNodeAtLocation AST walk that powers bidirectional highlighting.
+    // We just copy the raw text slice directly — no re-parsing needed.
+    if (!selectedNodeSubschema) return;
 
-      const rootSchema: unknown = JSON.parse(rawSchema);
-
-      const uriParts = id.split("#");
-      const pointer = uriParts.length > 1 ? uriParts[1] : "";
-
-      const path = pointer.split("/").filter((segment) => segment !== "").map((segment) => {
-
-          const decoded = decodeURIComponent(segment).replace(/~1/g, "/").replace(/~0/g, "~");
-
-          return /^\d+$/.test(decoded) ? parseInt(decoded, 10) : decoded;
-        });
-
-      let subschema: unknown = rootSchema;
-
-      for (const segment of path) {
-        if (
-          subschema && typeof subschema === "object" && segment in (subschema as Record<string, unknown>)
-        ) {
-          subschema = (subschema as Record<string, unknown>)[segment];
-        } else {
-          subschema = undefined;
-          break;
-        }
-      }
-
-      if (subschema === undefined) {
-        const schemaObject: Record<string, unknown> = {};
-
-        if (data.nodeData) {
-          for (const [key, keyData] of Object.entries(data.nodeData)) {
-            schemaObject[key] = keyData.value;
-          }
-        }
-
-        subschema = data.nodeData?.["booleanSchema"]
-          ? data.nodeData["booleanSchema"].value
-          : schemaObject;
-      }
-
-      const keyName =
-        path.length > 0 && typeof path[path.length - 1] === "string" ? path[path.length - 1] : null;
-
-      const finalOutput =
-        keyName && typeof subschema !== "undefined" ? { [keyName]: subschema } : subschema;
-
-      navigator.clipboard.writeText(JSON.stringify(finalOutput, null, 2)).then(() => {
-          setCopied(true);
-          setTimeout(() => setCopied(false), 2000);
-        });
-    } catch {
-      return;
-    }
+    navigator.clipboard.writeText(selectedNodeSubschema).then(() => {
+      setCopied(true);
+      setTimeout(() => setCopied(false), 2000);
+    });
   };
 
   return (
@@ -98,9 +51,10 @@ const NodeDetailsPopup = ({
       >
         <div className="absolute z-50 top-2 right-2 flex items-center gap-2">
           <button
-            className="flex items-center gap-1 px-2 py-1 text-xs font-medium rounded bg-slate-800 text-slate-100 hover:bg-slate-900 dark:bg-slate-700 dark:text-slate-100 dark:hover:bg-slate-600 transition-all shadow-sm"
+            className="flex items-center gap-1 px-2 py-1 text-xs font-medium rounded bg-slate-800 text-slate-100 hover:bg-slate-900 dark:bg-slate-700 dark:text-slate-100 dark:hover:bg-slate-600 transition-all shadow-sm disabled:opacity-40 disabled:cursor-not-allowed"
             onClick={handleCopySubschema}
             title="Copy subschema to clipboard"
+            disabled={!selectedNodeSubschema}
           >
             {copied ? <BsCheck size={14} /> : <BsCopy size={14} />}
             {copied ? "Copied!" : "Copy Subschema"}

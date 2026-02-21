@@ -19,8 +19,10 @@ type AppContextType = {
   changeSchemaFormat: (format: SchemaFormat) => void;
 
   selectedNode: SelectedNode | null;
-
   setSelectedNode: (selectedNode: SelectedNode | null) => void;
+
+  selectedNodeSubschema: string | null;
+  setSelectedNodeSubschema: (subschema: string | null) => void;
 };
 
 export const AppContext = createContext<AppContextType>({} as AppContextType);
