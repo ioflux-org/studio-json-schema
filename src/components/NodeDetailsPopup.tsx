@@ -68,21 +68,14 @@ const NodeDetailsPopup = ({
           <table className="w-full border border-[var(--popup-border-color)] text-left">
             <thead>
               <tr className="bg-[var(--popup-header-bg-color)] border-b border-[var(--popup-border-color)]">
-                <th className="p-2 font-bold text-[var(--popup-header-text-color)] w-1/3">
-                  Keyword
-                </th>
-                <th className="p-2 font-bold text-[var(--popup-header-text-color)]">
-                  Value
-                </th>
+                <th className="p-2 font-bold text-[var(--popup-header-text-color)] w-1/3">Keyword</th>
+                <th className="p-2 font-bold text-[var(--popup-header-text-color)]">Value</th>
               </tr>
             </thead>
             <tbody>
               {data.nodeData &&
                 Object.entries(data.nodeData).map(([key, keyData]) => (
-                  <tr
-                    key={key}
-                    className="border-b border-[var(--popup-border-color)]"
-                  >
+                  <tr key={key} className="border-b border-[var(--popup-border-color)]">
                     <td className="p-2 font-medium text-[var(--popup-text-color)] whitespace-nowrap">
                       {key}
                     </td>

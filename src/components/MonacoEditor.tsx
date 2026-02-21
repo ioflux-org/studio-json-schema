@@ -288,8 +288,9 @@ const MonacoEditor = () => {
   return (
     <div
       ref={containerRef}
-      className={`h-[92vh] flex flex-col ${isAnimating ? "panel-animating" : ""
-        }`}
+      className={`h-[92vh] flex flex-col ${
+        isAnimating ? "panel-animating" : ""
+      }`}
     >
       {isFullScreen && (
         <div className="w-full px-1 bg-[var(--view-bg-color)] justify-items-end">
