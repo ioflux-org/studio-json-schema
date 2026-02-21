@@ -198,9 +198,6 @@ const MonacoEditor = () => {
         .filter((d: any) => d.options.className === "monaco-highlight-line")
         .map((d: any) => d.id);
 
-      // Always include the key: if node lives inside a property, use the
-      // parent property node so the extracted text is `"key": value`.
-      // Falls back to the node itself only at root level (no parent property).
       const targetNode =
         node.parent?.type === "property" ? node.parent : node;
       const subschemaText = text.substring(targetNode.offset, targetNode.offset + targetNode.length);
@@ -266,13 +263,13 @@ const MonacoEditor = () => {
         setSchemaValidation(
           !dialect && typeof parsedSchema !== "boolean"
             ? {
-              status: "warning",
-              message: VALIDATION_UI["warning"].message,
-            }
+                status: "warning",
+                message: VALIDATION_UI["warning"].message,
+              }
             : {
-              status: "success",
-              message: VALIDATION_UI["success"].message,
-            }
+                status: "success",
+                message: VALIDATION_UI["success"].message,
+              }
         );
 
         saveSchemaJSON(SESSION_SCHEMA_KEY, copy);
