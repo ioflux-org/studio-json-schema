@@ -1,6 +1,6 @@
 {
   "name": "json-schema-studio",
-  "version": "0.4.3-beta",
+  "version": "0.5.2-beta",
   "type": "module",
   "homepage": "studio.ioflux.org",
   "repository": "https://github.com/ioflux-org/studio-json-schema",
@@ -19,6 +19,7 @@
     "@tailwindcss/vite": "^4.1.10",
     "@xyflow/react": "^12.8.3",
     "js-yaml": "^4.1.1",
+    "jsonc-parser": "^3.3.1",
     "monaco-editor": "^0.52.2",
     "react": "^19.1.0",
     "react-dom": "^19.1.0",

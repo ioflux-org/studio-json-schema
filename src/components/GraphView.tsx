@@ -1,4 +1,12 @@
-import { useCallback, useEffect, useState, useMemo } from "react";
+import {
+  useCallback,
+  useEffect,
+  useState,
+  useMemo,
+  useContext,
+  useRef,
+} from "react";
+import { AppContext } from "../contexts/AppContext";
 import type { CompiledSchema } from "@hyperjump/json-schema/experimental";
 import "@xyflow/react/dist/style.css";
 import dagre from "@dagrejs/dagre";
@@ -16,6 +24,7 @@ import {
 
 import CustomNode from "./CustomReactFlowNode";
 import NodeDetailsPopup from "./NodeDetailsPopup";
+
 import {
   processAST,
   type GraphEdge,
@@ -39,11 +48,9 @@ const GraphView = ({
 }: {
   compiledSchema: CompiledSchema | null;
 }) => {
-  const { setCenter, getZoom } = useReactFlow();
-  const [expandedNode, setExpandedNode] = useState<{
-    nodeId: string;
-    data: Record<string, unknown>;
-  } | null>(null);
+  const { setCenter, getZoom, fitView } = useReactFlow();
+  const { selectedNode, setSelectedNode } = useContext(AppContext);
+  const containerRef = useRef<HTMLDivElement>(null);
 
   const [nodes, setNodes, onNodeChange] = useNodesState<GraphNode>([]);
   const [edges, setEdges, onEdgeChange] = useEdgesState<GraphEdge>([]);
@@ -91,18 +98,17 @@ const GraphView = ({
   }, []);
 
   const onNodeClick: NodeMouseHandler = useCallback((_event, node) => {
-    setExpandedNode({
-      nodeId: node.id,
+    setSelectedNode({
+      id: node.id,
       data: node.data,
     });
-
     // Select connected edges programmatically to allow native selection handling
     setEdges((eds) =>
       eds.map((edge) => {
         const isConnected = edge.source === node.id || edge.target === node.id;
         return {
           ...edge,
-          selected: isConnected
+          selected: isConnected,
         };
       })
     );
@@ -262,6 +268,26 @@ const GraphView = ({
   }, [errorMessage]);
 
   useEffect(() => {
+    if (!containerRef.current) return;
+
+    let timeoutId: ReturnType<typeof setTimeout>;
+
+    const observer = new ResizeObserver(() => {
+      clearTimeout(timeoutId);
+      timeoutId = setTimeout(() => {
+        fitView({ duration: 800, padding: 0.05 });
+      }, 100);
+    });
+
+    observer.observe(containerRef.current);
+
+    return () => {
+      observer.disconnect();
+      clearTimeout(timeoutId);
+    };
+  }, []);
+
+  useEffect(() => {
     const trimmed = searchString.trim();
 
     const timeout = setTimeout(() => {
@@ -307,7 +333,7 @@ const GraphView = ({
   }, [searchString, nodes]);
 
   return (
-    <div className="relative w-full h-full">
+    <div ref={containerRef} className="relative w-full h-full">
       <ReactFlow
         nodes={nodes}
         edges={animatedEdges}
@@ -316,12 +342,13 @@ const GraphView = ({
         onEdgesChange={onEdgeChange}
         deleteKeyCode={null}
         nodeTypes={nodeTypes}
-        fitView
         minZoom={0.05}
         maxZoom={5}
         onEdgeMouseEnter={(_, edge) => setHoveredEdgeId(edge.id)}
         onEdgeMouseLeave={() => setHoveredEdgeId(null)}
-        onPaneClick={() => setExpandedNode(null)}
+        onPaneClick={() => {
+          setSelectedNode(null);
+        }}
       >
         <Background
           id="main-grid"
@@ -340,11 +367,12 @@ const GraphView = ({
         <Controls />
       </ReactFlow>
 
-      {expandedNode && (
+      {selectedNode && (
         <NodeDetailsPopup
-          nodeId={expandedNode.nodeId}
-          data={expandedNode.data}
-          onClose={() => setExpandedNode(null)}
+          data={selectedNode.data}
+          onClose={() => {
+            setSelectedNode(null);
+          }}
         />
       )}
       {/*Error Message */}
@@ -362,15 +390,30 @@ const GraphView = ({
         </div>
       )}
       <div className="absolute bottom-[10px] left-[50px] flex items-center gap-2">
-        <input
-          type="text"
-          maxLength={30}
-          placeholder="search node"
-          className="outline-none text-[var(--bottom-bg-color)] border-b-2 text-center w-[150px]"
-          onChange={handleChange}
-        />
+        <div className="relative">
+          <input
+            type="text"
+            maxLength={30}
+            placeholder="search node"
+            className="outline-none text-[var(--text-color)] border-b-2 border-[var(--text-color)] text-center w-[150px] pr-5"
+            value={searchString}
+            onChange={handleChange}
+          />
 
-        {/* Change 22: Show navigation controls only when there are multiple matches */}
+          {searchString && (
+            <button
+              onClick={() => {
+                setSearchString("");
+                setNodes((nds) => nds.map((n) => ({ ...n, selected: false })));
+                fitView({ duration: 800, padding: 0.05 });
+              }}
+              className="absolute right-0 top-1/2 -translate-y-1/2 text-[var(--text-color)] cursor-pointer hover:opacity-70"
+              title="Clear search"
+            >
+              <CgClose size={12} />
+            </button>
+          )}
+        </div>
         {matchCount > 1 && (
           <div className="flex items-center gap-1 bg-[var(--node-bg-color)] px-2 py-1 rounded border border-[var(--text-color)] opacity-80">
             <button

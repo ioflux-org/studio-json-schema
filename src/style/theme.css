@@ -26,6 +26,8 @@
   --view-text-color: #6b7280;
   --validation-text-color: #444444;
 
+  /* Monaco Editor Highlight */
+  --monaco-highlight-bg: rgba(255, 255, 0, 0.3);
   /* Popup */
   --popup-bg-color: #ffffff;
   --popup-text-color: #111111;
@@ -64,6 +66,8 @@
   --view-text-color: #fff;
   --validation-text-color: #fff;
 
+  /* Monaco Editor Highlight */
+  --monaco-highlight-bg: rgba(255, 255, 0, 0.1);
   /* Popup */
   --popup-bg-color: #2d2d2d;
   --popup-text-color: #f0f0f0;
@@ -74,7 +78,11 @@
   --popup-backdrop-color: rgba(0, 0, 0, 0.5);
 }
 
-/* Smooth transition for editor panel toggle — only when triggered by button */
+.monaco-highlight-line {
+  background-color: var(--monaco-highlight-bg);
+  width: 100% !important;
+}
+/* Smooth transition for editor panel toggle ï¿½ only when triggered by button */
 .panel-animating [data-panel] {
     transition: flex-basis 300ms ease, flex-grow 300ms ease;
 }

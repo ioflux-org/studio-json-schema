@@ -1,4 +1,5 @@
 import { useContext, useState, useEffect, useRef } from "react";
+import { parseTree, findNodeAtLocation } from "jsonc-parser";
 import {
   Panel,
   PanelGroup,
@@ -15,7 +16,8 @@ import {
   type SchemaDocument,
 } from "@hyperjump/json-schema/experimental";
 
-import Editor from "@monaco-editor/react";
+import Editor, { type OnMount } from "@monaco-editor/react";
+import type { editor } from "monaco-editor";
 import defaultSchema from "../data/defaultJSONSchema.json";
 import { AppContext } from "../contexts/AppContext";
 import SchemaVisualization from "./SchemaVisualization";
@@ -87,10 +89,15 @@ const saveSchemaJSON = (key: string, schema: JSONSchema) => {
 };
 
 const MonacoEditor = () => {
-  const { theme, isFullScreen, containerRef, schemaFormat } =
+  const { theme, isFullScreen, containerRef, schemaFormat, selectedNode } =
     useContext(AppContext);
 
+  const editorRef = useRef<editor.IStandaloneCodeEditor | null>(null);
   const editorPanelRef = useRef<ImperativePanelHandle>(null);
+
+  const handleEditorDidMount: OnMount = (editor) => {
+    editorRef.current = editor;
+  };
 
   const [compiledSchema, setCompiledSchema] = useState<CompiledSchema | null>(
     null
@@ -131,6 +138,68 @@ const MonacoEditor = () => {
       setIsAnimating(false);
     }, 300);
   };
+
+  useEffect(() => {
+    if (!editorRef.current) return;
+    const model = editorRef.current.getModel();
+    if (!model) return;
+
+    if (!selectedNode?.id) {
+      const oldDecorations = model
+        .getAllDecorations()
+        .filter((d: any) => d.options.className === "monaco-highlight-line")
+        .map((d: any) => d.id);
+      model.deltaDecorations(oldDecorations, []);
+      return;
+    }
+
+    const text = model.getValue();
+
+    const uriParts = selectedNode.id.split("#");
+    const fragment = uriParts.length > 1 ? uriParts[1] : "";
+
+    const path = fragment
+      .split("/")
+      .filter((segment: string) => segment !== "")
+      .map((segment: string) => {
+        const decoded = decodeURIComponent(segment);
+        return /^\d+$/.test(decoded) ? parseInt(decoded, 10) : decoded;
+      });
+
+    const tree = parseTree(text);
+    if (!tree) return;
+
+    const node = findNodeAtLocation(tree, path);
+
+    if (node) {
+      const startPos = model.getPositionAt(node.offset);
+      const endPos = model.getPositionAt(node.offset + node.length);
+
+      editorRef.current.revealPositionInCenter(startPos);
+      editorRef.current.setPosition(startPos);
+      editorRef.current.focus();
+
+      const decoration = {
+        range: new (window as any).monaco.Range(
+          startPos.lineNumber,
+          1,
+          endPos.lineNumber,
+          1
+        ),
+        options: {
+          isWholeLine: true,
+          className: "monaco-highlight-line",
+        },
+      };
+
+      const oldDecorations = model
+        .getAllDecorations()
+        .filter((d: any) => d.options.className === "monaco-highlight-line")
+        .map((d: any) => d.id);
+
+      model.deltaDecorations(oldDecorations, [decoration]);
+    }
+  }, [selectedNode?.id]);
 
   useEffect(() => {
     saveFormat(SESSION_FORMAT_KEY, schemaFormat);
@@ -186,13 +255,13 @@ const MonacoEditor = () => {
         setSchemaValidation(
           !dialect && typeof parsedSchema !== "boolean"
             ? {
-               status: "warning",
-               message: VALIDATION_UI["warning"].message,
-             }
+                status: "warning",
+                message: VALIDATION_UI["warning"].message,
+              }
             : {
-               status: "success",
-               message: VALIDATION_UI["success"].message,
-             }
+                status: "success",
+                message: VALIDATION_UI["success"].message,
+              }
         );
 
         saveSchemaJSON(SESSION_SCHEMA_KEY, copy);
@@ -212,8 +281,9 @@ const MonacoEditor = () => {
   return (
     <div
       ref={containerRef}
-      className={`h-[92vh] flex flex-col ${isAnimating ? "panel-animating" : ""
-        }`}
+      className={`h-[92vh] flex flex-col ${
+        isAnimating ? "panel-animating" : ""
+      }`}
     >
       {isFullScreen && (
         <div className="w-full px-1 bg-[var(--view-bg-color)] justify-items-end">
@@ -240,6 +310,7 @@ const MonacoEditor = () => {
               occurrencesHighlight: "off",
             }}
             onChange={(value) => setSchemaText(value ?? "")}
+            onMount={handleEditorDidMount}
           />
           <div className="flex-1 p-2 bg-[var(--validation-bg-color)] text-sm overflow-y-auto">
             <div className={VALIDATION_UI[schemaValidation.status].className}>
