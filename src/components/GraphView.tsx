@@ -404,20 +404,16 @@ const GraphView = ({
             <button
               onClick={() => {
                 setSearchString("");
-                setMatchedNodes([]);
-                setCurrentMatchIndex(0);
-                setErrorMessage("");
                 setNodes((nds) => nds.map((n) => ({ ...n, selected: false })));
-                fitView({ duration: 500, padding: 0.05 });
+                fitView({ duration: 800, padding: 0.05 });
               }}
-              className="absolute right-0 top-1/2 -translate-y-1/2 text-[var(--text-color)] hover:opacity-70"
+              className="absolute right-0 top-1/2 -translate-y-1/2 text-[var(--text-color)] cursor-pointer hover:opacity-70"
               title="Clear search"
             >
-              <CgClose size={14} />
+              <CgClose size={12} />
             </button>
           )}
         </div>
-        {/* Change 22: Show navigation controls only when there are multiple matches */}
         {matchCount > 1 && (
           <div className="flex items-center gap-1 bg-[var(--node-bg-color)] px-2 py-1 rounded border border-[var(--text-color)] opacity-80">
             <button
