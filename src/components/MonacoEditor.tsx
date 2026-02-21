@@ -198,12 +198,12 @@ const MonacoEditor = () => {
         .filter((d: any) => d.options.className === "monaco-highlight-line")
         .map((d: any) => d.id);
 
-      const propNode = node.parent?.type === "property" ? node.parent : null;
-      const subschemaText = propNode
-        ? `{\n  ${text.substring(propNode.offset, propNode.offset + propNode.length)}\n}`
-        : text.substring(node.offset, node.offset + node.length);
-      // Embed the subschema text back into selectedNode.data so the popup
-      // can read it from selectedNode.data.subschema — no extra context variable needed.
+      // Always include the key: if node lives inside a property, use the
+      // parent property node so the extracted text is `"key": value`.
+      // Falls back to the node itself only at root level (no parent property).
+      const targetNode =
+        node.parent?.type === "property" ? node.parent : node;
+      const subschemaText = text.substring(targetNode.offset, targetNode.offset + targetNode.length);
       if (selectedNode) {
         setSelectedNode({ ...selectedNode, data: { ...selectedNode.data, subschema: subschemaText } });
       }
