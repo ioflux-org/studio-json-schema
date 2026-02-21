@@ -89,7 +89,7 @@ const saveSchemaJSON = (key: string, schema: JSONSchema) => {
 };
 
 const MonacoEditor = () => {
-  const { theme, isFullScreen, containerRef, schemaFormat, selectedNode, setSelectedNodeSubschema } =
+  const { theme, isFullScreen, containerRef, schemaFormat, selectedNode, setSelectedNode } =
     useContext(AppContext);
 
   const editorRef = useRef<editor.IStandaloneCodeEditor | null>(null);
@@ -150,7 +150,7 @@ const MonacoEditor = () => {
         .filter((d: any) => d.options.className === "monaco-highlight-line")
         .map((d: any) => d.id);
       model.deltaDecorations(oldDecorations, []);
-      setSelectedNodeSubschema(null);
+      setSelectedNode(null);
       return;
     }
 
@@ -202,7 +202,11 @@ const MonacoEditor = () => {
       const subschemaText = propNode
         ? `{\n  ${text.substring(propNode.offset, propNode.offset + propNode.length)}\n}`
         : text.substring(node.offset, node.offset + node.length);
-      setSelectedNodeSubschema(subschemaText);
+      // Embed the subschema text back into selectedNode.data so the popup
+      // can read it from selectedNode.data.subschema — no extra context variable needed.
+      if (selectedNode) {
+        setSelectedNode({ ...selectedNode, data: { ...selectedNode.data, subschema: subschemaText } });
+      }
 
       model.deltaDecorations(oldDecorations, [decoration]);
     }
@@ -262,13 +266,13 @@ const MonacoEditor = () => {
         setSchemaValidation(
           !dialect && typeof parsedSchema !== "boolean"
             ? {
-                status: "warning",
-                message: VALIDATION_UI["warning"].message,
-              }
+              status: "warning",
+              message: VALIDATION_UI["warning"].message,
+            }
             : {
-                status: "success",
-                message: VALIDATION_UI["success"].message,
-              }
+              status: "success",
+              message: VALIDATION_UI["success"].message,
+            }
         );
 
         saveSchemaJSON(SESSION_SCHEMA_KEY, copy);
@@ -288,9 +292,8 @@ const MonacoEditor = () => {
   return (
     <div
       ref={containerRef}
-      className={`h-[92vh] flex flex-col ${
-        isAnimating ? "panel-animating" : ""
-      }`}
+      className={`h-[92vh] flex flex-col ${isAnimating ? "panel-animating" : ""
+        }`}
     >
       {isFullScreen && (
         <div className="w-full px-1 bg-[var(--view-bg-color)] justify-items-end">

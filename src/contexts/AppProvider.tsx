@@ -38,7 +38,6 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
   };
 
   const [selectedNode, setSelectedNode] = useState<SelectedNode | null>(null);
-  const [selectedNodeSubschema, setSelectedNodeSubschema] = useState<string | null>(null);
 
   const toggleFullScreen = useCallback(() => {
     const el = containerRef.current;
@@ -82,8 +81,6 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
     changeSchemaFormat,
     selectedNode,
     setSelectedNode,
-    selectedNodeSubschema,
-    setSelectedNodeSubschema,
   };
 
   return <AppContext.Provider value={value}>{children}</AppContext.Provider>;

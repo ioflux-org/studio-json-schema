@@ -14,7 +14,8 @@ const NodeDetailsPopup = ({
   };
   onClose: () => void;
 }) => {
-  const { selectedNodeSubschema } = useContext(AppContext);
+  const { selectedNode } = useContext(AppContext);
+  const subschema = (selectedNode?.data?.subschema as string) ?? null;
   const [copied, setCopied] = useState(false);
   const [activeView, setActiveView] = useState<View>("table");
 
@@ -31,9 +32,9 @@ const NodeDetailsPopup = ({
   };
 
   const handleCopySubschema = () => {
-    if (!selectedNodeSubschema) return;
+    if (!subschema) return;
 
-    navigator.clipboard.writeText(selectedNodeSubschema).then(() => {
+    navigator.clipboard.writeText(subschema).then(() => {
       setCopied(true);
       setTimeout(() => setCopied(false), 2000);
     });
@@ -77,17 +78,15 @@ const NodeDetailsPopup = ({
           </div>
 
           <div className="flex items-center gap-2">
-            {activeView === "raw" && (
-              <button
-                id="popup-copy-subschema"
-                className="flex items-center px-2 py-1 rounded bg-slate-800 text-slate-100 hover:bg-slate-900 dark:bg-slate-700 dark:text-slate-100 dark:hover:bg-slate-600 transition-all shadow-sm disabled:opacity-40 disabled:cursor-not-allowed"
-                onClick={handleCopySubschema}
-                title={copied ? "Copied!" : "Copy subschema"}
-                disabled={!selectedNodeSubschema}
-              >
-                {copied ? <BsCheck size={14} /> : <BsCopy size={14} />}
-              </button>
-            )}
+            <button
+              id="popup-copy-subschema"
+              className="flex items-center px-2 py-1 rounded bg-slate-800 text-slate-100 hover:bg-slate-900 dark:bg-slate-700 dark:text-slate-100 dark:hover:bg-slate-600 transition-all shadow-sm disabled:opacity-40 disabled:cursor-not-allowed"
+              onClick={handleCopySubschema}
+              title={copied ? "Copied!" : "Copy subschema"}
+              disabled={!subschema}
+            >
+              {copied ? <BsCheck size={14} /> : <BsCopy size={14} />}
+            </button>
             <button
               id="popup-close"
               className="text-[var(--popup-text-color)] hover:text-[var(--popup-close-btn-hover-color)]"
@@ -98,7 +97,7 @@ const NodeDetailsPopup = ({
           </div>
         </div>
 
-        <div className="overflow-auto flex-1 text-sm">
+        <div className="overflow-auto overflow-x-auto flex-1 text-sm">
           {activeView === "table" && (
             <table className="w-full border-collapse text-left">
               <thead className="sticky top-0 z-10">
@@ -121,8 +120,8 @@ const NodeDetailsPopup = ({
                       <td className="p-2 font-medium text-[var(--popup-text-color)] whitespace-nowrap">
                         {key}
                       </td>
-                      <td className="p-2 text-[var(--popup-text-color)]">
-                        <div className="max-h-[150px] overflow-auto pr-1">
+                      <td className="p-2 text-[var(--popup-text-color)] min-w-0">
+                        <div className="max-h-[150px] overflow-auto pr-1 break-all">
                           {formatValue(keyData.value as string)}
                         </div>
                       </td>
@@ -133,10 +132,10 @@ const NodeDetailsPopup = ({
           )}
 
           {activeView === "raw" && (
-            <div className="p-4">
-              {selectedNodeSubschema ? (
-                <pre className="text-xs font-mono text-[var(--popup-text-color)] whitespace-pre-wrap break-words leading-relaxed">
-                  {selectedNodeSubschema}
+            <div className="p-4 overflow-x-auto">
+              {subschema ? (
+                <pre className="text-xs font-mono text-[var(--popup-text-color)] whitespace-pre leading-relaxed">
+                  {subschema}
                 </pre>
               ) : (
                 <p className="text-xs text-[var(--popup-text-color)] opacity-50 italic">
