@@ -21,6 +21,9 @@ type AppContextType = {
   selectedNode: SelectedNode | null;
 
   setSelectedNode: (selectedNode: SelectedNode | null) => void;
+
+  showMinimap: boolean;
+  setShowMinimap: (show: boolean) => void;
 };
 
 export const AppContext = createContext<AppContextType>({} as AppContextType);

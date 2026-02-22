@@ -1,11 +1,12 @@
 import { BsGithub, BsMoonStars, BsBook, BsSun } from "react-icons/bs";
+import { MdMap } from "react-icons/md";
 import { useContext } from "react";
 import { Tooltip } from "react-tooltip";
 import { AppContext, type SchemaFormat } from "../contexts/AppContext";
 import FullscreenToggleButton from "./FullscreenToggleButton";
 
 const NavigationBar = () => {
-  const { theme, toggleTheme, schemaFormat, changeSchemaFormat } =
+  const { theme, toggleTheme, schemaFormat, changeSchemaFormat, showMinimap, setShowMinimap } =
     useContext(AppContext);
 
   return (
@@ -54,7 +55,21 @@ const NavigationBar = () => {
           <Tooltip
             id="toggle-theme"
             content="Better visuals in dark mode"
-            style={{ fontSize: "10px" }}
+            style={{ fontSize: "10px", zIndex: 100 }}
+          />
+        </li>
+        <li>
+          <button
+            className={`text-xl cursor-pointer transition-opacity ${!showMinimap && "opacity-50"}`}
+            onClick={() => setShowMinimap(!showMinimap)}
+            data-tooltip-id="toggle-minimap"
+          >
+            <MdMap className="text-[var(--navigation-text-color)]" />
+          </button>
+          <Tooltip
+            id="toggle-minimap"
+            content={showMinimap ? "Hide Minimap" : "Show Minimap"}
+            style={{ fontSize: "10px", zIndex: 100 }}
           />
         </li>
         <li>
