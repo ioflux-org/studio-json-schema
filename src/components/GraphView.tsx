@@ -295,6 +295,13 @@ const GraphView = ({
         setMatchedNodes([]);
         setCurrentMatchIndex(0);
         setErrorMessage("");
+          setNodes((nds) =>
+            nds.map((n) => ({
+              ...n,
+              selected: false,
+            }))
+          );
+        fitView({ duration: 500, padding: 0.05 });
         return;
       }
 
@@ -330,7 +337,7 @@ const GraphView = ({
     }, 300);
 
     return () => clearTimeout(timeout);
-  }, [searchString, nodes]);
+  }, [searchString]);
 
   return (
     <div ref={containerRef} className="relative w-full h-full">
