@@ -89,7 +89,7 @@ const saveSchemaJSON = (key: string, schema: JSONSchema) => {
 };
 
 const MonacoEditor = () => {
-  const { theme, isFullScreen, containerRef, schemaFormat, selectedNode } =
+  const { theme, isFullScreen, containerRef, schemaFormat, selectedNode, setSelectedNode } =
     useContext(AppContext);
 
   const editorRef = useRef<editor.IStandaloneCodeEditor | null>(null);
@@ -150,6 +150,7 @@ const MonacoEditor = () => {
         .filter((d: any) => d.options.className === "monaco-highlight-line")
         .map((d: any) => d.id);
       model.deltaDecorations(oldDecorations, []);
+      setSelectedNode(null);
       return;
     }
 
@@ -196,6 +197,13 @@ const MonacoEditor = () => {
         .getAllDecorations()
         .filter((d: any) => d.options.className === "monaco-highlight-line")
         .map((d: any) => d.id);
+
+      const targetNode =
+        node.parent?.type === "property" ? node.parent : node;
+      const subschemaText = text.substring(targetNode.offset, targetNode.offset + targetNode.length);
+      if (selectedNode) {
+        setSelectedNode({ ...selectedNode, data: { ...selectedNode.data, subschema: subschemaText } });
+      }
 
       model.deltaDecorations(oldDecorations, [decoration]);
     }
@@ -281,9 +289,8 @@ const MonacoEditor = () => {
   return (
     <div
       ref={containerRef}
-      className={`h-[92vh] flex flex-col ${
-        isAnimating ? "panel-animating" : ""
-      }`}
+      className={`h-[92vh] flex flex-col ${isAnimating ? "panel-animating" : ""
+        }`}
     >
       {isFullScreen && (
         <div className="w-full px-1 bg-[var(--view-bg-color)] justify-items-end">
