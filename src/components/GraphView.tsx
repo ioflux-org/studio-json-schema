@@ -49,6 +49,10 @@ const GraphView = ({
   compiledSchema: CompiledSchema | null;
 }) => {
   const { setCenter, getZoom, fitView } = useReactFlow();
+  const [expandedNode, setExpandedNode] = useState<{
+    nodeId: string;
+    data: Record<string, unknown>;
+  } | null>(null);
   const { selectedNode, setSelectedNode } = useContext(AppContext);
   const containerRef = useRef<HTMLDivElement>(null);
 
@@ -61,6 +65,7 @@ const GraphView = ({
   const [searchString, setSearchString] = useState("");
   const [errorMessage, setErrorMessage] = useState("");
   const [showErrorPopup, setShowErrorPopup] = useState(true);
+  const [hasActiveSearch, setHasActiveSearch] = useState(false);
   const matchCount = matchedNodes.length;
 
   const navigateMatch = useCallback(
@@ -173,7 +178,7 @@ const GraphView = ({
 
       return { nodes: newNodes, edges };
     },
-    []
+    [],
   );
 
   // TODO: check if the following approach to bringing the selected edge to the top has any significant performance issues
@@ -210,6 +215,16 @@ const GraphView = ({
       }),
     [orderedEdges, hoveredEdgeId]
   );
+
+  const resetSearchState = useCallback(() => {
+    setNodes((nds) =>
+      nds.map((n) => ({
+        ...n,
+        selected: false,
+      })),
+    );
+    fitView({ duration: 500 });
+  }, [setNodes, fitView]);
 
   useEffect(() => {
     try {
@@ -292,6 +307,11 @@ const GraphView = ({
 
     const timeout = setTimeout(() => {
       if (!trimmed) {
+        if (hasActiveSearch) {
+          resetSearchState();
+          setHasActiveSearch(false);
+        }
+
         setMatchedNodes([]);
         setCurrentMatchIndex(0);
         setErrorMessage("");
@@ -322,10 +342,11 @@ const GraphView = ({
           });
           return changed ? newNodes : nds;
         });
-
+        setHasActiveSearch(true);
         setErrorMessage("");
       } else {
         setErrorMessage(`${trimmed} is not in schema`);
+        resetSearchState();
       }
     }, 300);
 
