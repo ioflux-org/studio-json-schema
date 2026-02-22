@@ -1,5 +1,7 @@
-import { useContext, useState, useEffect, useRef } from "react";
+import { useContext, useState, useEffect, useRef, useCallback } from "react";
 import { parseTree, findNodeAtLocation } from "jsonc-parser";
+import { BsLink45Deg } from "react-icons/bs";
+import { Tooltip } from "react-tooltip";
 import {
   Panel,
   PanelGroup,
@@ -25,7 +27,11 @@ import FullscreenToggleButton from "./FullscreenToggleButton";
 import EditorToggleButton from "./EditorToggleButton";
 import { parseSchema } from "../utils/parseSchema";
 import YAML from "js-yaml";
-import type { JSONSchema } from "@apidevtools/json-schema-ref-parser";
+import {
+  encodeSchemaToShareURL,
+  loadInitialSchema,
+  saveSchemaToLocalStorage,
+} from "../utils/schemaShare";
 
 type ValidationStatus = {
   status: "success" | "warning" | "error";
@@ -41,7 +47,6 @@ type CreateBrowser = (
 
 const DEFAULT_SCHEMA_ID = "https://studio.ioflux.org/schema";
 const DEFAULT_SCHEMA_DIALECT = "https://json-schema.org/draft/2020-12/schema";
-const SESSION_SCHEMA_KEY = "ioflux.schema.editor.content";
 const SESSION_FORMAT_KEY = "ioflux.schema.editor.format";
 
 const JSON_SCHEMA_DIALECTS = [
@@ -74,20 +79,6 @@ const saveFormat = (key: string, format: SchemaFormat) => {
   sessionStorage.setItem(key, format);
 };
 
-const loadSchemaJSON = (key: string): any => {
-  const raw = sessionStorage.getItem(key);
-  if (!raw) return defaultSchema;
-  try {
-    return JSON.parse(raw);
-  } catch {
-    return defaultSchema;
-  }
-};
-
-const saveSchemaJSON = (key: string, schema: JSONSchema) => {
-  sessionStorage.setItem(key, JSON.stringify(schema, null, 2));
-};
-
 const MonacoEditor = () => {
   const { theme, isFullScreen, containerRef, schemaFormat, selectedNode } =
     useContext(AppContext);
@@ -103,7 +94,7 @@ const MonacoEditor = () => {
     null
   );
 
-  const initialSchemaJSON = loadSchemaJSON(SESSION_SCHEMA_KEY);
+  const initialSchemaJSON = loadInitialSchema(defaultSchema);
 
   const [schemaText, setSchemaText] = useState<string>(
     schemaFormat === "yaml"
@@ -120,6 +111,9 @@ const MonacoEditor = () => {
 
   const [editorVisible, setEditorVisible] = useState(true);
   const [isAnimating, setIsAnimating] = useState(false);
+  const [copyTooltipContent, setCopyTooltipContent] = useState(
+    "Copy shareable schema URL"
+  );
 
   const toggleEditorVisibility = () => {
     if (!editorPanelRef.current) return;
@@ -203,8 +197,7 @@ const MonacoEditor = () => {
 
   useEffect(() => {
     saveFormat(SESSION_FORMAT_KEY, schemaFormat);
-
-    const schemaJSON = loadSchemaJSON(SESSION_SCHEMA_KEY);
+    const schemaJSON = loadInitialSchema(defaultSchema);
 
     setSchemaText(
       schemaFormat === "yaml"
@@ -212,6 +205,29 @@ const MonacoEditor = () => {
         : JSON.stringify(schemaJSON, null, 2)
     );
   }, [schemaFormat]);
+
+  const copySchemaUrl = useCallback(async () => {
+    try {
+      const parsedSchema = parseSchema(schemaText, schemaFormat);
+      const link = encodeSchemaToShareURL(parsedSchema);
+      await navigator.clipboard.writeText(link);
+      return true;
+    } catch {
+      return false;
+    }
+  }, [schemaText, schemaFormat]);
+
+  const handleCopySchemaUrl = useCallback(async () => {
+    const copied = await copySchemaUrl();
+
+    setCopyTooltipContent(
+      copied ? "Schema URL copied" : "Cannot copy URL: fix schema errors first"
+    );
+
+    setTimeout(() => {
+      setCopyTooltipContent("Copy shareable schema URL");
+    }, 1500);
+  }, [copySchemaUrl]);
 
   useEffect(() => {
     if (!schemaText.trim()) return;
@@ -264,7 +280,7 @@ const MonacoEditor = () => {
               }
         );
 
-        saveSchemaJSON(SESSION_SCHEMA_KEY, copy);
+        saveSchemaToLocalStorage(copy);
       } catch (err) {
         const message = err instanceof Error ? err.message : String(err);
 
@@ -319,11 +335,24 @@ const MonacoEditor = () => {
           </div>
         </Panel>
         <PanelResizeHandle className="w-[1px] bg-gray-400 relative">
-          <div>
+          <div className="absolute top-2 left-2 z-10 flex flex-col gap-2">
             <EditorToggleButton
-              className={"absolute top-2 left-2 z-10"}
+              className={""}
               editorVisible={editorVisible}
               toggleEditorVisibility={toggleEditorVisibility}
+            />
+            <button
+              className="flex items-center justify-center px-1 py-1 rounded-lg cursor-pointer bg-[var(--view-bg-color)] duration-300 border-2 hover:scale-105 text-[var(--navigation-text-color)]"
+              onClick={handleCopySchemaUrl}
+              data-tooltip-id="copy-schema-url"
+              aria-label="Copy schema URL"
+            >
+              <BsLink45Deg size={18} />
+            </button>
+            <Tooltip
+              id="copy-schema-url"
+              content={copyTooltipContent}
+              style={{ fontSize: "10px" }}
             />
           </div>
         </PanelResizeHandle>
