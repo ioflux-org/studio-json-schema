@@ -337,7 +337,7 @@ const GraphView = ({
     }, 300);
 
     return () => clearTimeout(timeout);
-  }, [searchString, nodes]);
+  }, [searchString]);
 
   return (
     <div ref={containerRef} className="relative w-full h-full">
