@@ -1,82 +1,57 @@
 ﻿[data-theme="light"] {
   /* Backgrounds */
-  --bg-color: #ffffff;
-  --node-bg-color: #ffffff;
-  --node-key-color: #00b7ff;
-  --node-value-bg-color: #f5f5f5;
-  --reactflow-bg-main-pattern-color: #c1bfbf;
-  --reactflow-bg-sub-pattern-color: #000000;
-  --visualize-bg-color: #ffffff;
-  --visualize-bg-image: rgba(107, 114, 128, 0.1);
-  --bottom-bg-color: #3d85c6;
-  --view-bg-color: #eeeeee;
-  --control-bg-color: #6b7280;
-  --validation-bg-color: #eeeeee;
-  --pillar-bg-color: #b0b0b0;
-  --validation-heading-color: #999999;
+  --color-bg-base: #ffffff;
+  --color-bg-surface: #ffffff;
+  --color-bg-subtle: #eeeeee;
+  --color-bg-inverse: #3d85c6;
+  --color-overlay: rgba(255, 255, 255, 0.1);
 
-  /* Text color*/
-  --text-color: #111111;
-  --bottom-text-color: #ffffff;
-  --tool-name-color: #1e3a8a;
-  --tool-content-color: #6b7280;
-  --navigation-text-color: #6b7280;
-  --dropdown-text-color: #444444;
-  --view-text-color: #6b7280;
-  --validation-text-color: #444444;
+  /* Text */
+  --color-text-primary: #111111;
+  --color-text-secondary: #6b7280;
+  --color-text-inverse: #ffffff;
+  --color-brand: #1e3a8a;
+
+  /* Accents/Borders */
+  --color-accent: #00b7ff;
+  --color-border: #d1d5db;
+  --color-border-strong: #9ca3af;
+  --color-grid: rgba(107, 114, 128, 0.1);
+  --color-reactflow-grid: #c1bfbf;
 
   /* Monaco Editor Highlight */
   --monaco-highlight-bg: rgba(255, 255, 0, 0.3);
 
   /* Popup */
-  --popup-bg-color: #ffffff;
-  --popup-text-color: #111111;
-  --popup-border-color: #d1d5db;
-  --popup-header-bg-color: #f3f4f6;
-  --popup-header-text-color: #374151;
-  --popup-close-btn-hover-color: #717479;
-  --popup-backdrop-color: rgba(255, 255, 255, 0.1);
+  --color-popup-header-bg: #f3f4f6;
 }
 
 [data-theme="dark"] {
   /* Backgrounds */
-  --bg-color: #3d3d3d;
-  --node-bg-color: black;
-  --node-key-color: #00b7ff;
-  --node-value-bg-color: #1a1a1a;
-  --reactflow-bg-main-pattern-color: white;
-  --reactflow-bg-sub-pattern-color: white;
-  --editor-bg-color: #1e1e1e;
-  --visualize-bg-color: #1a1a1a;
-  --visualize-bg-image: rgba(255, 255, 255, 0.05);
-  --bottom-bg-color: #3d3d3d;
-  --view-bg-color: #1e1e1e;
-  --control-bg-color: #3c3c3c;
-  --validation-bg-color: #242424;
-  --pillar-bg-color: #444444;
-  --validation-heading-color: #999999;
+  --color-bg-base: #3d3d3d;
+  --color-bg-surface: #1a1a1a;
+  --color-bg-subtle: #242424;
+  --color-bg-inverse: #3d3d3d;
+  --color-overlay: rgba(0, 0, 0, 0.5);
 
-  /* Text color */
-  --text-color: #f0f0f0;
-  --bottom-text-color: #ffffff;
-  --tool-name-color: #fff;
-  --tool-content-color: #fff;
-  --navigation-text-color: #ffffff;
-  --dropdown-text-color: #ffffff;
-  --view-text-color: #fff;
-  --validation-text-color: #fff;
+  /* Text */
+  --color-text-primary: #f0f0f0;
+  --color-text-secondary: #ffffff;
+  --color-text-inverse: #ffffff;
+  --color-brand: #ffffff;
+
+  /* Accents/Borders */
+  --color-accent: #00b7ff;
+  --color-border: #444444;
+  --color-border-strong: #666666;
+  --color-grid: rgba(255, 255, 255, 0.05);
+  --color-reactflow-grid: #ffffff;
 
   /* Monaco Editor Highlight */
   --monaco-highlight-bg: rgba(255, 255, 0, 0.1);
 
   /* Popup */
-  --popup-bg-color: #2d2d2d;
-  --popup-text-color: #f0f0f0;
-  --popup-border-color: #444444;
-  --popup-header-bg-color: #1f1f1f;
-  --popup-header-text-color: #e0e0e0;
-  --popup-close-btn-hover-color: #777575;
-  --popup-backdrop-color: rgba(0, 0, 0, 0.5);
+  --color-popup-header-bg: #1f1f1f;
 }
 
 .monaco-highlight-line {
