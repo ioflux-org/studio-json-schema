@@ -19,10 +19,10 @@ const NavigationBar = () => {
         />
 
         <div className="flex font-mono flex-col">
-          <span className="text-2xl font-bold  text-[var(--tool-name-color)]">
+          <span className="text-2xl font-bold  text-[var(--color-brand)]">
             Studio
           </span>
-          <span className="text-xs opacity-70 text-[var(--tool-name-color)]">
+          <span className="text-xs opacity-70 text-[var(--color-brand)]">
             JSON Schema
           </span>
         </div>
@@ -32,7 +32,7 @@ const NavigationBar = () => {
         <li>
           <select
             onChange={(e) => changeSchemaFormat(e.target.value as SchemaFormat)}
-            className="text-sm border rounded-sm bg-[var(--bg-color)] text-[var(--dropdown-text-color)] border-[var(--navigation-text-color)] cursor-pointer"
+            className="text-sm border-2 rounded-sm bg-[var(--color-bg-base)] text-[var(--color-text-secondary)] border-[var(--color-border-strong)] cursor-pointer"
             value={schemaFormat}
           >
             <option value="json">JSON</option>
@@ -46,9 +46,9 @@ const NavigationBar = () => {
             data-tooltip-id="toggle-theme"
           >
             {theme === "light" ? (
-              <BsSun className="text-[var(--navigation-text-color)]" />
+              <BsSun className="text-[var(--color-text-secondary)]" />
             ) : (
-              <BsMoonStars className="text-[var(--navigation-text-color)]" />
+              <BsMoonStars className="text-[var(--color-text-secondary)]" />
             )}
           </button>
           <Tooltip
@@ -65,7 +65,7 @@ const NavigationBar = () => {
             className="text-xl"
             data-tooltip-id="github"
           >
-            <BsGithub className="text-[var(--navigation-text-color)]" />
+            <BsGithub className="text-[var(--color-text-secondary)]" />
             <Tooltip
               id="github"
               content="Star on Github"
@@ -81,7 +81,7 @@ const NavigationBar = () => {
             className="text-xl"
             data-tooltip-id="learn-keywords"
           >
-            <BsBook className="text-[var(--navigation-text-color)]" />
+            <BsBook className="text-[var(--color-text-secondary)]" />
             <Tooltip
               id="learn-keywords"
               content="Docs"

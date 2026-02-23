@@ -1,12 +1,12 @@
-body{
-  background-color: var(--bg-color)
+body {
+  background-color: var(--color-bg-base);
 }
 
 .visualize {
-  background-color: var(--visualize-bg-color);
+  background-color: var(--color-bg-surface);
   background-image:
-    linear-gradient(to right, var(--visualize-bg-image) 0.1px, transparent 1px),
-    linear-gradient(to bottom, var(--visualize-bg-image) 0.1px, transparent 1px);
+    linear-gradient(to right, var(--color-grid) 0.1px, transparent 1px),
+    linear-gradient(to bottom, var(--color-grid) 0.1px, transparent 1px);
   background-size: 30px 30px;
 }
 

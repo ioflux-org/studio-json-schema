@@ -9,7 +9,7 @@ const FullscreenToggleButton = () => {
     <button
       onClick={toggleFullScreen}
       className="cursor-pointer"
-      style={{ color: "var(--navigation-text-color)" }}
+      style={{ color: "var(--color-text-secondary)" }}
     >
       <BsArrowsFullscreen />
     </button>

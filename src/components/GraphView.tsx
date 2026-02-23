@@ -377,14 +377,14 @@ const GraphView = ({
           variant={BackgroundVariant.Lines}
           lineWidth={0.05}
           gap={100}
-          color="var(--reactflow-bg-main-pattern-color)"
+          color="var(--color-reactflow-grid)"
         />
         <Background
           id="sub-grid"
           variant={BackgroundVariant.Lines}
           lineWidth={0.02}
           gap={20}
-          color="var(--reactflow-bg-sub-pattern-color)"
+          color="var(--color-reactflow-grid)"
         />
         <Controls />
       </ReactFlow>
@@ -418,7 +418,7 @@ const GraphView = ({
             type="text"
             maxLength={30}
             placeholder="search node"
-            className="outline-none text-[var(--text-color)] border-b-2 border-[var(--text-color)] text-center w-[150px] pr-5"
+            className="outline-none text-[var(--color-text-primary)] border-b-2 border-[var(--color-text-primary)] text-center w-[150px] pr-5"
             value={searchString}
             onChange={handleChange}
           />
@@ -430,7 +430,7 @@ const GraphView = ({
                 setNodes((nds) => nds.map((n) => ({ ...n, selected: false })));
                 fitView({ duration: 800, padding: 0.05 });
               }}
-              className="absolute right-0 top-1/2 -translate-y-1/2 text-[var(--text-color)] cursor-pointer hover:opacity-70"
+              className="absolute right-0 top-1/2 -translate-y-1/2 text-[var(--color-text-primary)] cursor-pointer hover:opacity-70"
               title="Clear search"
             >
               <CgClose size={12} />
@@ -438,28 +438,28 @@ const GraphView = ({
           )}
         </div>
         {matchCount > 1 && (
-          <div className="flex items-center gap-1 bg-[var(--node-bg-color)] px-2 py-1 rounded border border-[var(--text-color)] opacity-80">
+          <div className="flex items-center gap-1 bg-[var(--color-bg-surface)] px-2 py-1 rounded border border-[var(--color-text-primary)] opacity-80">
             <button
               onClick={() => navigateMatch("prev")}
-              className="hover:bg-[var(--text-color)] hover:bg-opacity-20 rounded p-1 transition-colors"
+              className="hover:bg-[var(--color-text-primary)] hover:bg-opacity-20 rounded p-1 transition-colors"
               title="Previous match"
             >
               <MdNavigateBefore
                 size={20}
-                className="text-[var(--text-color)]"
+                className="text-[var(--color-text-primary)]"
               />
             </button>
 
-            <span className="text-xs text-[var(--text-color)] min-w-[40px] text-center">
+            <span className="text-xs text-[var(--color-text-primary)] min-w-[40px] text-center">
               {currentMatchIndex + 1}/{matchCount}
             </span>
 
             <button
               onClick={() => navigateMatch("next")}
-              className="hover:bg-[var(--text-color)] hover:bg-opacity-20 rounded p-1 transition-colors"
+              className="hover:bg-[var(--color-text-primary)] hover:bg-opacity-20 rounded p-1 transition-colors"
               title="Next match"
             >
-              <MdNavigateNext size={20} className="text-[var(--text-color)]" />
+              <MdNavigateNext size={20} className="text-[var(--color-text-primary)]" />
             </button>
           </div>
         )}

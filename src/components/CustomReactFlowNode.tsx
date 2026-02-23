@@ -38,7 +38,7 @@ const CustomNode = ({ data, id, selected }: { data: RFNodeData; id: string; sele
             ? "rounded-2xl text-center overflow-hidden"
             : "rounded"
         }
-        relative transition-shadow duration-300 text-sm bg-[var(--node-bg-color)] text-[var(--text-color)]
+        relative transition-shadow duration-300 text-sm bg-[var(--color-bg-surface)] text-[var(--color-text-primary)]
         min-w-[100px] max-w-[400px] hover:shadow-[0_0_10px_var(--color)]
         ${/* Change 25: Apply visual highlighting (shadow and ring) when node is selected */ ""}
         ${selected ? "shadow-[0_0_15px_var(--color)] ring-2 ring-[var(--color)]" : ""}
@@ -91,7 +91,7 @@ const CustomNode = ({ data, id, selected }: { data: RFNodeData; id: string; sele
                   : "",
               }}
             >
-              <span className="font-semibold mr-2 whitespace-nowrap text-[var(--node-key-color)]">
+              <span className="font-semibold mr-2 whitespace-nowrap text-[var(--color-accent)]">
                 {!data.isBooleanNode && `${key}:`}
               </span>
 
@@ -103,7 +103,7 @@ const CustomNode = ({ data, id, selected }: { data: RFNodeData; id: string; sele
                         rowRefs.current[`${id}-${item}`] = el;
                       }}
                       key={index}
-                      className="px-2 py-[2px] bg-[var(--node-value-bg-color)]"
+                      className="px-2 py-[2px] bg-[var(--color-bg-subtle)]"
                       style={{ border: `1px solid ${data.nodeStyle.color}30` }}
                     >
                       {item}
