@@ -6,9 +6,11 @@ import { AppContext } from "../contexts/AppContext";
 type View = "table" | "raw";
 
 const NodeDetailsPopup = ({
+  nodeId,
   data,
   onClose,
 }: {
+  nodeId: string;
   data: {
     nodeData?: NodeData;
   };
@@ -16,9 +18,23 @@ const NodeDetailsPopup = ({
 }) => {
   const { selectedNode } = useContext(AppContext);
   const subschema = (selectedNode?.data?.subschema as string) ?? null;
-  const [copied, setCopied] = useState(false);
+  const [copiedSubschema, setCopiedSubschema] = useState(false);
+  const [copiedPath, setCopiedPath] = useState(false);
   const [activeView, setActiveView] = useState<View>("table");
 
+  const extractPath = (nodeId: string) => {
+    const hashIndex = nodeId.indexOf("#");
+    const fragment = hashIndex !== -1 ? nodeId.substring(hashIndex + 1) : "";
+    return fragment || "/";
+  };
+
+  const copyPathToClipboard = () => {
+    if (nodeId) {
+      navigator.clipboard.writeText(extractPath(nodeId));
+      setCopiedPath(true);
+      setTimeout(() => setCopiedPath(false), 2000);
+    }
+  };
   const formatValue = (value: string | string[]) => {
     return (
       <div className="flex flex-col">
@@ -35,8 +51,8 @@ const NodeDetailsPopup = ({
     if (!subschema) return;
 
     navigator.clipboard.writeText(subschema).then(() => {
-      setCopied(true);
-      setTimeout(() => setCopied(false), 2000);
+      setCopiedSubschema(true);
+      setTimeout(() => setCopiedSubschema(false), 2000);
     });
   };
 
@@ -82,10 +98,10 @@ const NodeDetailsPopup = ({
               id="popup-copy-subschema"
               className="flex items-center px-2 py-1 rounded bg-slate-800 text-slate-100 hover:bg-slate-900 dark:bg-slate-700 dark:text-slate-100 dark:hover:bg-slate-600 transition-all shadow-sm disabled:opacity-40 disabled:cursor-not-allowed"
               onClick={handleCopySubschema}
-              title={copied ? "Copied!" : "Copy subschema"}
+              title={copiedSubschema ? "Copied!" : "Copy subschema"}
               disabled={!subschema}
             >
-              {copied ? <BsCheck size={14} /> : <BsCopy size={14} />}
+              {copiedSubschema ? <BsCheck size={14} /> : <BsCopy size={14} />}
             </button>
             <button
               id="popup-close"
@@ -97,11 +113,30 @@ const NodeDetailsPopup = ({
           </div>
         </div>
 
-        <div className="overflow-auto overflow-x-auto flex-1 text-sm">
+        <div className="overflow-auto overflow-x-auto flex-1 text-sm pt-2">
+          {nodeId && (
+            <div className="mx-4 mb-4 p-2 bg-[var(--popup-header-bg-color)] rounded border border-[var(--popup-border-color)] flex items-center justify-between">
+              <div className="overflow-x-auto max-h-[60px] overflow-y-auto pr-1 flex-1">
+                <div className="font-mono text-xs text-[var(--text-color)] whitespace-nowrap">{extractPath(nodeId)}</div>
+              </div>
+              <button
+                onClick={copyPathToClipboard}
+                className="ml-2 p-1.5 text-[var(--navigation-text-color)] hover:text-[var(--text-color)] hover:bg-[var(--validation-bg-color)] rounded transition-colors flex-shrink-0"
+                title="Copy path to clipboard"
+              >
+                {copiedPath ? (
+                  <BsCheck size={16} className="text-green-600" />
+                ) : (
+                  <BsCopy size={16} />
+                )}
+              </button>
+            </div>
+          )}
+
           {activeView === "table" && (
             <table className="w-full border-collapse text-left">
               <thead className="sticky top-0 z-10">
-                <tr className="bg-[var(--popup-header-bg-color)] border-b border-[var(--popup-border-color)]">
+                <tr className="bg-[var(--popup-header-bg-color)] border-y border-[var(--popup-border-color)]">
                   <th className="p-2 font-bold text-[var(--popup-header-text-color)] w-1/3">
                     Keyword
                   </th>
@@ -132,7 +167,7 @@ const NodeDetailsPopup = ({
           )}
 
           {activeView === "raw" && (
-            <div className="p-4 overflow-x-auto">
+            <div className="px-4 pb-4 overflow-x-auto">
               {subschema ? (
                 <pre className="text-xs font-mono text-[var(--popup-text-color)] whitespace-pre leading-relaxed">
                   {subschema}

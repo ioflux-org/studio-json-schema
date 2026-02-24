@@ -369,6 +369,7 @@ const GraphView = ({
 
       {selectedNode && (
         <NodeDetailsPopup
+          nodeId={selectedNode.id}
           data={selectedNode.data}
           onClose={() => {
             setSelectedNode(null);
