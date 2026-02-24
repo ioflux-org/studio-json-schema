@@ -1,15 +1,33 @@
-import { BsX } from "react-icons/bs";
+import { BsX, BsCopy, BsCheck } from "react-icons/bs";
+import { useState } from "react";
 import { type NodeData } from "../utils/processAST";
 
 const NodeDetailsPopup = ({
+  nodeId,
   data,
   onClose,
 }: {
+  nodeId: string;
   data: {
     nodeData?: NodeData;
   };
   onClose: () => void;
 }) => {
+  const [copied, setCopied] = useState(false);
+
+  const extractPath = (nodeId: string) => {
+    const hashIndex = nodeId.indexOf("#");
+    const fragment = hashIndex !== -1 ? nodeId.substring(hashIndex + 1) : "";
+    return fragment || "/";
+  };
+
+  const copyPathToClipboard = () => {
+    if (nodeId) {
+      navigator.clipboard.writeText(extractPath(nodeId));
+      setCopied(true);
+      setTimeout(() => setCopied(false), 2000);
+    }
+  };
   const formatValue = (value: string | string[]) => {
     return (
       <div className="flex flex-col">
@@ -40,6 +58,24 @@ const NodeDetailsPopup = ({
         </button>
 
         <div className="relative pt-8 text-sm">
+          {nodeId && (
+            <div className="mb-4 p-2 bg-[var(--popup-header-bg-color)] rounded border border-[var(--popup-border-color)] flex items-center justify-between">
+              <div className="overflow-x-auto max-h-[60px] overflow-y-auto pr-1 flex-1">
+                <div className="font-mono text-xs text-[var(--text-color)] whitespace-nowrap">{extractPath(nodeId)}</div>
+              </div>
+              <button
+                onClick={copyPathToClipboard}
+                className="ml-2 p-1.5 text-[var(--navigation-text-color)] hover:text-[var(--text-color)] hover:bg-[var(--validation-bg-color)] rounded transition-colors flex-shrink-0"
+                title="Copy path to clipboard"
+              >
+                {copied ? (
+                  <BsCheck size={16} className="text-green-600" />
+                ) : (
+                  <BsCopy size={16} />
+                )}
+              </button>
+            </div>
+          )}
           <table className="w-full border border-[var(--popup-border-color)] text-left">
             <thead>
               <tr className="bg-[var(--popup-header-bg-color)] border-b border-[var(--popup-border-color)]">

@@ -353,10 +353,9 @@ const keywordHandlerMap: KeywordHandlerMap = {
     },
     // "https://json-schema.org/keyword/dependentSchemas": createBasicKeywordHandler("dependentSchemas"),
     "https://json-schema.org/keyword/contains": (ast, keywordValue, nodes, edges, parentId, nodeDepth, renderedNodes) => {
-        // eslint-disable-next-line @typescript-eslint/ban-ts-comment
-        // @ts-expect-error
-        processAST({ ast, keywordValue: keywordValue["contains"], nodes, edges, parentId, renderedNodes, nodeTitle: "contains", nodeDepth });
-        return { key: "contains", data: { value: keywordValue, ellipsis: "{ ... }" } }
+        const value = keywordValue as { contains: string; minContains: number; maxContains: number };
+        processAST({ ast, schemaUri: value.contains, nodes, edges, parentId, childId: "contains", renderedNodes, nodeTitle: "contains", nodeDepth });
+        return { key: "contains", data: { value: value.contains, ellipsis: "{ ... }" } }
     },
     "https://json-schema.org/keyword/items": (ast, keywordValue, nodes, edges, parentId, nodeDepth, renderedNodes) => {
         const value = keywordValue as string[];
