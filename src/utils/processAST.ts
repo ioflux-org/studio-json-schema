@@ -98,11 +98,13 @@ export const processAST: ProcessAST = ({ ast, schemaUri, nodes, edges, parentId,
     if (renderedNodes.includes(schemaUri)) {
         const sourceHandle = getSourceHandle(parentId, childId);
         const targetHandle = `${sourceHandle}-target`;
+        const targetNode = nodes.find(n => n.id === schemaUri);
+        const backEdgeColor = targetNode?.data.nodeStyle.color ?? "#CCCCCC";
+
         edges.push({
             id: `${parentId}--${sourceHandle}--${schemaUri}--${targetHandle}`,
             type: "smoothstep",
-            // TODO: pass the color of the targeted node instead of handcoded value
-            data: { color: "#CCCCCC" },
+            data: { color: backEdgeColor },
             source: parentId,
             target: schemaUri,
             sourceHandle: sourceHandle,
