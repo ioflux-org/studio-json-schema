@@ -47,7 +47,7 @@ const NodeDetailsPopup = ({
     >
       <div className="absolute inset-0 bg-[var(--popup-backdrop-color)] backdrop-blur-sm" />
       <div
-        className="relative z-50 w-[60%] max-h-[80%] p-4 rounded-lg shadow-xl bg-[var(--popup-bg-color)] overflow-x-hdden overflow-auto"
+        className="relative z-50 w-[60%] max-h-[80%] p-4 rounded-lg shadow-xl bg-[var(--popup-bg-color)] overflow-auto"
         onClick={(e) => e.stopPropagation()}
       >
         <button
