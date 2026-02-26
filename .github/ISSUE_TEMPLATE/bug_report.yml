@@ -1,7 +1,7 @@
-name: Bug Report
+name: "Bug Report"
 description: Report a bug to help us improve
-title: "[BUG] "
-labels: [bug]
+title: "[BUG]: "
+labels: ["bug"]
 body:
   - type: textarea
     id: description
@@ -20,37 +20,33 @@ body:
         2. Click on '....'
         3. Scroll down to '....'
         4. See error
-    validations:
-      required: true
   - type: textarea
     id: expected
     attributes:
       label: Expected Behavior
       description: A clear and concise description of what you expected to happen.
-    validations:
-      required: true
   - type: textarea
     id: screenshots
     attributes:
       label: Screenshots
       description: If applicable, add screenshots to help explain your problem.
+  - type: markdown
+    attributes:
+      value: "## Device Information"
   - type: input
     id: os
     attributes:
       label: OS
-      description: What operating system are you using?
       placeholder: e.g., macOS, Windows, Linux
   - type: input
     id: browser
     attributes:
       label: Browser
-      description: What browser are you using?
       placeholder: e.g., Chrome, Firefox, Safari
   - type: input
     id: version
     attributes:
       label: Version
-      description: What version of the application are you using?
       placeholder: e.g., 1.0.0
   - type: textarea
     id: context
@@ -60,14 +56,14 @@ body:
   - type: checkboxes
     id: working
     attributes:
-      label: Are you going to work on this?
+      label: "Are you going to work on this?"
       options:
-        - label: Yes
-        - label: No
+        - label: "Yes, I'd like to submit a PR."
+        - label: "No, I'm just suggesting it."
   - type: checkboxes
     id: beginner-friendly
     attributes:
       label: Good First Issue
-      description: Check this box if you think this issue is simple enough to serve as a good starting point for a brand new contributor.
+      description: Is this a good starting point for a brand new contributor?
       options:
-        - label: I believe this is a beginner-friendly issue
+        - label: I believe this is a beginner-friendly issue.
