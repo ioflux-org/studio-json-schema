@@ -7,6 +7,7 @@
   --node-value-bg-color: #f5f5f5;
   --reactflow-bg-main-pattern-color: #c1bfbf;
   --reactflow-bg-sub-pattern-color: #000000;
+  --reactflow-edge-default-color: #666666;
   --visualize-bg-color: #ffffff;
   --visualize-bg-image: rgba(107, 114, 128, 0.1);
   --bottom-bg-color: #3d85c6;
@@ -46,6 +47,7 @@
   --node-value-bg-color: #1a1a1a;
   --reactflow-bg-main-pattern-color: white;
   --reactflow-bg-sub-pattern-color: white;
+  --reactflow-edge-default-color: #888888;
   --editor-bg-color: #1e1e1e;
   --visualize-bg-color: #1a1a1a;
   --visualize-bg-image: rgba(255, 255, 255, 0.05);
