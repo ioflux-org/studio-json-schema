@@ -78,11 +78,29 @@
   --popup-backdrop-color: rgba(0, 0, 0, 0.5);
 }
 
+/* React Flow Controls Dark Mode Fix */
+[data-theme="dark"] .react-flow__controls-button {
+  background: var(--control-bg-color);
+  border-bottom: 1px solid var(--popup-border-color);
+  fill: #f0f0f0;
+  color: #f0f0f0;
+}
+
+[data-theme="dark"] .react-flow__controls-button:hover {
+  background: var(--popup-bg-color);
+}
+
+[data-theme="dark"] .react-flow__controls-button path {
+  fill: currentColor;
+}
+
 .monaco-highlight-line {
   background-color: var(--monaco-highlight-bg);
   width: 100% !important;
 }
 /* Smooth transition for editor panel toggle � only when triggered by button */
 .panel-animating [data-panel] {
-    transition: flex-basis 300ms ease, flex-grow 300ms ease;
+  transition:
+    flex-basis 300ms ease,
+    flex-grow 300ms ease;
 }

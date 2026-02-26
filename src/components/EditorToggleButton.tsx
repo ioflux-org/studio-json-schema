@@ -1,5 +1,5 @@
-import { BsChevronLeft, BsChevronRight } from "react-icons/bs";
 import { Tooltip } from "react-tooltip";
+import { GoSidebarCollapse, GoSidebarExpand } from "react-icons/go";
 
 const EditorToggleButton = ({
   className,
@@ -14,19 +14,17 @@ const EditorToggleButton = ({
     <div className={className}>
       <button
         onClick={toggleEditorVisibility}
-        className="flex px-1 py-2 rounded-lg cursor-pointer bg-[var(--view-bg-color)] duration-300 border-2 hover:scale-105 text-[var(--navigation-text-color)]"
+        className="flex text-neutral-400 dark:text-neutral-500 rounded-sm cursor-pointer duration-300   hover:scale-103"
         data-tooltip-id="editor-toggle-tooltip"
         aria-label={editorVisible ? "Hide Editor" : "Show Editor"}
       >
         {editorVisible ? (
           <>
-            <BsChevronLeft size={10} />
-            <BsChevronLeft size={10} />
+            <GoSidebarExpand size={24} />
           </>
         ) : (
           <>
-            <BsChevronRight size={10} />
-            <BsChevronRight size={10} />
+            <GoSidebarCollapse size={24} />
           </>
         )}
       </button>

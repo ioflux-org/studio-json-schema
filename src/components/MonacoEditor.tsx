@@ -319,7 +319,7 @@ const MonacoEditor = () => {
             </div>
           </div>
         </Panel>
-        <PanelResizeHandle className="w-[1px] bg-gray-400 relative">
+        <PanelResizeHandle className="w-px bg-gray-400 relative">
           <div>
             <EditorToggleButton
               className={"absolute top-2 left-2 z-10"}

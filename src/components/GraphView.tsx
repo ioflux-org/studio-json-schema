@@ -32,7 +32,7 @@ import {
 } from "../utils/processAST";
 import { sortAST } from "../utils/sortAST";
 import { resolveCollisions } from "../utils/resolveCollisions";
-import { MdNavigateBefore, MdNavigateNext } from "react-icons/md";
+import { MdNavigateBefore, MdNavigateNext, MdSearch } from "react-icons/md";
 import { CgClose } from "react-icons/cg";
 import { extractKeywords } from "../utils/searchNodeHelpers";
 
@@ -51,6 +51,7 @@ const GraphView = ({
   const { setCenter, getZoom, fitView } = useReactFlow();
   const { selectedNode, setSelectedNode } = useContext(AppContext);
   const containerRef = useRef<HTMLDivElement>(null);
+  const searchInputRef = useRef<HTMLInputElement>(null);
 
   const [nodes, setNodes, onNodeChange] = useNodesState<GraphNode>([]);
   const [edges, setEdges, onEdgeChange] = useEdgesState<GraphEdge>([]);
@@ -62,6 +63,17 @@ const GraphView = ({
   const [errorMessage, setErrorMessage] = useState("");
   const [showErrorPopup, setShowErrorPopup] = useState(true);
   const matchCount = matchedNodes.length;
+
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === "f") {
+        e.preventDefault();
+        searchInputRef.current?.focus();
+      }
+    };
+    window.addEventListener("keydown", handleKeyDown);
+    return () => window.removeEventListener("keydown", handleKeyDown);
+  }, []);
 
   const navigateMatch = useCallback(
     (direction: "next" | "prev") => {
@@ -364,7 +376,7 @@ const GraphView = ({
           gap={20}
           color="var(--reactflow-bg-sub-pattern-color)"
         />
-        <Controls />
+        <Controls style={{ margin: "10px" }} />
       </ReactFlow>
 
       {selectedNode && (
@@ -390,16 +402,29 @@ const GraphView = ({
           </button>
         </div>
       )}
-      <div className="absolute bottom-[10px] left-[50px] flex items-center gap-2">
-        <div className="relative">
+      <div className="absolute bottom-[10px] left-12 flex items-center gap-2">
+        <div className="relative flex items-center">
+          <MdSearch className="absolute left-0 mt-px text-neutral-400 dark:text-neutral-600 pointer-events-none" size={16} />
           <input
+            ref={searchInputRef}
             type="text"
             maxLength={30}
-            placeholder="search node"
-            className="outline-none text-[var(--text-color)] border-b-2 border-[var(--text-color)] text-center w-[150px] pr-5"
+            placeholder="Search node"
+            className="w-[180px] outline-none bg-transparent text-[var(--text-color)] border-b-2 border-neutral-300 dark:border-neutral-500 text-left pl-5 pr-6 transition-colors focus:border-(--node-key-color) placeholder:text-sm placeholder:text-neutral-500 placeholder:opacity-70"
             value={searchString}
             onChange={handleChange}
           />
+
+          {!searchString && (
+            <div className="absolute right-0 flex items-center gap-1 text-[8px] text-neutral-500 pointer-events-none select-none font-sans">
+              <kbd className="px-1 py-[2.5px] border border-neutral-500 rounded font-medium opacity-70">
+                <div className="flex translate-y-0.25">
+                  ⌘
+                </div>
+              </kbd>
+              <kbd className="px-1.25 text-[11px] border border-neutral-500 rounded font-medium opacity-70">F</kbd>
+            </div>
+          )}
 
           {searchString && (
             <button
@@ -408,36 +433,33 @@ const GraphView = ({
                 setNodes((nds) => nds.map((n) => ({ ...n, selected: false })));
                 fitView({ duration: 800, padding: 0.05 });
               }}
-              className="absolute right-0 top-1/2 -translate-y-1/2 text-[var(--text-color)] cursor-pointer hover:opacity-70"
+              className="absolute right-2 text-[var(--text-color)] cursor-pointer hover:opacity-70 transition-opacity"
               title="Clear search"
             >
-              <CgClose size={12} />
+              <CgClose size={14} />
             </button>
           )}
         </div>
         {matchCount > 1 && (
-          <div className="flex items-center gap-1 bg-[var(--node-bg-color)] px-2 py-1 rounded border border-[var(--text-color)] opacity-80">
+          <div className="flex items-center gap-1 bg-(--popup-bg-color) p-1 rounded border border-(--popup-border-color) shadow-sm text-(--text-color)">
             <button
               onClick={() => navigateMatch("prev")}
-              className="hover:bg-[var(--text-color)] hover:bg-opacity-20 rounded p-1 transition-colors"
+              className="hover:bg-black/20 dark:hover:bg-white/10 rounded p-1 transition-colors"
               title="Previous match"
             >
-              <MdNavigateBefore
-                size={20}
-                className="text-[var(--text-color)]"
-              />
+              <MdNavigateBefore size={20} />
             </button>
 
-            <span className="text-xs text-[var(--text-color)] min-w-[40px] text-center">
+            <span className="text-xs min-w-[32px] text-center">
               {currentMatchIndex + 1}/{matchCount}
             </span>
 
             <button
               onClick={() => navigateMatch("next")}
-              className="hover:bg-[var(--text-color)] hover:bg-opacity-20 rounded p-1 transition-colors"
+              className="hover:bg-black/20 dark:hover:bg-white/10 rounded p-1 transition-colors"
               title="Next match"
             >
-              <MdNavigateNext size={20} className="text-[var(--text-color)]" />
+              <MdNavigateNext size={20} />
             </button>
           </div>
         )}
