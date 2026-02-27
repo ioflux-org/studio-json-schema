@@ -45,6 +45,13 @@ const SESSION_SCHEMA_KEY = "ioflux.schema.editor.content";
 const SESSION_FORMAT_KEY = "ioflux.schema.editor.format";
 const DEFAULT_EDITOR_PANEL_WIDTH = 25; // in percentage
 
+const DIALECT_URL_TO_DIALECT: Record<string, string> = {
+  "https://json-schema.org/draft/2020-12/schema": "2020-12",
+  "https://json-schema.org/draft/2019-09/schema": "2019-09",
+  "http://json-schema.org/draft-07/schema#": "draft-07",
+  "http://json-schema.org/draft-06/schema#": "draft-06",
+  "http://json-schema.org/draft-04/schema#": "draft-04",
+};
 const JSON_SCHEMA_DIALECTS = [
   "https://json-schema.org/draft/2020-12/schema",
   "https://json-schema.org/draft/2019-09/schema",
@@ -231,7 +238,7 @@ const MonacoEditor = () => {
           JSON_SCHEMA_DIALECTS.includes(dialectVersion) &&
           !SUPPORTED_DIALECTS.includes(dialectVersion)
         ) {
-          throw new Error(`Dialect "${dialectVersion}" is not supported yet.`);
+          throw new Error(`Unsupported JSON Schema version. Currently, this tool only supports dialect '${DIALECT_URL_TO_DIALECT[DEFAULT_SCHEMA_DIALECT]}'. Your schema uses '${DIALECT_URL_TO_DIALECT[dialectVersion]}'.`);
         }
 
         const schemaDocument = buildSchemaDocument(
