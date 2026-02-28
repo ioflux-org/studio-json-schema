@@ -1,8 +1,8 @@
 import type { GraphNode } from "./processAST";
 
 export const inferSchemaType = (nodeData: GraphNode["data"]["nodeData"]): [string, string] => {
-    if (typeof nodeData.type === "string") {
-        return ["objectSchema", nodeData.type];
+    if (nodeData.type && typeof nodeData.type.value === "string") {
+        return ["objectSchema", nodeData.type.value];
     }
 
     const objectKeywords = new Set([
