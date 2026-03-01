@@ -438,7 +438,7 @@ const GraphView = ({
           )}
         </div>
         {matchCount > 1 && (
-          <div className="flex items-center gap-1 bg-[var(--color-bg-surface)] px-2 py-1 rounded border border-[var(--color-text-primary)] opacity-80">
+          <div className="flex items-center gap-1 bg-[var(--color-bg-base)] px-2 py-1 rounded border border-[var(--color-text-primary)] opacity-80">
             <button
               onClick={() => navigateMatch("prev")}
               className="hover:bg-[var(--color-text-primary)] hover:bg-opacity-20 rounded p-1 transition-colors"

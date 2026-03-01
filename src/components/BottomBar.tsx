@@ -2,7 +2,7 @@ import { BsLinkedin, BsGithub, BsSlack, BsTwitterX } from "react-icons/bs";
 
 const BottomBar = () => {
   return (
-    <div className="h-[5vh] bg-[var(--color-bg-subtle)] px-4 py-1.5 text-[var(--color-text-primary)]">
+    <div className="h-[5vh] bg-[var(--color-bg-surface)] px-4 py-1.5 text-[var(--color-text-primary)]">
       <div className="flex flex-col md:flex-row">
         <div className="w-full">
           Copyright © 2025 visualize-json-schema Authors.

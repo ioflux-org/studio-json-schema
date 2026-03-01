@@ -3,7 +3,7 @@ body {
 }
 
 .visualize {
-  background-color: var(--color-bg-surface);
+  background-color: var(--color-bg-base);
   background-image:
     linear-gradient(to right, var(--color-grid) 0.1px, transparent 1px),
     linear-gradient(to bottom, var(--color-grid) 0.1px, transparent 1px);

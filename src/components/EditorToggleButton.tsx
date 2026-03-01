@@ -14,7 +14,7 @@ const EditorToggleButton = ({
     <div className={className}>
       <button
         onClick={toggleEditorVisibility}
-        className="flex px-1 py-2 rounded-lg cursor-pointer bg-[var(--color-bg-subtle)] duration-300 border-2 hover:scale-105 text-[var(--color-text-secondary)]"
+        className="flex px-1 py-2 rounded-lg cursor-pointer bg-[var(--color-bg-surface)] duration-300 border-2 hover:scale-105 text-[var(--color-text-secondary)]"
         data-tooltip-id="editor-toggle-tooltip"
         aria-label={editorVisible ? "Hide Editor" : "Show Editor"}
       >

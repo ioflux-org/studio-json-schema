@@ -65,7 +65,7 @@ const NodeDetailsPopup = ({
               </div>
               <button
                 onClick={copyPathToClipboard}
-                className="ml-2 p-1.5 text-[var(--color-text-secondary)] hover:text-[var(--color-text-primary)] hover:bg-[var(--color-bg-subtle)] rounded transition-colors flex-shrink-0"
+                className="ml-2 p-1.5 text-[var(--color-text-secondary)] hover:text-[var(--color-text-primary)] hover:bg-[var(--color-bg-surface)] rounded transition-colors flex-shrink-0"
                 title="Copy path to clipboard"
               >
                 {copied ? (

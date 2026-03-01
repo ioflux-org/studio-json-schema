@@ -9,7 +9,7 @@ const NavigationBar = () => {
     useContext(AppContext);
 
   return (
-    <nav className="h-[8vh] flex justify-between items-center shadow-lg relative z-10">
+    <nav className="h-[8vh] flex justify-between items-center bg-[var(--color-bg-surface)] shadow-lg relative z-10">
       <div className="flex items-center text-center select-none">
         <img
           src={theme === "dark" ? "logo-dark.svg" : "logo-light.svg"}

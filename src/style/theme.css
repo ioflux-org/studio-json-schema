@@ -1,8 +1,7 @@
 ﻿[data-theme="light"] {
   /* Backgrounds */
   --color-bg-base: #ffffff;
-  --color-bg-surface: #ffffff;
-  --color-bg-subtle: #eeeeee;
+  --color-bg-surface: #f8fafc;
   --color-overlay: rgba(255, 255, 255, 0.1);
 
   /* Text */
@@ -25,9 +24,8 @@
 
 [data-theme="dark"] {
   /* Backgrounds */
-  --color-bg-base: #3d3d3d;
-  --color-bg-surface: #1a1a1a;
-  --color-bg-subtle: #242424;
+  --color-bg-base: #1a1a1a;
+  --color-bg-surface: #242424;
   --color-overlay: rgba(0, 0, 0, 0.5);
 
   /* Text */
