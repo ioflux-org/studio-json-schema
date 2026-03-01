@@ -25,7 +25,7 @@
 [data-theme="dark"] {
   /* Backgrounds */
   --color-bg-base: #1a1a1a;
-  --color-bg-surface: #242424;
+  --color-bg-surface: #2a2a2a;
   --color-overlay: rgba(0, 0, 0, 0.5);
 
   /* Text */
