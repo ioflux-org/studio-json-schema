@@ -57,6 +57,7 @@ JSON Schemas become difficult to reason about as they grow:
 - `$ref` resolution (local & external)
 - Circular reference handling
 - Clear node & edge representation for schema entities
+- Search nodes by label with multi-match navigation
 - Light & dark theme support
 - Runs fully in your browser -- all data stays on your device
 
@@ -179,6 +180,7 @@ Design improvements are welcome :)
 ### Controls
 
 - Zoom, fit-view, and other graph controls are available in the bottom-left corner of the visualization.
+- A **search** input at the bottom lets you find nodes by label. Matching is case-insensitive; if multiple nodes match, `◀` / `▶` arrows appear to step through them. Clearing the input restores the full graph view.
 
 ---
 
@@ -194,7 +196,6 @@ Design improvements are welcome :)
 ## Current Limitations / Known Issues
 
 - Currently, it only supports visualization for the latest dialect (2020-12).
-- The **search** feature is visible in the UI but not yet implemented.
 - When editing a schema in real time, the node handles may appear misaligned.  
   **Workaround**: Refresh the page after editing to restore correct handle positions.
 - If a `$defs` subschema references another `$defs` subschema defined later in the schema, the source/target handles will swap, and the title of the referencing node will be clipped.
