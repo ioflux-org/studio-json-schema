@@ -32,7 +32,7 @@ const NavigationBar = () => {
         <li>
           <select
             onChange={(e) => changeSchemaFormat(e.target.value as SchemaFormat)}
-            className="text-sm border-2 rounded-sm bg-[var(--color-bg-base)] text-[var(--color-text-secondary)] border-[var(--color-border-strong)] cursor-pointer"
+            className="text-sm border-2 rounded-sm bg-[var(--color-bg-base)] text-[var(--color-text-secondary)] border-[var(--color-border)] cursor-pointer"
             value={schemaFormat}
           >
             <option value="json">JSON</option>

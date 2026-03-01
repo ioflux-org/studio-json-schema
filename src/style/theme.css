@@ -12,8 +12,7 @@
 
   /* Accents/Borders */
   --color-accent: #00b7ff;
-  --color-border: #d1d5db;
-  --color-border-strong: #9ca3af;
+  --color-border: #c1c5cd;
   --color-grid: rgba(107, 114, 128, 0.1);
   --color-reactflow-grid: #c1bfbf;
 
@@ -38,8 +37,7 @@
 
   /* Accents/Borders */
   --color-accent: #00b7ff;
-  --color-border: #444444;
-  --color-border-strong: #666666;
+  --color-border: #656464;
   --color-grid: rgba(255, 255, 255, 0.05);
   --color-reactflow-grid: #ffffff;
 
