@@ -38,10 +38,9 @@
   --popup-close-btn-hover-color: #717479;
   --popup-backdrop-color: rgba(255, 255, 255, 0.1);
 
-  /* Cursors — white arrow / black hand */
+  /* Cursors */
   --cursor-default: url('data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24"><path fill="%23fff" stroke="%23000" stroke-width="1.5" d="M3 3l7.5 16.5 2.5-7 7-2.5L3 3z"/></svg>');
-  --cursor-pointer: url('data:image/svg+xml;utf8,<svg fill="%231A1A1A" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" width="24px" height="24px"><path d="M48.294,26.119c-3.184-0.565-3.855,2.001-3.855,2.001s0.126-3.404-3.276-4.154c-2.987-0.659-3.98,2.318-3.98,2.318s0.205-3.681-3.206-3.861c-3.131-0.165-3.501,2.845-3.501,2.845c-0.066-0.481-1.906-16.398-1.995-16.999c-0.242-1.62-1.767-2.334-2.716-2.349c-1.225-0.019-2.573,1.235-2.554,2.616c0.004,0.339-0.039,20.824-0.057,29.256C22.123,35.478,20.121,32.04,17,31c-3-1-5,1-5,1c6,11,9.017,21.024,18,25l-0.13-0.368c0.089,0.059,0.17,0.12,0.261,0.178l17.704-3.404c0,0,1.626-3.228,2.482-7.616c0.871-4.467,1.087-9.023,1.036-11.186C51.273,31.264,50.976,26.595,48.294,26.119z"/></svg>');
-  --cursor-text: url('data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" width="14" height="18" viewBox="0 0 14 18"><rect x="3" y="0" width="8" height="2.5" rx="1.25" fill="%23000"/><rect x="4" y="0.5" width="6" height="1.5" rx="0.75" fill="%23fff"/><rect x="6.25" y="2" width="1.5" height="14" rx="0.5" fill="%23000"/><rect x="6.6" y="2" width="0.8" height="14" fill="%23fff"/><rect x="3" y="15.5" width="8" height="2.5" rx="1.25" fill="%23000"/><rect x="4" y="16" width="6" height="1.5" rx="0.75" fill="%23fff"/></svg>');
+  --cursor-text: url("/I-beam.png");
 }
 
 /* Dark Theme */
@@ -85,10 +84,9 @@
   --popup-close-btn-hover-color: #777575;
   --popup-backdrop-color: rgba(0, 0, 0, 0.5);
 
-  /* Cursors — black arrow / white hand */
+  /* Cursors */
   --cursor-default: url('data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24"><path fill="%23000" stroke="%23fff" stroke-width="1.5" d="M3 3l7.5 16.5 2.5-7 7-2.5L3 3z"/></svg>');
-  --cursor-pointer: url('data:image/svg+xml;utf8,<svg fill="%23ffffff" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" width="24px" height="24px"><path d="M48.294,26.119c-3.184-0.565-3.855,2.001-3.855,2.001s0.126-3.404-3.276-4.154c-2.987-0.659-3.98,2.318-3.98,2.318s0.205-3.681-3.206-3.861c-3.131-0.165-3.501,2.845-3.501,2.845c-0.066-0.481-1.906-16.398-1.995-16.999c-0.242-1.62-1.767-2.334-2.716-2.349c-1.225-0.019-2.573,1.235-2.554,2.616c0.004,0.339-0.039,20.824-0.057,29.256C22.123,35.478,20.121,32.04,17,31c-3-1-5,1-5,1c6,11,9.017,21.024,18,25l-0.13-0.368c0.089,0.059,0.17,0.12,0.261,0.178l17.704-3.404c0,0,1.626-3.228,2.482-7.616c0.871-4.467,1.087-9.023,1.036-11.186C51.273,31.264,50.976,26.595,48.294,26.119z"/></svg>');
-  --cursor-text: url('data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" width="14" height="18" viewBox="0 0 14 18"><rect x="3" y="0" width="8" height="2.5" rx="1.25" fill="%23fff"/><rect x="4" y="0.5" width="6" height="1.5" rx="0.75" fill="%23000"/><rect x="6.25" y="2" width="1.5" height="14" rx="0.5" fill="%23fff"/><rect x="6.6" y="2" width="0.8" height="14" fill="%23000"/><rect x="3" y="15.5" width="8" height="2.5" rx="1.25" fill="%23fff"/><rect x="4" y="16" width="6" height="1.5" rx="0.75" fill="%23000"/></svg>');
+  --cursor-text: url("/I-beam-white.png");
 }
 
 .monaco-highlight-line {
@@ -106,6 +104,24 @@
   cursor:
     var(--cursor-default) 0 0,
     default !important;
+}
+
+.monaco-editor .decorationsOverviewRuler,
+.monaco-editor .scrollbar,
+.monaco-editor .scrollbar * {
+  cursor:
+    var(--cursor-default) 0 0,
+    default !important;
+}
+
+.monaco-editor,
+.monaco-editor *,
+.monaco-editor .view-lines,
+.monaco-editor .cursors-layer,
+.monaco-editor .inputarea {
+  cursor:
+    var(--cursor-text) 7 9,
+    text !important;
 }
 
 .react-flow__node,
@@ -127,24 +143,5 @@ label,
 [draggable="true"],
 .cursor-pointer,
 .cursor-grab {
-  cursor:
-    var(--cursor-pointer) 6 0,
-    pointer !important;
-}
-
-.monaco-editor,
-.monaco-editor *,
-.monaco-editor .view-lines,
-.monaco-editor .cursors-layer,
-.monaco-editor .inputarea {
-  cursor:
-    var(--cursor-text) 7 9,
-    text !important;
-}
-
-.react-flow__node.dragging,
-.react-flow__node.dragging * {
-  cursor:
-    var(--cursor-pointer) 6 0,
-    grabbing !important;
+  cursor: pointer !important;
 }
