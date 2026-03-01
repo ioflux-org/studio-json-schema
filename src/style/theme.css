@@ -3,13 +3,11 @@
   --color-bg-base: #ffffff;
   --color-bg-surface: #ffffff;
   --color-bg-subtle: #eeeeee;
-  --color-bg-inverse: #3d85c6;
   --color-overlay: rgba(255, 255, 255, 0.1);
 
   /* Text */
   --color-text-primary: #111111;
   --color-text-secondary: #6b7280;
-  --color-text-inverse: #ffffff;
   --color-brand: #1e3a8a;
 
   /* Accents/Borders */
@@ -31,13 +29,11 @@
   --color-bg-base: #3d3d3d;
   --color-bg-surface: #1a1a1a;
   --color-bg-subtle: #242424;
-  --color-bg-inverse: #3d3d3d;
   --color-overlay: rgba(0, 0, 0, 0.5);
 
   /* Text */
   --color-text-primary: #f0f0f0;
   --color-text-secondary: #ffffff;
-  --color-text-inverse: #ffffff;
   --color-brand: #ffffff;
 
   /* Accents/Borders */
