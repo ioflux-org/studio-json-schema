@@ -1,51 +1,42 @@
 name: "Feature Request"
-description: "Suggest an idea or improvement for this project"
+description: "Suggest an idea or improvement"
 title: "[FEATURE]: "
 labels: ["enhancement"]
-assignees: []
 
 body:
   - type: textarea
-    id: problem
+    id: feature-content
     attributes:
-      label: "Is your feature request related to a problem?"
-      description: "Please describe the problem you're facing."
-      placeholder: "Ex. I'm always frustrated when..."
+      label: "Feature Details"
+      description: "Replace the text under each heading with your own details."
+      value: |
+        ### Problem Statement
+        [Describe the problem you're facing. Ex. I'm always frustrated when...]
+
+        ### Proposed Solution
+        [A clear and concise description of what you want to happen.]
+
+        ### Demo Video/Screenshots
+        [Paste Demo video / Screenshots here (if Relevant)]
+
+        ### Alternatives Considered
+        [A clear and concise description of any alternative solutions or features you've considered.]
+
+        ### Additional Context
+        [Add any other context or screenshots about the feature request here.]
     validations:
       required: true
 
-  - type: textarea
-    id: solution
-    attributes:
-      label: "Describe the solution you'd like"
-      description: "A clear and concise description of what you want to happen."
-    validations:
-      required: true
-
-  - type: textarea
-    id: alternatives
-    attributes:
-      label: "Describe alternatives you've considered"
-      description: "A clear and concise description of any alternative solutions or features you've considered."
-
-  - type: textarea
-    id: context
-    attributes:
-      label: "Additional Context"
-      description: "Add any other context or screenshots about the feature request here."
-
   - type: checkboxes
-    id: working
-    attributes:
-      label: "Are you going to work on this?"
-      options:
-        - label: "Yes, I'd like to submit a PR."
-        - label: "No, I'm just suggesting it."
-
-  - type: checkboxes
-    id: beginner-friendly
+    id: good-first-issue
     attributes:
       label: "Good First Issue"
-      description: "Check this box if you think this feature is a good starting point for a new contributor."
       options:
-        - label: "I believe this is a beginner-friendly issue."
+        - label: "I believe this issue is a good first issue for new contributors."
+
+  - type: checkboxes
+    id: work
+    attributes:
+      label: "Contribution"
+      options:
+        - label: "I am willing to work on this feature."
