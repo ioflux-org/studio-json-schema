@@ -215,7 +215,14 @@ const MonacoEditor = () => {
   }, [schemaFormat]);
 
   useEffect(() => {
-    if (!schemaText.trim()) return;
+  if (schemaText.trim().length === 0) {
+    setSchemaValidation({
+      status: "success",
+      message: "",
+    });
+    setCompiledSchema(null);
+    return;
+  }
 
     const timeout = setTimeout(async () => {
       try {
@@ -300,19 +307,21 @@ const MonacoEditor = () => {
           ref={editorPanelRef}
           collapsible
         >
-          <Editor
-            height="90%"
-            width="100%"
-            language={schemaFormat}
-            value={schemaText}
-            theme={theme === "light" ? "vs-light" : "vs-dark"}
-            options={{
-              minimap: { enabled: false },
-              occurrencesHighlight: "off",
-            }}
-            onChange={(value) => setSchemaText(value ?? "")}
-            onMount={handleEditorDidMount}
-          />
+       <Editor
+  height="90%"
+  width="100%"
+  language={schemaFormat}
+  value={schemaText}
+  theme={theme === "light" ? "vs-light" : "vs-dark"}
+  options={{
+    minimap: { enabled: false },
+    occurrencesHighlight: "off",
+    placeholder: "Paste your JSON Schema here to visualize the graph..."
+  }}
+  onChange={(value) => setSchemaText(value ?? "")}
+  onMount={handleEditorDidMount}
+/>
+
           <div className="flex-1 p-2 bg-[var(--validation-bg-color)] text-sm overflow-y-auto">
             <div className={VALIDATION_UI[schemaValidation.status].className}>
               {schemaValidation.message}
