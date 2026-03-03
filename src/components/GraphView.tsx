@@ -392,7 +392,9 @@ const GraphView = ({
           </button>
         </div>
       )}
-      <div className="absolute bottom-[10px] left-[50px] flex items-center gap-2">
+      {/* Hide search bar when node details popup is open */}
+      {!selectedNode && (
+        <div className="absolute bottom-[10px] left-[50px] flex items-center gap-2">
         <div className="relative">
           <input
             type="text"
@@ -443,7 +445,8 @@ const GraphView = ({
             </button>
           </div>
         )}
-      </div>
+        </div>
+      )}
     </div>
   );
 };
