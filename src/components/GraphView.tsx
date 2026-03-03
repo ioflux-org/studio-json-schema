@@ -392,7 +392,7 @@ const GraphView = ({
           </button>
         </div>
       )}
-      {/* Hide search bar when node details popup is open */}
+      
       {!selectedNode && (
         <div className="absolute bottom-[10px] left-[50px] flex items-center gap-2">
         <div className="relative">
