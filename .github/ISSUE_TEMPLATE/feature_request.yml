@@ -1,0 +1,42 @@
+name: "Feature Request"
+description: "Suggest an idea or improvement"
+title: "Feat: "
+labels: ["enhancement"]
+
+body:
+  - type: textarea
+    id: feature-content
+    attributes:
+      label: "Feature Details"
+      description: "Replace the text under each heading with your own details."
+      value: |
+        ### Problem Statement
+        [Describe the problem you're facing. Ex. I'm always frustrated when...]
+
+        ### Proposed Solution
+        [A clear and concise description of what you want to happen.]
+
+        ### Demo Video/Screenshots
+        [Paste Demo video / Screenshots here (if Relevant)]
+
+        ### Alternatives Considered
+        [A clear and concise description of any alternative solutions or features you've considered.]
+
+        ### Additional Context
+        [Add any other context or screenshots about the feature request here.]
+    validations:
+      required: true
+
+  - type: checkboxes
+    id: good-first-issue
+    attributes:
+      label: "Good First Issue"
+      options:
+        - label: "I believe this issue is a good first issue for new contributors."
+
+  - type: checkboxes
+    id: work
+    attributes:
+      label: "Contribution"
+      options:
+        - label: "I am willing to work on this feature."
