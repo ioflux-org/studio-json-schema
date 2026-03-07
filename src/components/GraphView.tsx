@@ -369,32 +369,7 @@ const GraphView = ({
         <Controls />
       </ReactFlow>
 
-      {selectedNode && (
-        <NodeDetailsPopup
-          nodeId={selectedNode.id}
-          data={selectedNode.data}
-          onClose={() => {
-            setSelectedNode(null);
-          }}
-        />
-      )}
-      {/*Error Message */}
-      {errorMessage && showErrorPopup && (
-        <div className="absolute bottom-[50px] left-[100px] flex gap-2 px-2 py-1 bg-red-500 text-white rounded-md shadow-lg">
-          <div className="text-sm font-medium tracking-wide font-roboto">
-            {errorMessage}
-          </div>
-          <button
-            className="cursor-pointer"
-            onClick={() => setShowErrorPopup(false)}
-          >
-            <CgClose size={18} />
-          </button>
-        </div>
-      )}
-      
-      {!selectedNode && (
-        <div className="absolute bottom-[10px] left-[50px] flex items-center gap-2">
+      <div className="absolute bottom-[10px] left-[50px] flex items-center gap-2">
         <div className="relative">
           <input
             type="text"
@@ -445,7 +420,30 @@ const GraphView = ({
             </button>
           </div>
         )}
+      </div>
+
+      {errorMessage && showErrorPopup && (
+        <div className="absolute bottom-[50px] left-[100px] flex gap-2 px-2 py-1 bg-red-500 text-white rounded-md shadow-lg z-50">
+          <div className="text-sm font-medium tracking-wide font-roboto">
+            {errorMessage}
+          </div>
+          <button
+            className="cursor-pointer"
+            onClick={() => setShowErrorPopup(false)}
+          >
+            <CgClose size={18} />
+          </button>
         </div>
+      )}
+
+      {selectedNode && (
+        <NodeDetailsPopup
+          nodeId={selectedNode.id}
+          data={selectedNode.data}
+          onClose={() => {
+            setSelectedNode(null);
+          }}
+        />
       )}
     </div>
   );
