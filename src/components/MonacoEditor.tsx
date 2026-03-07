@@ -282,9 +282,8 @@ const MonacoEditor = () => {
   return (
     <div
       ref={containerRef}
-      className={`h-[92vh] flex flex-col ${
-        isAnimating ? "panel-animating" : ""
-      }`}
+      className={`h-[92vh] flex flex-col ${isAnimating ? "panel-animating" : ""
+        }`}
     >
       {isFullScreen && (
         <div className="w-full px-1 bg-[var(--view-bg-color)] justify-items-end">
@@ -307,12 +306,17 @@ const MonacoEditor = () => {
             value={schemaText}
             theme={theme === "light" ? "vs-light" : "vs-dark"}
             options={{
+
               minimap: { enabled: false },
               occurrencesHighlight: "off",
+              placeholder: "Paste your JSON Schema here to visualize the graph..."
+              
             }}
+
             onChange={(value) => setSchemaText(value ?? "")}
             onMount={handleEditorDidMount}
           />
+
           <div className="flex-1 p-2 bg-[var(--validation-bg-color)] text-sm overflow-y-auto">
             <div className={VALIDATION_UI[schemaValidation.status].className}>
               {schemaValidation.message}
