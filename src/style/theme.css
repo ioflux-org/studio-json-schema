@@ -1,5 +1,4 @@
-/*light theme */
-[data-theme="light"] {
+﻿[data-theme="light"] {
   /* Backgrounds */
   --bg-color: #ffffff;
   --node-bg-color: #ffffff;
@@ -28,6 +27,7 @@
 
   /* Monaco Editor Highlight */
   --monaco-highlight-bg: rgba(255, 255, 0, 0.3);
+
   /* Popup */
   --popup-bg-color: #ffffff;
   --popup-text-color: #111111;
@@ -68,6 +68,7 @@
 
   /* Monaco Editor Highlight */
   --monaco-highlight-bg: rgba(255, 255, 0, 0.1);
+
   /* Popup */
   --popup-bg-color: #2d2d2d;
   --popup-text-color: #f0f0f0;
@@ -82,7 +83,11 @@
   background-color: var(--monaco-highlight-bg);
   width: 100% !important;
 }
-/* Smooth transition for editor panel toggle � only when triggered by button */
+/* Smooth transition for editor panel toggle - only when triggered by button */
 .panel-animating [data-panel] {
-    transition: flex-basis 300ms ease, flex-grow 300ms ease;
+  transition: flex-basis 300ms ease, flex-grow 300ms ease;
+}
+
+.react-flow__pane {
+  cursor: default !important;
 }
