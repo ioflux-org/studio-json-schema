@@ -26,6 +26,7 @@ import EditorToggleButton from "./EditorToggleButton";
 import { parseSchema } from "../utils/parseSchema";
 import YAML from "js-yaml";
 import type { JSONSchema } from "@apidevtools/json-schema-ref-parser";
+import { Tooltip } from "react-tooltip";
 
 type ValidationStatus = {
   status: "success" | "warning" | "error";
@@ -256,13 +257,13 @@ const MonacoEditor = () => {
         setSchemaValidation(
           !dialect && typeof parsedSchema !== "boolean"
             ? {
-                status: "warning",
-                message: VALIDATION_UI["warning"].message,
-              }
+              status: "warning",
+              message: VALIDATION_UI["warning"].message,
+            }
             : {
-                status: "success",
-                message: VALIDATION_UI["success"].message,
-              }
+              status: "success",
+              message: VALIDATION_UI["success"].message,
+            }
         );
 
         saveSchemaJSON(SESSION_SCHEMA_KEY, copy);
@@ -282,9 +283,8 @@ const MonacoEditor = () => {
   return (
     <div
       ref={containerRef}
-      className={`h-[92vh] flex flex-col ${
-        isAnimating ? "panel-animating" : ""
-      }`}
+      className={`h-[92vh] flex flex-col ${isAnimating ? "panel-animating" : ""
+        }`}
     >
       {isFullScreen && (
         <div className="w-full px-1 bg-[var(--view-bg-color)] justify-items-end">
@@ -300,22 +300,38 @@ const MonacoEditor = () => {
           ref={editorPanelRef}
           collapsible
         >
-          <Editor
-            height="90%"
-            width="100%"
-            language={schemaFormat}
-            value={schemaText}
-            theme={theme === "light" ? "vs-light" : "vs-dark"}
-            options={{
-              minimap: { enabled: false },
-              occurrencesHighlight: "off",
-            }}
-            onChange={(value) => setSchemaText(value ?? "")}
-            onMount={handleEditorDidMount}
-          />
-          <div className="flex-1 p-2 bg-[var(--validation-bg-color)] text-sm overflow-y-auto">
-            <div className={VALIDATION_UI[schemaValidation.status].className}>
+          <div className="flex-1 min-h-0 flex">
+            <Editor
+              height="100%"
+              width="100%"
+              language={schemaFormat}
+              value={schemaText}
+              theme={theme === "light" ? "vs-light" : "vs-dark"}
+              options={{
+                minimap: { enabled: false },
+                occurrencesHighlight: "off",
+              }}
+              onChange={(value) => setSchemaText(value ?? "")}
+              onMount={handleEditorDidMount}
+            />
+          </div>
+          <div className="flex items-center justify-between px-2 py-1 bg-[var(--validation-bg-color)] text-xs border-t border-[var(--popup-border-color)] shrink-0">
+            <div className={`truncate ${VALIDATION_UI[schemaValidation.status].className}`}>
               {schemaValidation.message}
+            </div>
+            <div className="flex items-center flex-shrink-0 ml-2">
+              <img
+                src="trust-badge.svg"
+                alt="Local-only processing"
+                className="w-5 h-5 opacity-80 hover:opacity-100 transition-opacity"
+                draggable="false"
+                data-tooltip-id="local-only-tooltip"
+              />
+              <Tooltip
+                id="local-only-tooltip"
+                content="Your data never leaves your device. All processing happens locally."
+                style={{ fontSize: "10px", zIndex: 100 }}
+              />
             </div>
           </div>
         </Panel>

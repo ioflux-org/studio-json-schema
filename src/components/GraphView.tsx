@@ -19,6 +19,8 @@ import {
   Position,
   BackgroundVariant,
   useReactFlow,
+  MiniMap,
+  type MiniMapNodeProps,
   type NodeMouseHandler,
 } from "@xyflow/react";
 
@@ -43,13 +45,50 @@ const NODE_WIDTH = 172;
 const NODE_HEIGHT = 36;
 const HORIZONTAL_GAP = 150;
 
+const MinimapCustomNode = ({ x, y, width, height, color, data, selected }: MiniMapNodeProps & { data?: any }) => {
+  const { theme } = useContext(AppContext);
+  const isDark = theme === "dark";
+
+  const bg = isDark ? "black" : "#ffffff";
+  const borderColor = color || (isDark ? "#444" : "#ccc");
+  const headerBg = color || borderColor;
+  const textColor = isDark ? "#ffffff" : "#000000";
+
+  if (data?.isBooleanNode) {
+    return (
+      <g transform={`translate(${x}, ${y})`}>
+        <rect width={width} height={height} fill={headerBg} fillOpacity={0.5} stroke={selected ? "var(--node-key-color)" : borderColor} strokeWidth={selected ? 6 : 4} rx={16} />
+      </g>
+    );
+  }
+
+  const rowCount = Math.max(0, Math.floor((height - 30) / 26));
+
+  return (
+    <g transform={`translate(${x}, ${y})`}>
+      <rect width={width} height={height} fill={bg} stroke={selected ? "var(--node-key-color)" : borderColor} strokeWidth={selected ? 4 : 2} rx={4} />
+
+      <path d={`M 0 4 Q 0 0 4 0 L ${width - 4} 0 Q ${width} 0 ${width} 4 L ${width} 26 L 0 26 Z`} fill={headerBg} fillOpacity={0.3} />
+      <line x1={0} y1={26} x2={width} y2={26} stroke={borderColor} strokeWidth={1} />
+
+      {height > 30 && Array.from({ length: rowCount }).map((_, i) => (
+        <g key={i} transform={`translate(0, ${30 + i * 26})`}>
+          <rect x={4} y={2} width={width - 8} height={22} fill={borderColor} fillOpacity={0.1} rx={2} />
+          <rect x={8} y={9} width={30 + (i % 3) * 10} height={8} fill={borderColor} rx={2} />
+          <rect x={width / 2} y={9} width={20 + (i % 4) * 15} height={8} fill={textColor} fillOpacity={0.2} rx={2} />
+        </g>
+      ))}
+    </g>
+  );
+};
+
 const GraphView = ({
   compiledSchema,
 }: {
   compiledSchema: CompiledSchema | null;
 }) => {
   const { setCenter, getZoom, fitView } = useReactFlow();
-  const { selectedNode, setSelectedNode } = useContext(AppContext);
+  const { theme, selectedNode, setSelectedNode, showMinimap } = useContext(AppContext);
   const containerRef = useRef<HTMLDivElement>(null);
 
   const [nodes, setNodes, onNodeChange] = useNodesState<GraphNode>([]);
@@ -387,6 +426,21 @@ const GraphView = ({
           color="var(--reactflow-bg-sub-pattern-color)"
         />
         <Controls />
+        {showMinimap && (
+          <MiniMap
+            nodeComponent={MinimapCustomNode as any}
+            pannable
+            zoomable
+            style={{
+              backgroundColor: theme === "dark" ? "#404040" : "var(--bg-color)",
+              borderColor: theme === "dark" ? "gray" : "var(--node-border-color)",
+              borderWidth: "1px",
+              borderStyle: "solid"
+            }}
+            maskColor={theme === "dark" ? "rgba(0, 0, 0, 0.4)" : "var(--minimap-mask-color, rgba(0, 0, 0, 0.1))"}
+            className="rounded-md overflow-hidden"
+          />
+        )}
       </ReactFlow>
 
       {selectedNode && (
