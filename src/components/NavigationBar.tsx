@@ -34,6 +34,7 @@ const NavigationBar = () => {
             onChange={(e) => changeSchemaFormat(e.target.value as SchemaFormat)}
             className="text-sm border rounded-sm bg-[var(--bg-color)] text-[var(--dropdown-text-color)] border-[var(--navigation-text-color)] cursor-pointer"
             value={schemaFormat}
+            aria-label="Select schema format"
           >
             <option value="json">JSON</option>
             <option value="yaml">YAML</option>
@@ -44,6 +45,7 @@ const NavigationBar = () => {
             className="text-xl cursor-pointer"
             onClick={toggleTheme}
             data-tooltip-id="toggle-theme"
+            aria-label={theme === 'light' ? 'Switch to dark mode' : 'Switch to light mode'}
           >
             {theme === "light" ? (
               <BsSun className="text-[var(--navigation-text-color)]" />
@@ -64,6 +66,7 @@ const NavigationBar = () => {
             rel="noopener noreferrer"
             className="text-xl"
             data-tooltip-id="github"
+            aria-label="View project on GitHub"
           >
             <BsGithub className="text-[var(--navigation-text-color)]" />
             <Tooltip
@@ -80,6 +83,7 @@ const NavigationBar = () => {
             rel="noopener noreferrer"
             className="text-xl"
             data-tooltip-id="learn-keywords"
+            aria-label="View documentation"
           >
             <BsBook className="text-[var(--navigation-text-color)]" />
             <Tooltip
@@ -90,7 +94,7 @@ const NavigationBar = () => {
           </a>
         </li>
         <li>
-          <FullscreenToggleButton />
+          <FullscreenToggleButton aria-label="Toggle fullscreen"/>
         </li>
       </ul>
     </nav>

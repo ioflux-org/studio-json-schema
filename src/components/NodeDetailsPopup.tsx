@@ -53,6 +53,7 @@ const NodeDetailsPopup = ({
         <button
           className="absolute z-50 top-2 right-2 text-[var(--popup-text-color)] hover:text-[var(--popup-close-btn-hover-color)]"
           onClick={onClose}
+          aria-label="Close node details popup"
         >
           <BsX size={24} />
         </button>
