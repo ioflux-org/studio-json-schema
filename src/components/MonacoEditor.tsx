@@ -287,8 +287,8 @@ const MonacoEditor = () => {
       }`}
     >
       {isFullScreen && (
-        <div className="w-full px-1 bg-[var(--view-bg-color)] justify-items-end">
-          <div className="text-[var(--view-text-color)]">
+        <div className="w-full px-1 bg-[var(--color-bg-surface)] justify-items-end">
+          <div className="text-[var(--color-text-secondary)]">
             <FullscreenToggleButton />
           </div>
         </div>
@@ -313,7 +313,7 @@ const MonacoEditor = () => {
             onChange={(value) => setSchemaText(value ?? "")}
             onMount={handleEditorDidMount}
           />
-          <div className="flex-1 p-2 bg-[var(--validation-bg-color)] text-sm overflow-y-auto">
+          <div className="flex-1 p-2 bg-[var(--color-bg-surface)] text-sm overflow-y-auto">
             <div className={VALIDATION_UI[schemaValidation.status].className}>
               {schemaValidation.message}
             </div>
@@ -331,7 +331,7 @@ const MonacoEditor = () => {
 
         <Panel
           minSize={60}
-          className="flex flex-col relative bg-[var(--visualize-bg-color)]"
+          className="flex flex-col relative bg-[var(--color-bg-base)]"
         >
           <SchemaVisualization compiledSchema={compiledSchema} />
         </Panel>
