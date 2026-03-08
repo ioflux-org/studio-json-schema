@@ -405,6 +405,7 @@ const GraphView = ({
             {errorMessage}
           </div>
           <button
+            aria-label="Close error message"
             className="cursor-pointer"
             onClick={() => setShowErrorPopup(false)}
           >
@@ -418,6 +419,7 @@ const GraphView = ({
             type="text"
             maxLength={30}
             placeholder="search node"
+            aria-label="Search node"
             className="outline-none text-[var(--text-color)] border-b-2 border-[var(--text-color)] text-center w-[150px] pr-5"
             value={searchString}
             onChange={handleChange}
@@ -425,6 +427,7 @@ const GraphView = ({
 
           {searchString && (
             <button
+              aria-label="Clear search"
               onClick={() => {
                 setSearchString("");
                 setNodes((nds) => nds.map((n) => ({ ...n, selected: false })));
@@ -440,6 +443,7 @@ const GraphView = ({
         {matchCount > 1 && (
           <div className="flex items-center gap-1 bg-[var(--node-bg-color)] px-2 py-1 rounded border border-[var(--text-color)] opacity-80">
             <button
+              aria-label="Previous match"
               onClick={() => navigateMatch("prev")}
               className="hover:bg-[var(--text-color)] hover:bg-opacity-20 rounded p-1 transition-colors"
               title="Previous match"
@@ -455,6 +459,7 @@ const GraphView = ({
             </span>
 
             <button
+              aria-label="Next match"
               onClick={() => navigateMatch("next")}
               className="hover:bg-[var(--text-color)] hover:bg-opacity-20 rounded p-1 transition-colors"
               title="Next match"

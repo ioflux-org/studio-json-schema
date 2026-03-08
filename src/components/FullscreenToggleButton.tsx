@@ -7,6 +7,7 @@ const FullscreenToggleButton = () => {
 
   return (
     <button
+      aria-label="Toggle fullscreen"
       onClick={toggleFullScreen}
       className="cursor-pointer"
       style={{ color: "var(--navigation-text-color)" }}

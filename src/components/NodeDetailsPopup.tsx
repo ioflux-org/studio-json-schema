@@ -51,6 +51,7 @@ const NodeDetailsPopup = ({
         onClick={(e) => e.stopPropagation()}
       >
         <button
+          aria-label="Close popup"
           className="absolute z-50 top-2 right-2 text-[var(--popup-text-color)] hover:text-[var(--popup-close-btn-hover-color)]"
           onClick={onClose}
         >
@@ -64,6 +65,7 @@ const NodeDetailsPopup = ({
                 <div className="font-mono text-xs text-[var(--text-color)] whitespace-nowrap">{extractPath(nodeId)}</div>
               </div>
               <button
+                aria-label="Copy path to clipboard"
                 onClick={copyPathToClipboard}
                 className="ml-2 p-1.5 text-[var(--navigation-text-color)] hover:text-[var(--text-color)] hover:bg-[var(--validation-bg-color)] rounded transition-colors flex-shrink-0"
                 title="Copy path to clipboard"

@@ -31,6 +31,7 @@ const NavigationBar = () => {
       <ul className="flex gap-5 mr-10">
         <li>
           <select
+            aria-label="Schema format"
             onChange={(e) => changeSchemaFormat(e.target.value as SchemaFormat)}
             className="text-sm border rounded-sm bg-[var(--bg-color)] text-[var(--dropdown-text-color)] border-[var(--navigation-text-color)] cursor-pointer"
             value={schemaFormat}
@@ -41,6 +42,7 @@ const NavigationBar = () => {
         </li>
         <li>
           <button
+            aria-label={theme === "light" ? "Switch to dark mode" : "Switch to light mode"}
             className="text-xl cursor-pointer"
             onClick={toggleTheme}
             data-tooltip-id="toggle-theme"
@@ -59,6 +61,7 @@ const NavigationBar = () => {
         </li>
         <li>
           <a
+            aria-label="Star on Github"
             href="https://github.com/jagpreetrahi/visualize-json-schema"
             target="_blank"
             rel="noopener noreferrer"
@@ -75,6 +78,7 @@ const NavigationBar = () => {
         </li>
         <li>
           <a
+            aria-label="Open documentation"
             href="https://github.com/jagpreetrahi/visualize-json-schema?tab=readme-ov-file#json-schema-visualizer"
             target="_blank"
             rel="noopener noreferrer"
