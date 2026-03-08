@@ -5,12 +5,12 @@ const BottomBar = () => {
     <div className="h-[5vh] bg-[var(--bottom-bg-color)]  px-4 py-1.5 text-[var(--bottom-text-color)]">
       <div className="flex flex-col md:flex-row">
         <div className="w-full">
-          Copyright © 2025 visualize-json-schema Authors.
+          Copyright © {new Date().getFullYear()} json-schema-studio Authors.
         </div>
         <ul className="flex gap-4">
           <li>
             <a
-              href="https://github.com/jagpreetrahi/visualize-json-schema"
+              href="https://github.com/ioflux-org/studio-json-schema"
               target="_blank"
               rel="noopener noreferrer"
               className="flex items-center gap-2 px-1"
