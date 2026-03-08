@@ -102,7 +102,7 @@ const CustomNode = ({ data, id, selected }: { data: RFNodeData; id: string; sele
                         rowRefs.current[`${id}-${item}`] = el;
                       }}
                       key={index}
-                      className="px-2 py-[2px] bg-[var(--color-bg-base)]"
+                      className="px-2 py-[2px] bg-[var(--color-bg-surface-strong)]"
                       style={{ border: `1px solid ${data.nodeStyle.color}30` }}
                     >
                       {item}
