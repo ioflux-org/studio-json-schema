@@ -297,6 +297,8 @@ const GraphView = ({
         setMatchedNodes([]);
         setCurrentMatchIndex(0);
         setErrorMessage("");
+        setNodes((nds) => nds.map((n) => ({ ...n, selected: false })));
+        fitView({ duration: 800, padding: 0.05 });
         return;
       }
 
@@ -332,10 +334,30 @@ const GraphView = ({
     }, 300);
 
     return () => clearTimeout(timeout);
-  }, [searchString, nodes]);
+  }, [searchString]);
+
+  const handleKeyDown = useCallback(
+    (e: React.KeyboardEvent<HTMLDivElement>) => {
+      if (matchCount <= 1) return;
+
+      if (e.key === "ArrowRight" || e.key === "Enter") {
+        e.preventDefault();
+        navigateMatch("next");
+      } else if (e.key === "ArrowLeft") {
+        e.preventDefault();
+        navigateMatch("prev");
+      }
+    },
+    [matchCount, navigateMatch]
+  );
 
   return (
-    <div ref={containerRef} className="relative w-full h-full">
+    <div
+      ref={containerRef}
+      tabIndex={0}
+      onKeyDown={handleKeyDown}
+      className="relative w-full h-full"
+    >
       <ReactFlow
         nodes={nodes}
         edges={animatedEdges}
