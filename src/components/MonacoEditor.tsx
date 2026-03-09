@@ -25,6 +25,7 @@ import FullscreenToggleButton from "./FullscreenToggleButton";
 import EditorToggleButton from "./EditorToggleButton";
 import { parseSchema } from "../utils/parseSchema";
 import YAML from "js-yaml";
+import { parseDocument, isNode, type Node } from "yaml";
 import type { JSONSchema } from "@apidevtools/json-schema-ref-parser";
 
 type ValidationStatus = {
@@ -167,14 +168,47 @@ const MonacoEditor = () => {
         return /^\d+$/.test(decoded) ? parseInt(decoded, 10) : decoded;
       });
 
-    const tree = parseTree(text);
-    if (!tree) return;
+    let offset = -1;
+    let length = 0;
 
-    const node = findNodeAtLocation(tree, path);
+    if (schemaFormat === "yaml") {
+      const doc = parseDocument(text);
+      if (doc) {
+        let current: any = doc.contents;
+        for (const segment of path) {
+          if (current && typeof current === 'object') {
+            if ('get' in current) {
+              current = current.get(segment, true);
+            } else {
+              current = current[segment];
+            }
+          } else {
+            current = undefined;
+            break;
+          }
+        }
+        if (isNode(current as Node)) {
+          const range = (current as Node).range;
+          if (range) {
+            offset = range[0];
+            length = range[1] - range[0];
+          }
+        }
+      }
+    } else {
+      const tree = parseTree(text);
+      if (tree) {
+        const node = findNodeAtLocation(tree, path);
+        if (node) {
+          offset = node.offset;
+          length = node.length;
+        }
+      }
+    }
 
-    if (node) {
-      const startPos = model.getPositionAt(node.offset);
-      const endPos = model.getPositionAt(node.offset + node.length);
+    if (offset !== -1) {
+      const startPos = model.getPositionAt(offset);
+      const endPos = model.getPositionAt(offset + length);
 
       editorRef.current.revealPositionInCenter(startPos);
       editorRef.current.setPosition(startPos);
@@ -256,13 +290,13 @@ const MonacoEditor = () => {
         setSchemaValidation(
           !dialect && typeof parsedSchema !== "boolean"
             ? {
-                status: "warning",
-                message: VALIDATION_UI["warning"].message,
-              }
+              status: "warning",
+              message: VALIDATION_UI["warning"].message,
+            }
             : {
-                status: "success",
-                message: VALIDATION_UI["success"].message,
-              }
+              status: "success",
+              message: VALIDATION_UI["success"].message,
+            }
         );
 
         saveSchemaJSON(SESSION_SCHEMA_KEY, copy);
@@ -282,9 +316,8 @@ const MonacoEditor = () => {
   return (
     <div
       ref={containerRef}
-      className={`h-[92vh] flex flex-col ${
-        isAnimating ? "panel-animating" : ""
-      }`}
+      className={`h-[92vh] flex flex-col ${isAnimating ? "panel-animating" : ""
+        }`}
     >
       {isFullScreen && (
         <div className="w-full px-1 bg-[var(--view-bg-color)] justify-items-end">
