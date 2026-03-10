@@ -25,6 +25,7 @@ import FullscreenToggleButton from "./FullscreenToggleButton";
 import EditorToggleButton from "./EditorToggleButton";
 import { parseSchema } from "../utils/parseSchema";
 import YAML from "js-yaml";
+import { parseDocument, isMap, isSeq, type YAMLMap, type YAMLSeq } from "yaml";
 import type { JSONSchema } from "@apidevtools/json-schema-ref-parser";
 
 type ValidationStatus = {
@@ -145,6 +146,7 @@ const MonacoEditor = () => {
     const model = editorRef.current.getModel();
     if (!model) return;
 
+    // Clear decorations immediately when no node is selected
     if (!selectedNode?.id) {
       const oldDecorations = model
         .getAllDecorations()
@@ -154,53 +156,105 @@ const MonacoEditor = () => {
       return;
     }
 
-    const text = model.getValue();
+    // Micro-delay: allow Monaco to finish updating its internal text model
+    // after a format toggle before we read the text and apply decorations.
+    const timerId = setTimeout(() => {
+      if (!editorRef.current) return;
+      const model = editorRef.current.getModel();
+      if (!model) return;
 
-    const uriParts = selectedNode.id.split("#");
-    const fragment = uriParts.length > 1 ? uriParts[1] : "";
+      const text = model.getValue();
 
-    const path = fragment
-      .split("/")
-      .filter((segment: string) => segment !== "")
-      .map((segment: string) => {
-        const decoded = decodeURIComponent(segment);
-        return /^\d+$/.test(decoded) ? parseInt(decoded, 10) : decoded;
-      });
+      const uriParts = selectedNode.id.split("#");
+      const fragment = uriParts.length > 1 ? uriParts[1] : "";
 
-    const tree = parseTree(text);
-    if (!tree) return;
+      const path = fragment
+        .split("/")
+        .filter((segment: string) => segment !== "")
+        .map((segment: string) => {
+          const decoded = decodeURIComponent(segment);
+          return /^\d+$/.test(decoded) ? parseInt(decoded, 10) : decoded;
+        });
 
-    const node = findNodeAtLocation(tree, path);
+      let offset: number | undefined;
+      let length: number | undefined;
 
-    if (node) {
-      const startPos = model.getPositionAt(node.offset);
-      const endPos = model.getPositionAt(node.offset + node.length);
+      if (schemaFormat === "yaml") {
+        // YAML path: use `yaml` library's parseDocument for position-aware AST
+        const doc = parseDocument(text);
+        if (!doc.contents) return;
 
-      editorRef.current.revealPositionInCenter(startPos);
-      editorRef.current.setPosition(startPos);
-      editorRef.current.focus();
+        // Walk the YAML AST using the JSON Pointer path segments
+        let current: unknown = doc.contents;
+        for (const segment of path) {
+          if (isMap(current)) {
+            const pair = (current as YAMLMap).items.find(
+              (item) => String(item.key) === String(segment)
+            );
+            if (!pair) { current = undefined; break; }
+            current = pair.value;
+          } else if (isSeq(current)) {
+            const index = typeof segment === "number" ? segment : parseInt(String(segment), 10);
+            if (isNaN(index) || index < 0 || index >= (current as YAMLSeq).items.length) {
+              current = undefined;
+              break;
+            }
+            current = (current as YAMLSeq).items[index];
+          } else {
+            current = undefined;
+            break;
+          }
+        }
 
-      const decoration = {
-        range: new (window as any).monaco.Range(
-          startPos.lineNumber,
-          1,
-          endPos.lineNumber,
-          1
-        ),
-        options: {
-          isWholeLine: true,
-          className: "monaco-highlight-line",
-        },
-      };
+        if (current && typeof current === "object" && "range" in (current as any)) {
+          const range = (current as any).range as [number, number, number];
+          offset = range[0];
+          length = range[1] - range[0];
+        }
+      } else {
+        // JSON path: existing logic using jsonc-parser
+        const tree = parseTree(text);
+        if (!tree) return;
 
-      const oldDecorations = model
-        .getAllDecorations()
-        .filter((d: any) => d.options.className === "monaco-highlight-line")
-        .map((d: any) => d.id);
+        const node = findNodeAtLocation(tree, path);
+        if (node) {
+          offset = node.offset;
+          length = node.length;
+        }
+      }
 
-      model.deltaDecorations(oldDecorations, [decoration]);
-    }
-  }, [selectedNode?.id]);
+      if (offset !== undefined && length !== undefined) {
+        const startPos = model.getPositionAt(offset);
+        const endPos = model.getPositionAt(offset + length);
+
+        editorRef.current!.revealPositionInCenter(startPos);
+        editorRef.current!.setPosition(startPos);
+        editorRef.current!.focus();
+
+        const decoration = {
+          range: new (window as any).monaco.Range(
+            startPos.lineNumber,
+            1,
+            endPos.lineNumber,
+            1
+          ),
+          options: {
+            isWholeLine: true,
+            className: "monaco-highlight-line",
+          },
+        };
+
+        const oldDecorations = model
+          .getAllDecorations()
+          .filter((d: any) => d.options.className === "monaco-highlight-line")
+          .map((d: any) => d.id);
+
+        model.deltaDecorations(oldDecorations, [decoration]);
+      }
+    }, 50);
+
+    return () => clearTimeout(timerId);
+  }, [selectedNode?.id, schemaFormat]);
 
   useEffect(() => {
     saveFormat(SESSION_FORMAT_KEY, schemaFormat);
@@ -256,13 +310,13 @@ const MonacoEditor = () => {
         setSchemaValidation(
           !dialect && typeof parsedSchema !== "boolean"
             ? {
-                status: "warning",
-                message: VALIDATION_UI["warning"].message,
-              }
+              status: "warning",
+              message: VALIDATION_UI["warning"].message,
+            }
             : {
-                status: "success",
-                message: VALIDATION_UI["success"].message,
-              }
+              status: "success",
+              message: VALIDATION_UI["success"].message,
+            }
         );
 
         saveSchemaJSON(SESSION_SCHEMA_KEY, copy);
@@ -282,9 +336,8 @@ const MonacoEditor = () => {
   return (
     <div
       ref={containerRef}
-      className={`h-[92vh] flex flex-col ${
-        isAnimating ? "panel-animating" : ""
-      }`}
+      className={`h-[92vh] flex flex-col ${isAnimating ? "panel-animating" : ""
+        }`}
     >
       {isFullScreen && (
         <div className="w-full px-1 bg-[var(--view-bg-color)] justify-items-end">
