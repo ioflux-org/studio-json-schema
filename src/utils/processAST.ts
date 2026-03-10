@@ -211,7 +211,6 @@ const generateSourceHandles: GenerateSourceHandles = (key, value, nodeId, defs) 
 
 const updateNode: UpdateNode = (node, update) => {
     if (!node) {
-        console.log(`Node not found`)
         return;
     }
 
