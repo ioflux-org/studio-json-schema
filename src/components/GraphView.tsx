@@ -196,7 +196,9 @@ const GraphView = ({
         const isHovered = edge.id === hoveredEdgeId;
         const isSelected = edge.selected;
         const isActive = isHovered || isSelected;
-        const strokeColor = isActive ? edge.data.color : "#666";
+        const strokeColor = isActive
+          ? edge.data.color
+          : "var(--reactflow-edge-default-color)";
         const strokeWidth = isActive ? 2.5 : 1;
         return {
           ...edge,
