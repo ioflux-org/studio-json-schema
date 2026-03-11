@@ -167,14 +167,92 @@ const MonacoEditor = () => {
         return /^\d+$/.test(decoded) ? parseInt(decoded, 10) : decoded;
       });
 
-    const tree = parseTree(text);
-    if (!tree) return;
+    let startPos: ReturnType<typeof model.getPositionAt> | undefined;
+    let endPos: ReturnType<typeof model.getPositionAt> | undefined;
 
-    const node = findNodeAtLocation(tree, path);
+    if (schemaFormat === "yaml") {
+      // For YAML, walk the text lines to find the target key at the correct depth
+      const lines = text.split("\n");
+      const targetDepths: { key: string | number; indent: number }[] = [];
+      let currentIndent = 0;
 
-    if (node) {
-      const startPos = model.getPositionAt(node.offset);
-      const endPos = model.getPositionAt(node.offset + node.length);
+      for (let i = 0; i < path.length; i++) {
+        const segment = path[i];
+        const searchFrom =
+          targetDepths.length > 0
+            ? targetDepths[targetDepths.length - 1].indent
+            : -1;
+
+        for (let lineIdx = 0; lineIdx < lines.length; lineIdx++) {
+          const line = lines[lineIdx];
+          const trimmed = line.trimStart();
+          const indent = line.length - trimmed.length;
+
+          if (indent <= searchFrom && targetDepths.length > 0) continue;
+
+          if (typeof segment === "string") {
+            // Match "key:" at the right indentation level
+            if (
+              trimmed.startsWith(`${segment}:`) ||
+              trimmed.startsWith(`"${segment}":`)
+            ) {
+              if (
+                targetDepths.length === 0 ||
+                indent > targetDepths[targetDepths.length - 1].indent
+              ) {
+                currentIndent = indent;
+                targetDepths.push({ key: segment, indent });
+                if (i === path.length - 1) {
+                  // Found the target — lineIdx is 0-based, Monaco is 1-based
+                  const offset = lines
+                    .slice(0, lineIdx)
+                    .reduce((sum, l) => sum + l.length + 1, 0);
+                  startPos = model.getPositionAt(offset);
+                  endPos = model.getPositionAt(offset + line.length);
+                }
+                break;
+              }
+            }
+          } else if (typeof segment === "number") {
+            // Array item — count "- " entries at the expected indent
+            let arrayIdx = 0;
+            for (let j = lineIdx; j < lines.length; j++) {
+              const arrLine = lines[j];
+              const arrTrimmed = arrLine.trimStart();
+              const arrIndent = arrLine.length - arrTrimmed.length;
+              if (arrIndent < currentIndent && j > lineIdx) break;
+              if (arrTrimmed.startsWith("- ") && arrIndent === currentIndent) {
+                if (arrayIdx === segment) {
+                  targetDepths.push({ key: segment, indent: arrIndent });
+                  if (i === path.length - 1) {
+                    const offset = lines
+                      .slice(0, j)
+                      .reduce((sum, l) => sum + l.length + 1, 0);
+                    startPos = model.getPositionAt(offset);
+                    endPos = model.getPositionAt(offset + arrLine.length);
+                  }
+                  break;
+                }
+                arrayIdx++;
+              }
+            }
+            break;
+          }
+        }
+      }
+    } else {
+      // JSON mode — use jsonc-parser
+      const tree = parseTree(text);
+      if (!tree) return;
+
+      const node = findNodeAtLocation(tree, path);
+      if (node) {
+        startPos = model.getPositionAt(node.offset);
+        endPos = model.getPositionAt(node.offset + node.length);
+      }
+    }
+
+    if (startPos && endPos) {
 
       editorRef.current.revealPositionInCenter(startPos);
       editorRef.current.setPosition(startPos);
@@ -200,7 +278,7 @@ const MonacoEditor = () => {
 
       model.deltaDecorations(oldDecorations, [decoration]);
     }
-  }, [selectedNode?.id]);
+  }, [selectedNode?.id, schemaFormat]);
 
   useEffect(() => {
     saveFormat(SESSION_FORMAT_KEY, schemaFormat);
