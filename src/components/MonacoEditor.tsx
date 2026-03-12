@@ -205,6 +205,10 @@ const MonacoEditor = () => {
   useEffect(() => {
     saveFormat(SESSION_FORMAT_KEY, schemaFormat);
 
+    if (!schemaText.trim()) {
+      return;
+    }
+
     const schemaJSON = loadSchemaJSON(SESSION_SCHEMA_KEY);
 
     setSchemaText(
@@ -215,7 +219,14 @@ const MonacoEditor = () => {
   }, [schemaFormat]);
 
   useEffect(() => {
-    if (!schemaText.trim()) return;
+    if (!schemaText.trim()) {
+      setCompiledSchema(null);
+      setSchemaValidation({
+        status: "error",
+        message: VALIDATION_UI["error"].message + "Schema cannot be empty",
+      });
+      return;
+    }
 
     const timeout = setTimeout(async () => {
       try {

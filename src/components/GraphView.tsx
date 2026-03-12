@@ -213,6 +213,13 @@ const GraphView = ({
 
   useEffect(() => {
     try {
+      if (!compiledSchema) {
+        setNodes([]);
+        setEdges([]);
+        setSelectedNode(null);
+        return;
+      }
+
       const result = generateNodesAndEdges(compiledSchema);
       if (!result) return;
 
