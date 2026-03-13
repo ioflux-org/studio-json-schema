@@ -39,6 +39,8 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
 
   const [selectedNode, setSelectedNode] = useState<SelectedNode | null>(null);
 
+  const [showMinimap, setShowMinimap] = useState(true);
+
   const toggleFullScreen = useCallback(() => {
     const el = containerRef.current;
 
@@ -81,6 +83,8 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
     changeSchemaFormat,
     selectedNode,
     setSelectedNode,
+    showMinimap,
+    setShowMinimap,
   };
 
   return <AppContext.Provider value={value}>{children}</AppContext.Provider>;
