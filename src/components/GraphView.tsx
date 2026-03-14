@@ -51,6 +51,7 @@ const GraphView = ({
   const { setCenter, getZoom, fitView } = useReactFlow();
   const { selectedNode, setSelectedNode } = useContext(AppContext);
   const containerRef = useRef<HTMLDivElement>(null);
+  const userInteractedRef = useRef(false);
 
   const [nodes, setNodes, onNodeChange] = useNodesState<GraphNode>([]);
   const [edges, setEdges, onEdgeChange] = useEdgesState<GraphEdge>([]);
@@ -225,6 +226,7 @@ const GraphView = ({
 
       // important: reset collision flag when schema changes
       setCollisionResolved(false);
+      userInteractedRef.current = false;
     } catch (err) {
       console.error("Error generating visualization graph: ", err);
     }
@@ -275,7 +277,9 @@ const GraphView = ({
     const observer = new ResizeObserver(() => {
       clearTimeout(timeoutId);
       timeoutId = setTimeout(() => {
-        fitView({ duration: 800, padding: 0.05 });
+        if (!userInteractedRef.current) {
+          fitView({ duration: 800, padding: 0.05 });
+        }
       }, 100);
     });
 
@@ -285,7 +289,7 @@ const GraphView = ({
       observer.disconnect();
       clearTimeout(timeoutId);
     };
-  }, []);
+  }, [fitView]);
 
   useEffect(() => {
     const trimmed = searchString.trim();
@@ -315,6 +319,7 @@ const GraphView = ({
         const y = firstNode.position.y + NODE_HEIGHT / 2;
 
         setCenter(x, y, { zoom: Math.max(getZoom(), 1), duration: 500 });
+        userInteractedRef.current = true;
         setNodes((nds) => {
           let changed = false;
           const newNodes = nds.map((n) => {
@@ -362,6 +367,9 @@ const GraphView = ({
         onNodeClick={onNodeClick}
         onNodesChange={onNodeChange}
         onEdgesChange={onEdgeChange}
+        onMoveStart={(e) => {
+          if (e) userInteractedRef.current = true;
+        }}
         deleteKeyCode={null}
         nodeTypes={nodeTypes}
         minZoom={0.05}
@@ -386,7 +394,9 @@ const GraphView = ({
           gap={20}
           color="var(--reactflow-bg-sub-pattern-color)"
         />
-        <Controls />
+        <Controls onFitView={() => {
+          userInteractedRef.current = false;
+        }} />
       </ReactFlow>
 
       {selectedNode && (
@@ -428,6 +438,7 @@ const GraphView = ({
               onClick={() => {
                 setSearchString("");
                 setNodes((nds) => nds.map((n) => ({ ...n, selected: false })));
+                userInteractedRef.current = false;
                 fitView({ duration: 800, padding: 0.05 });
               }}
               className="absolute right-0 top-1/2 -translate-y-1/2 text-[var(--text-color)] cursor-pointer hover:opacity-70"
