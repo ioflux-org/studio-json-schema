@@ -20,6 +20,7 @@ import {
   BackgroundVariant,
   useReactFlow,
   type NodeMouseHandler,
+  PanOnScrollMode,
 } from "@xyflow/react";
 
 import CustomNode from "./CustomReactFlowNode";
@@ -368,6 +369,8 @@ const GraphView = ({
         maxZoom={5}
         onEdgeMouseEnter={(_, edge) => setHoveredEdgeId(edge.id)}
         onEdgeMouseLeave={() => setHoveredEdgeId(null)}
+        panOnScroll={true}
+        panOnScrollMode={PanOnScrollMode.Free}
         onPaneClick={() => {
           setSelectedNode(null);
         }}
