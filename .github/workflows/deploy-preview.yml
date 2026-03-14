@@ -15,6 +15,7 @@ permissions:
 jobs:
   deploy-preview:
     runs-on: ubuntu-latest
+    timeout-minutes: 15
     if: ${{ github.event.workflow_run.conclusion == 'success' }}
     name: Deploy Preview to Cloudflare Pages
     steps:
@@ -27,6 +28,13 @@ jobs:
           path: build
           github-token: ${{ secrets.GITHUB_TOKEN }}
           run-id: ${{ github.event.workflow_run.id }}
+
+      - name: Verify artifact download
+        run: |
+          if [ -z "$(ls -A build)" ]; then
+            echo "Error: Downloaded artifact directory is empty"
+            exit 1
+          fi
 
       - name: Deploy to Cloudflare Pages
         uses: AdrianGonz97/refined-cf-pages-action@v1

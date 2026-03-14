@@ -12,6 +12,7 @@ concurrency:
 jobs:
   build-preview:
     runs-on: ubuntu-latest
+    timeout-minutes: 15
     name: Build Preview Site and Upload Build Artifact
     steps:
       - name: Checkout repository
@@ -20,7 +21,7 @@ jobs:
       - name: Setup Node.js
         uses: actions/setup-node@v4
         with:
-          node-version: lts/*
+          node-version: 20
           cache: npm
 
       - name: Install dependencies
@@ -35,3 +36,4 @@ jobs:
         with:
           name: preview-build
           path: dist
+          if-no-files-found: error
