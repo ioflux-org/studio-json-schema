@@ -5,7 +5,7 @@ import { AppContext, type SchemaFormat } from "../contexts/AppContext";
 import FullscreenToggleButton from "./FullscreenToggleButton";
 
 const NavigationBar = () => {
-  const { theme, toggleTheme, schemaFormat, changeSchemaFormat, isAutoZoomEnabled, toggleAutoZoom } =
+  const { theme, toggleTheme, schemaFormat, changeSchemaFormat } =
     useContext(AppContext);
 
   return (
@@ -29,24 +29,6 @@ const NavigationBar = () => {
       </div>
 
       <ul className="flex gap-5 mr-10">
-        <li className="flex items-center">
-          <button
-            className={`text-xs px-2 py-1 rounded border transition-colors cursor-pointer ${
-              isAutoZoomEnabled 
-                ? "border-green-500 text-green-500 hover:bg-green-500/10" 
-                : "border-red-500 text-red-500 hover:bg-red-500/10"
-            }`}
-            onClick={toggleAutoZoom}
-            data-tooltip-id="toggle-auto-zoom"
-          >
-            Auto Zoom: {isAutoZoomEnabled ? "ON" : "OFF"}
-          </button>
-          <Tooltip
-            id="toggle-auto-zoom"
-            content={isAutoZoomEnabled ? "Disable Auto Zoom on resize" : "Enable Auto Zoom on resize"}
-            style={{ fontSize: "10px" }}
-          />
-        </li>
         <li className="flex items-center">
           <select
             onChange={(e) => changeSchemaFormat(e.target.value as SchemaFormat)}
