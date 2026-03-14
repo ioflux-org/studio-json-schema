@@ -1,0 +1,47 @@
+name: Upload Preview Deployment
+
+on:
+  workflow_run:
+    workflows: ['Build Preview Deployment']
+    types:
+      - completed
+
+permissions:
+  actions: read
+  deployments: write
+  contents: read
+  pull-requests: write
+
+jobs:
+  deploy-preview:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    if: ${{ github.event.workflow_run.conclusion == 'success' }}
+    name: Deploy Preview to Cloudflare Pages
+    steps:
+      # Downloads the build directory from the previous workflow
+      - name: Download build artifact
+        uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4
+        id: preview-build-artifact
+        with:
+          name: preview-build
+          path: build
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+          run-id: ${{ github.event.workflow_run.id }}
+
+      - name: Verify artifact download
+        run: |
+          if [ -z "$(ls -A build)" ]; then
+            echo "Error: Downloaded artifact directory is empty"
+            exit 1
+          fi
+
+      - name: Deploy to Cloudflare Pages
+        uses: AdrianGonz97/refined-cf-pages-action@45ea15c1c69a7bce8ffbb79ba114daa2b52f0cff # v1
+        with:
+          apiToken: ${{ secrets.CF_API_TOKEN }}
+          accountId: ${{ secrets.CF_ACCOUNT_ID }}
+          githubToken: ${{ secrets.GITHUB_TOKEN }}
+          projectName: ${{ vars.CF_PROJECT_NAME }}
+          directory: ${{ steps.preview-build-artifact.outputs.download-path }}
+          deploymentName: Preview
