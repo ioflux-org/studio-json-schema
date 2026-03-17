@@ -15,6 +15,7 @@ import {
   type CompiledSchema,
   type SchemaDocument,
 } from "@hyperjump/json-schema/experimental";
+import { type Browser } from "@hyperjump/browser";
 
 import Editor, { type OnMount } from "@monaco-editor/react";
 import type { editor } from "monaco-editor";
@@ -31,6 +32,10 @@ type ValidationStatus = {
   status: "success" | "warning" | "error";
   message: string;
 };
+
+type SchemaBrowser = Browser & {
+  _cache: Record<string, SchemaDocument>;
+}
 
 type CreateBrowser = (
   id: string,
@@ -249,8 +254,11 @@ const MonacoEditor = () => {
         };
 
         const browser = createBrowser(schemaId, schemaDocument);
-        // @ts-expect-error
-        const schema = await getSchema(schemaDocument.baseUri, browser);
+
+        // The Hyperjump `getSchema` expects a full browser instance, but we only need the _cache
+        // property for local-only resolution. This cast is safe because our usage only triggers cache lookup.
+        // We are casting a minimal object to 'SchemaBrowser' (Browser & { _cache }).
+        const schema = await getSchema(schemaDocument.baseUri, browser as SchemaBrowser);
 
         setCompiledSchema(await compile(schema));
         setSchemaValidation(
