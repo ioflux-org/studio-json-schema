@@ -18,18 +18,20 @@ const SearchBar = ({ onSearch, onNavigate, matchCount, currentIndex }: SearchBar
   // Create a ref to manage the input's focus state
   const inputRef = useRef<HTMLInputElement>(null);
 
-  // Handle Ctrl+F / Cmd+F globally
+// Handle Ctrl+F / Cmd+F globally
   useEffect(() => {
     const handleGlobalKeyDown = (e: KeyboardEvent) => {
       // Check for Cmd (macOS) or Ctrl (Windows/Linux) + f
       if ((e.metaKey || e.ctrlKey) && e.key.toLowerCase() === 'f') {
-        e.preventDefault(); // Prevent the browser's default search bar from opening
+        e.preventDefault(); 
+        e.stopPropagation(); // <-- ADDED: Stop React Flow from eating the event
         inputRef.current?.focus();
       }
     };
 
-    window.addEventListener('keydown', handleGlobalKeyDown);
-    return () => window.removeEventListener('keydown', handleGlobalKeyDown);
+    // <-- ADDED { capture: true } below: Forces the browser to run this listener FIRST
+    window.addEventListener('keydown', handleGlobalKeyDown, { capture: true });
+    return () => window.removeEventListener('keydown', handleGlobalKeyDown, { capture: true });
   }, []);
 
   // Debounce the search value
