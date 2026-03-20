@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect, useCallback, useRef } from "react";
 import { CgClose } from "react-icons/cg";
 import { MdNavigateBefore, MdNavigateNext } from "react-icons/md";
 
@@ -14,6 +14,23 @@ const SearchBar = ({ onSearch, onNavigate, matchCount, currentIndex }: SearchBar
   const [errorMessage, setErrorMessage] = useState("");
   const [showErrorPopup, setShowErrorPopup] = useState(false);
   const [debouncedValue, setDebouncedValue] = useState("");
+  
+  // Create a ref to manage the input's focus state
+  const inputRef = useRef<HTMLInputElement>(null);
+
+  // Handle Ctrl+F / Cmd+F globally
+  useEffect(() => {
+    const handleGlobalKeyDown = (e: KeyboardEvent) => {
+      // Check for Cmd (macOS) or Ctrl (Windows/Linux) + f
+      if ((e.metaKey || e.ctrlKey) && e.key.toLowerCase() === 'f') {
+        e.preventDefault(); // Prevent the browser's default search bar from opening
+        inputRef.current?.focus();
+      }
+    };
+
+    window.addEventListener('keydown', handleGlobalKeyDown);
+    return () => window.removeEventListener('keydown', handleGlobalKeyDown);
+  }, []);
 
   // Debounce the search value
   useEffect(() => {
@@ -55,6 +72,19 @@ const SearchBar = ({ onSearch, onNavigate, matchCount, currentIndex }: SearchBar
     setSearchValue(event.target.value);
   }, []);
 
+  // Handle Enter and Escape keys when the input is focused
+  const handleInputKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
+    if (e.key === 'Escape') {
+      inputRef.current?.blur(); // Deselect the input
+    } else if (e.key === 'Enter') {
+      e.preventDefault();
+      // Only navigate if there are matches to cycle through
+      if (matchCount > 1) {
+        onNavigate('next');
+      }
+    }
+  };
+
   return (
     <>
       {errorMessage && showErrorPopup && (
@@ -73,12 +103,14 @@ const SearchBar = ({ onSearch, onNavigate, matchCount, currentIndex }: SearchBar
 
       <div className="absolute bottom-[10px] left-[50px] flex items-center gap-2">
         <input
+          ref={inputRef}
           type="text"
           maxLength={30}
           placeholder="search node"
           className="outline-none text-[var(--bottom-bg-color)] border-b-2 text-center w-[150px]"
           value={searchValue}
           onChange={handleChange}
+          onKeyDown={handleInputKeyDown}
         />
         
         {matchCount > 1 && (

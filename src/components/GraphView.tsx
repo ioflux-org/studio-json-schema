@@ -24,6 +24,7 @@ import {
 
 import CustomNode from "./CustomReactFlowNode";
 import NodeDetailsPopup from "./NodeDetailsPopup";
+import SearchBar from "./SearchBar"; // <-- Import the new SearchBar
 
 import {
   processAST,
@@ -32,8 +33,6 @@ import {
 } from "../utils/processAST";
 import { sortAST } from "../utils/sortAST";
 import { resolveCollisions } from "../utils/resolveCollisions";
-import { MdNavigateBefore, MdNavigateNext } from "react-icons/md";
-import { CgClose } from "react-icons/cg";
 import { extractKeywords } from "../utils/searchNodeHelpers";
 
 const nodeTypes = { customNode: CustomNode };
@@ -48,7 +47,8 @@ const GraphView = ({
 }: {
   compiledSchema: CompiledSchema | null;
 }) => {
-  const { setCenter, getZoom, fitView } = useReactFlow();
+  // Added getNodes here to fetch the latest nodes cleanly during a search
+  const { setCenter, getZoom, fitView, getNodes } = useReactFlow();
   const { selectedNode, setSelectedNode } = useContext(AppContext);
   const containerRef = useRef<HTMLDivElement>(null);
 
@@ -56,11 +56,10 @@ const GraphView = ({
   const [edges, setEdges, onEdgeChange] = useEdgesState<GraphEdge>([]);
   const [collisionResolved, setCollisionResolved] = useState(false);
   const [hoveredEdgeId, setHoveredEdgeId] = useState<string | null>(null);
+  
+  // Search state that GraphView still needs to track
   const [matchedNodes, setMatchedNodes] = useState<GraphNode[]>([]);
   const [currentMatchIndex, setCurrentMatchIndex] = useState(0);
-  const [searchString, setSearchString] = useState("");
-  const [errorMessage, setErrorMessage] = useState("");
-  const [showErrorPopup, setShowErrorPopup] = useState(true);
   const matchCount = matchedNodes.length;
 
   const navigateMatch = useCallback(
@@ -90,19 +89,52 @@ const GraphView = ({
         return newIndex;
       });
     },
-    [matchedNodes]
+    [matchedNodes, matchCount, setCenter, getZoom, setNodes]
   );
 
-  const handleChange = useCallback((e: React.ChangeEvent<HTMLInputElement>) => {
-    setSearchString(e.target.value);
-  }, []);
+const handleSearch = useCallback((searchTerm: string) => {
+    // FIX: Cast the generic Node[] to your custom GraphNode[]
+    const currentNodes = getNodes() as GraphNode[]; 
+    
+    // If search is cleared
+    if (!searchTerm) {
+      setMatchedNodes([]);
+      setCurrentMatchIndex(0);
+      setNodes((nds) => nds.map((n) => ({ ...n, selected: false })));
+      fitView({ duration: 800, padding: 0.05 });
+      return true; 
+    }
+
+    const searchWords = searchTerm.toLowerCase().match(/[a-zA-Z0-9_]+/g) || [];
+
+    const foundNodes = currentNodes.filter((node) => {
+      // TypeScript now knows node.data.nodeLabel is a string
+      const labelWords = extractKeywords(node.data.nodeLabel);
+      return searchWords.every((word) => labelWords.includes(word));
+    });
+
+    setMatchedNodes(foundNodes);
+    setCurrentMatchIndex(0);
+
+    if (foundNodes.length > 0) {
+      const firstNode = foundNodes[0];
+      const x = firstNode.position.x + NODE_WIDTH / 2;
+      const y = firstNode.position.y + NODE_HEIGHT / 2;
+
+      setCenter(x, y, { zoom: Math.max(getZoom(), 1), duration: 500 });
+      setNodes((nds) => nds.map((n) => ({ ...n, selected: n.id === firstNode.id })));
+      
+      return true; // Match found
+    }
+
+    return false; // No match found
+  }, [getNodes, setNodes, fitView, setCenter, getZoom]);
 
   const onNodeClick: NodeMouseHandler = useCallback((_event, node) => {
     setSelectedNode({
       id: node.id,
       data: node.data,
     });
-    // Select connected edges programmatically to allow native selection handling
     setEdges((eds) =>
       eds.map((edge) => {
         const isConnected = edge.source === node.id || edge.target === node.id;
@@ -112,7 +144,7 @@ const GraphView = ({
         };
       })
     );
-  }, []);
+  }, [setSelectedNode, setEdges]);
 
   const generateNodesAndEdges = useCallback(
     (
@@ -122,7 +154,6 @@ const GraphView = ({
     ) => {
       if (!compiledSchema) return;
       const { ast, schemaUri } = compiledSchema;
-      // console.log(ast)
       processAST({
         ast: sortAST(ast),
         schemaUri,
@@ -157,8 +188,6 @@ const GraphView = ({
           ...node,
           targetPosition: isHorizontal ? Position.Left : Position.Top,
           sourcePosition: isHorizontal ? Position.Right : Position.Bottom,
-          // We are shifting the dagre node position (anchor=center center) to the top left
-          // so it matches the React Flow node anchor point (top left).
           position: {
             x:
               nodeWithPosition.x -
@@ -176,8 +205,6 @@ const GraphView = ({
     []
   );
 
-  // TODO: check if the following approach to bringing the selected edge to the top has any significant performance issues
-  // check if logic can be optimised
   const orderedEdges = useMemo(() => {
     const normal: typeof edges = [];
     const selected: typeof edges = [];
@@ -223,7 +250,6 @@ const GraphView = ({
       setNodes(layoutedNodes);
       setEdges(layoutedEdges);
 
-      // important: reset collision flag when schema changes
       setCollisionResolved(false);
     } catch (err) {
       console.error("Error generating visualization graph: ", err);
@@ -256,18 +282,6 @@ const GraphView = ({
   }, [nodes, collisionResolved, allNodesMeasured, setNodes]);
 
   useEffect(() => {
-    if (errorMessage) {
-      setShowErrorPopup(true);
-      const timer = setTimeout(() => {
-        setShowErrorPopup(false);
-      }, 3000);
-      return () => clearTimeout(timer);
-    } else {
-      setShowErrorPopup(false);
-    }
-  }, [errorMessage]);
-
-  useEffect(() => {
     if (!containerRef.current) return;
 
     let timeoutId: ReturnType<typeof setTimeout>;
@@ -285,54 +299,7 @@ const GraphView = ({
       observer.disconnect();
       clearTimeout(timeoutId);
     };
-  }, []);
-
-  useEffect(() => {
-    const trimmed = searchString.trim();
-
-    const timeout = setTimeout(() => {
-      if (!trimmed) {
-        setMatchedNodes([]);
-        setCurrentMatchIndex(0);
-        setErrorMessage("");
-        setNodes((nds) => nds.map((n) => ({ ...n, selected: false })));
-        fitView({ duration: 800, padding: 0.05 });
-        return;
-      }
-
-      const searchWords = trimmed.toLowerCase().match(/[a-zA-Z0-9_]+/g) || [];
-
-      const foundNodes = nodes.filter((node) => {
-        const labelWords = extractKeywords(node.data.nodeLabel);
-        return searchWords.every((word) => labelWords.includes(word));
-      });
-
-      setMatchedNodes(foundNodes);
-
-      if (foundNodes.length > 0) {
-        const firstNode = foundNodes[currentMatchIndex % foundNodes.length];
-        const x = firstNode.position.x + NODE_WIDTH / 2;
-        const y = firstNode.position.y + NODE_HEIGHT / 2;
-
-        setCenter(x, y, { zoom: Math.max(getZoom(), 1), duration: 500 });
-        setNodes((nds) => {
-          let changed = false;
-          const newNodes = nds.map((n) => {
-            const selected = n.id === firstNode.id;
-            if (n.selected !== selected) changed = true;
-            return { ...n, selected };
-          });
-          return changed ? newNodes : nds;
-        });
-
-        setErrorMessage("");
-      } else {
-        setErrorMessage(`${trimmed} is not in schema`);
-      }
-    }, 300);
-
-    return () => clearTimeout(timeout);
-  }, [searchString]);
+  }, [fitView]);
 
   return (
     <div ref={containerRef} className="relative w-full h-full">
@@ -369,72 +336,13 @@ const GraphView = ({
         <Controls />
       </ReactFlow>
 
-      <div className="absolute bottom-[10px] left-[50px] flex items-center gap-2">
-        <div className="relative">
-          <input
-            type="text"
-            maxLength={30}
-            placeholder="search node"
-            className="outline-none text-[var(--text-color)] border-b-2 border-[var(--text-color)] text-center w-[150px] pr-5"
-            value={searchString}
-            onChange={handleChange}
-          />
-
-          {searchString && (
-            <button
-              onClick={() => {
-                setSearchString("");
-                setNodes((nds) => nds.map((n) => ({ ...n, selected: false })));
-                fitView({ duration: 800, padding: 0.05 });
-              }}
-              className="absolute right-0 top-1/2 -translate-y-1/2 text-[var(--text-color)] cursor-pointer hover:opacity-70"
-              title="Clear search"
-            >
-              <CgClose size={12} />
-            </button>
-          )}
-        </div>
-        {matchCount > 1 && (
-          <div className="flex items-center gap-1 bg-[var(--node-bg-color)] px-2 py-1 rounded border border-[var(--text-color)] opacity-80">
-            <button
-              onClick={() => navigateMatch("prev")}
-              className="hover:bg-[var(--text-color)] hover:bg-opacity-20 rounded p-1 transition-colors"
-              title="Previous match"
-            >
-              <MdNavigateBefore
-                size={20}
-                className="text-[var(--text-color)]"
-              />
-            </button>
-
-            <span className="text-xs text-[var(--text-color)] min-w-[40px] text-center">
-              {currentMatchIndex + 1}/{matchCount}
-            </span>
-
-            <button
-              onClick={() => navigateMatch("next")}
-              className="hover:bg-[var(--text-color)] hover:bg-opacity-20 rounded p-1 transition-colors"
-              title="Next match"
-            >
-              <MdNavigateNext size={20} className="text-[var(--text-color)]" />
-            </button>
-          </div>
-        )}
-      </div>
-
-      {errorMessage && showErrorPopup && (
-        <div className="absolute bottom-[50px] left-[100px] flex gap-2 px-2 py-1 bg-red-500 text-white rounded-md shadow-lg z-50">
-          <div className="text-sm font-medium tracking-wide font-roboto">
-            {errorMessage}
-          </div>
-          <button
-            className="cursor-pointer"
-            onClick={() => setShowErrorPopup(false)}
-          >
-            <CgClose size={18} />
-          </button>
-        </div>
-      )}
+      {/* RENDER THE NEW SEARCH BAR HERE */}
+      <SearchBar 
+        onSearch={handleSearch}
+        onNavigate={navigateMatch}
+        matchCount={matchCount}
+        currentIndex={currentMatchIndex}
+      />
 
       {selectedNode && (
         <NodeDetailsPopup
