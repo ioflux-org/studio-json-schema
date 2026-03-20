@@ -1,0 +1,49 @@
+name: "Bug Report"
+description: "Report a software bug"
+title: "Bug: "
+labels: ["bug"]
+
+body:
+  - type: textarea
+    id: bug-content
+    attributes:
+      label: "Bug Details"
+      description: "Replace the text under each heading with your own details."
+      value: |
+        ### Description
+        [A clear and concise description of what the bug is.]
+
+        ### Steps to Reproduce
+        1. [Step 1] - Click on..
+        2. [Step 2] - Select that part ...
+        3. [Step 3] - See error ...
+
+        ### Demo Video/Screenshots
+        [Paste Demo video / Screenshots here (if Relevant)]
+
+        ### Expected Behavior
+        [A clear and concise description of what you expected to happen.]
+
+        ### Environment
+        - **OS:** [e.g. Windows 11]
+        - **Browser:** [e.g. Chrome]
+        - **Version:** [e.g. 1.0.0]
+
+        ### Additional Context
+        [Add any other context]
+    validations:
+      required: true
+
+  - type: checkboxes
+    id: good-first-issue
+    attributes:
+      label: "Good First Issue"
+      options:
+        - label: "I believe this issue is a good first issue for new contributors."
+
+  - type: checkboxes
+    id: work
+    attributes:
+      label: "Contribution"
+      options:
+        - label: "I am willing to fix this bug."

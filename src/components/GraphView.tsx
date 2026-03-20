@@ -301,8 +301,28 @@ const handleSearch = useCallback((searchTerm: string) => {
     };
   }, [fitView]);
 
+  const handleKeyDown = useCallback(
+    (e: React.KeyboardEvent<HTMLDivElement>) => {
+      if (matchCount <= 1) return;
+
+      if (e.key === "ArrowRight" || e.key === "Enter") {
+        e.preventDefault();
+        navigateMatch("next");
+      } else if (e.key === "ArrowLeft") {
+        e.preventDefault();
+        navigateMatch("prev");
+      }
+    },
+    [matchCount, navigateMatch]
+  );
+
   return (
-    <div ref={containerRef} className="relative w-full h-full">
+    <div
+      ref={containerRef}
+      tabIndex={0}
+      onKeyDown={handleKeyDown}
+      className="relative w-full h-full"
+    >
       <ReactFlow
         nodes={nodes}
         edges={animatedEdges}
