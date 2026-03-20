@@ -77,14 +77,9 @@ const SearchBar = ({ onSearch, onNavigate, matchCount, currentIndex }: SearchBar
   // Handle Enter and Escape keys when the input is focused
   const handleInputKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
     if (e.key === 'Escape') {
+      setSearchValue("");
       inputRef.current?.blur(); // Deselect the input
-    } else if (e.key === 'Enter') {
-      e.preventDefault();
-      // Only navigate if there are matches to cycle through
-      if (matchCount > 1) {
-        onNavigate('next');
-      }
-    }
+    } 
   };
 
   return (
