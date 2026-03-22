@@ -143,6 +143,7 @@ _This diagram shows the structure of the "Example JSON Schema" above._
 
 - Keywords displayed inside a node represent how that schema defines the instance.
 - If a keyword's value is itself a subschema, a new node is created.
+- Keyword values that are objects or complex references (such as `$ref`, or `additionalProperties` with a schema value) are displayed inline as `{ ... }` rather than showing the full value. The actual content is represented by the connected child node.
 
 ### Edges
 
@@ -179,6 +180,8 @@ Design improvements are welcome :)
 ### Controls
 
 - Zoom, fit-view, and other graph controls are available in the bottom-left corner of the visualization.
+- A **search node** input at the bottom lets you find nodes by label. Matching is case-insensitive; if multiple nodes match, `◀` / `▶` arrows appear to step through them. Clearing the input restores the full graph view.
+- When a search match is active, the matched node is visually emphasized with a **glowing colored border** — the glow color matches the node's own type color, making it easy to spot across the graph.
 
 ---
 
