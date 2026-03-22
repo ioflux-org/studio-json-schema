@@ -1,4 +1,5 @@
 import { useContext, useState, useEffect, useRef } from "react";
+
 import { parseTree, findNodeAtLocation } from "jsonc-parser";
 import {
   Panel,
@@ -21,7 +22,7 @@ import type { editor } from "monaco-editor";
 import defaultSchema from "../data/defaultJSONSchema.json";
 import { AppContext } from "../contexts/AppContext";
 import SchemaVisualization from "./SchemaVisualization";
-import FullscreenToggleButton from "./FullscreenToggleButton";
+import NavigationBar from "./NavigationBar";
 import EditorToggleButton from "./EditorToggleButton";
 import { parseSchema } from "../utils/parseSchema";
 import YAML from "js-yaml";
@@ -287,11 +288,7 @@ const MonacoEditor = () => {
       }`}
     >
       {isFullScreen && (
-        <div className="w-full px-1 bg-[var(--view-bg-color)] justify-items-end">
-          <div className="text-[var(--view-text-color)]">
-            <FullscreenToggleButton />
-          </div>
-        </div>
+        <NavigationBar />
       )}
       <PanelGroup direction="horizontal">
         <Panel
