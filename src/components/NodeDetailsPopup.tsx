@@ -47,7 +47,7 @@ const NodeDetailsPopup = ({
     >
       <div className="absolute inset-0 bg-[var(--popup-backdrop-color)] backdrop-blur-sm" />
       <div
-        className="relative z-50 w-[60%] max-h-[80%] p-4 rounded-lg shadow-xl bg-[var(--popup-bg-color)] overflow-x-hdden overflow-auto"
+        className="relative z-50 w-[90%] sm:w-[60%] min-w-[320px] max-h-[80%] p-4 rounded-lg shadow-xl bg-[var(--popup-bg-color)] overflow-x-hidden overflow-auto"
         onClick={(e) => e.stopPropagation()}
       >
         <button
@@ -76,6 +76,7 @@ const NodeDetailsPopup = ({
               </button>
             </div>
           )}
+          <div className="overflow-x-auto">
           <table className="w-full border border-[var(--popup-border-color)] text-left">
             <thead>
               <tr className="bg-[var(--popup-header-bg-color)] border-b border-[var(--popup-border-color)]">
@@ -90,8 +91,8 @@ const NodeDetailsPopup = ({
                     <td className="p-2 font-medium text-[var(--popup-text-color)] whitespace-nowrap">
                       {key}
                     </td>
-                    <td className="p-2 text-[var(--popup-text-color)]">
-                      <div className="max-h-[150px] overflow-auto pr-1">
+                    <td className="p-2 text-[var(--popup-text-color)] max-w-0">
+                      <div className="max-h-[150px] overflow-auto pr-1 break-words">
                         {formatValue(keyData.value as string)}
                       </div>
                     </td>
@@ -99,6 +100,7 @@ const NodeDetailsPopup = ({
                 ))}
             </tbody>
           </table>
+          </div>
         </div>
       </div>
     </div>
