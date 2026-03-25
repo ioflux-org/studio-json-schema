@@ -207,6 +207,107 @@ const MonacoEditor = () => {
   }, [selectedNode?.id]);
 
   useEffect(() => {
+    if (!editorRef.current) return;
+    const model = editorRef.current.getModel();
+    if (!model) return;
+
+    const DECORATION = "monaco-highlight-line";
+
+    const clearDecorations = () => {
+      const old = model
+        .getAllDecorations()
+        .filter((d: any) => d.options.className === DECORATION)
+        .map((d: any) => d.id);
+      model.deltaDecorations(old, []);
+    };
+
+    if (!searchString.trim()) {
+      clearDecorations();
+      searchMatchesRef.current = [];
+      searchMatchIndexRef.current = 0;
+      return;
+    }
+
+    const matches = model.findMatches(
+      searchString,
+      true,  // searchOnlyEditableRange
+      false, // isRegex
+      false, // matchCase
+      null,  // wordSeparators
+      false  // captureMatches
+    );
+
+    clearDecorations();
+    searchMatchesRef.current = [];
+    searchMatchIndexRef.current = 0;
+
+    if (matches.length === 0) return;
+
+    searchMatchesRef.current = matches;
+
+    // For each match highlight the full node block it belongs to
+    const text = model.getValue();
+    const tree = parseTree(text);
+    const decorations: any[] = [];
+    const highlightedRanges = new Set<string>();
+
+    for (const match of matches) {
+      const matchOffset = model.getOffsetAt({
+        lineNumber: match.range.startLineNumber,
+        column: match.range.startColumn,
+      });
+
+      let highlighted = false;
+
+      if (tree) {
+        // Walk up the AST to find the smallest node containing this offset
+        let current: any = tree;
+        let bestNode: any = null;
+        const visit = (node: any) => {
+          if (matchOffset < node.offset || matchOffset > node.offset + node.length) return;
+          bestNode = node;
+          if (node.children) {
+            for (const child of node.children) visit(child);
+          }
+        };
+        visit(current);
+
+        if (bestNode) {
+          const startPos = model.getPositionAt(bestNode.offset);
+          const endPos = model.getPositionAt(bestNode.offset + bestNode.length);
+          const key = `${startPos.lineNumber}:${endPos.lineNumber}`;
+          if (!highlightedRanges.has(key)) {
+            highlightedRanges.add(key);
+            decorations.push({
+              range: new (window as any).monaco.Range(startPos.lineNumber, 1, endPos.lineNumber, 1),
+              options: { isWholeLine: true, className: DECORATION },
+            });
+          }
+          highlighted = true;
+        }
+      }
+
+      if (!highlighted) {
+        const key = `${match.range.startLineNumber}:${match.range.endLineNumber}`;
+        if (!highlightedRanges.has(key)) {
+          highlightedRanges.add(key);
+          decorations.push({
+            range: new (window as any).monaco.Range(match.range.startLineNumber, 1, match.range.endLineNumber, 1),
+            options: { isWholeLine: true, className: DECORATION },
+          });
+        }
+      }
+    }
+
+    model.deltaDecorations([], decorations);
+
+    editorRef.current.revealPositionInCenter({
+      lineNumber: matches[0].range.startLineNumber,
+      column: matches[0].range.startColumn,
+    });
+  }, [searchString]);
+
+  useEffect(() => {
     saveFormat(SESSION_FORMAT_KEY, schemaFormat);
 
     const schemaJSON = loadSchemaJSON(SESSION_SCHEMA_KEY);
