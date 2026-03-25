@@ -48,7 +48,7 @@ const GraphView = ({
   compiledSchema: CompiledSchema | null;
 }) => {
   const { setCenter, getZoom, fitView } = useReactFlow();
-  const { selectedNode, setSelectedNode, searchString } = useContext(AppContext);
+  const { selectedNode, setSelectedNode, searchString, graphFocusRequest } = useContext(AppContext);
   const containerRef = useRef<HTMLDivElement>(null);
 
   const [nodes, setNodes, onNodeChange] = useNodesState<GraphNode>([]);
@@ -105,6 +105,27 @@ const GraphView = ({
       })
     );
   }, []);
+
+  // Sync graph focus when Enter is pressed in search
+  useEffect(() => {
+    if (!graphFocusRequest) return;
+    const graphNode = nodes.find((n) => n.id === graphFocusRequest.nodeId);
+    if (!graphNode || graphNode.data.nodeLabel === "root") return;
+
+    // Update matchedNodes so the nav buttons appear and navigateMatch works
+    setMatchedNodes((prev) => {
+      const alreadyIncluded = prev.some((n) => n.id === graphNode.id);
+      const updated = alreadyIncluded ? prev : [...prev, graphNode];
+      const idx = updated.findIndex((n) => n.id === graphNode.id);
+      setCurrentMatchIndex(idx);
+      return updated;
+    });
+
+    const x = graphNode.position.x + NODE_WIDTH / 2;
+    const y = graphNode.position.y + NODE_HEIGHT / 2;
+    setCenter(x, y, { zoom: Math.max(getZoom(), 1), duration: 500 });
+    setNodes((nds) => nds.map((n) => ({ ...n, selected: n.id === graphNode.id })));
+  }, [graphFocusRequest]);
 
   const generateNodesAndEdges = useCallback(
     (
@@ -285,8 +306,16 @@ const GraphView = ({
         searchWords.length === 0
           ? []
           : nodes.filter((node) => {
-              const labelWords = extractKeywords(node.data.nodeLabel);
-              return searchWords.every((word) => labelWords.includes(word));
+              if (node.data.nodeLabel === "root") return false;
+              const nodeText = [
+                node.data.nodeLabel,
+                ...Object.keys(node.data.nodeData),
+                ...Object.values(node.data.nodeData).map((d) =>
+                  Array.isArray(d.value) ? d.value.join(" ") : String(d.value ?? "")
+                ),
+              ].join(" ");
+              const nodeWords = extractKeywords(nodeText);
+              return searchWords.every((word) => nodeWords.includes(word));
             });
 
       setMatchedNodes(foundNodes);
