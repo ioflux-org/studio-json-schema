@@ -33,7 +33,6 @@ import {
 import { sortAST } from "../utils/sortAST";
 import { resolveCollisions } from "../utils/resolveCollisions";
 import { MdNavigateBefore, MdNavigateNext } from "react-icons/md";
-import { CgClose } from "react-icons/cg";
 import { extractKeywords } from "../utils/searchNodeHelpers";
 
 const nodeTypes = { customNode: CustomNode };
@@ -58,8 +57,6 @@ const GraphView = ({
   const [hoveredEdgeId, setHoveredEdgeId] = useState<string | null>(null);
   const [matchedNodes, setMatchedNodes] = useState<GraphNode[]>([]);
   const [currentMatchIndex, setCurrentMatchIndex] = useState(0);
-  const [errorMessage, setErrorMessage] = useState("");
-  const [showErrorPopup, setShowErrorPopup] = useState(true);
   const matchCount = matchedNodes.length;
 
   const navigateMatch = useCallback(
@@ -251,18 +248,6 @@ const GraphView = ({
   }, [nodes, collisionResolved, allNodesMeasured, setNodes]);
 
   useEffect(() => {
-    if (errorMessage) {
-      setShowErrorPopup(true);
-      const timer = setTimeout(() => {
-        setShowErrorPopup(false);
-      }, 3000);
-      return () => clearTimeout(timer);
-    } else {
-      setShowErrorPopup(false);
-    }
-  }, [errorMessage]);
-
-  useEffect(() => {
     if (!containerRef.current) return;
 
     let timeoutId: ReturnType<typeof setTimeout>;
@@ -289,7 +274,6 @@ const GraphView = ({
       if (!trimmed) {
         setMatchedNodes([]);
         setCurrentMatchIndex(0);
-        setErrorMessage("");
         setNodes((nds) => nds.map((n) => ({ ...n, selected: false })));
         fitView({ duration: 800, padding: 0.05 });
         return;
@@ -323,9 +307,6 @@ const GraphView = ({
           return changed ? newNodes : nds;
         });
 
-        setErrorMessage("");
-      } else {
-        setErrorMessage(`${trimmed} is not in schema`);
       }
     }, 300);
 
@@ -395,20 +376,6 @@ const GraphView = ({
             setSelectedNode(null);
           }}
         />
-      )}
-      {/*Error Message */}
-      {errorMessage && showErrorPopup && (
-        <div className="absolute bottom-[50px] left-[100px] flex gap-2 px-2 py-1 bg-red-500 text-white rounded-md shadow-lg">
-          <div className="text-sm font-medium tracking-wide font-roboto">
-            {errorMessage}
-          </div>
-          <button
-            className="cursor-pointer"
-            onClick={() => setShowErrorPopup(false)}
-          >
-            <CgClose size={18} />
-          </button>
-        </div>
       )}
       <div className="absolute bottom-[10px] left-[50px] flex items-center gap-2">
         {matchCount > 1 && (
