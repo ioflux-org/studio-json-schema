@@ -1,4 +1,4 @@
-import { useContext, useState, useEffect, useRef } from "react";
+import { useContext, useState, useEffect, useRef, useCallback } from "react";
 import { CgClose } from "react-icons/cg";
 
 import { parseTree, findNodeAtLocation } from "jsonc-parser";
@@ -92,7 +92,7 @@ const saveSchemaJSON = (key: string, schema: JSONSchema) => {
 };
 
 const MonacoEditor = () => {
-  const { theme, isFullScreen, containerRef, schemaFormat, selectedNode, searchString, setSearchString, requestGraphFocus } =
+  const { theme, isFullScreen, containerRef, schemaFormat, selectedNode, searchString, setSearchString, requestGraphFocus, registerActivateEditorMatch, navigateGraphMatch } =
     useContext(AppContext);
 
   const editorRef = useRef<editor.IStandaloneCodeEditor | null>(null);
@@ -316,6 +316,88 @@ const MonacoEditor = () => {
     });
   }, [searchString]);
 
+  const activateMatch = useCallback((matchIndex: number) => {
+    const matches = searchMatchesRef.current;
+    if (matches.length === 0) return;
+    const next = ((matchIndex % matches.length) + matches.length) % matches.length;
+    searchMatchIndexRef.current = next;
+    const range = matches[next].range;
+
+    editorRef.current?.revealPositionInCenter({ lineNumber: range.startLineNumber, column: range.startColumn });
+    editorRef.current?.setPosition({ lineNumber: range.startLineNumber, column: range.startColumn });
+
+    const model = editorRef.current?.getModel();
+    const schema = compiledSchemaRef.current;
+    if (!model || !monacoRef.current) return;
+
+    const matchOffset = model.getOffsetAt({ lineNumber: range.startLineNumber, column: range.startColumn });
+    const tree = parseTree(model.getValue());
+    const DECORATION = "monaco-highlight-line";
+
+    const oldIds = model.getAllDecorations()
+      .filter((d: any) => d.options.className === DECORATION)
+      .map((d: any) => d.id);
+    model.deltaDecorations(oldIds, []);
+
+    if (!tree) return;
+
+    const ancestors: any[] = [];
+    const visit = (node: any) => {
+      if (matchOffset < node.offset || matchOffset > node.offset + node.length) return;
+      ancestors.push(node);
+      if (node.children) for (const child of node.children) visit(child);
+    };
+    visit(tree);
+
+    const deepest = ancestors[ancestors.length - 1];
+    const parentProp = deepest?.parent?.type === "property" ? deepest.parent : null;
+    const isNodeNameMatch =
+      parentProp &&
+      deepest === parentProp.children?.[0] &&
+      (parentProp.children?.[1]?.type === "object" || parentProp.children?.[1]?.type === "array");
+
+    let highlightStart: number;
+    let highlightEnd: number;
+    if (isNodeNameMatch) {
+      const valueNode = parentProp.children[1];
+      highlightStart = valueNode.offset;
+      highlightEnd = valueNode.offset + valueNode.length;
+    } else {
+      highlightStart = model.getOffsetAt({ lineNumber: range.startLineNumber, column: 1 });
+      highlightEnd = model.getOffsetAt({ lineNumber: range.endLineNumber, column: model.getLineMaxColumn(range.endLineNumber) });
+    }
+
+    const startPos = model.getPositionAt(highlightStart);
+    const endPos = model.getPositionAt(highlightEnd);
+    model.deltaDecorations([], [{
+      range: new monacoRef.current.Range(startPos.lineNumber, 1, endPos.lineNumber, 1),
+      options: { isWholeLine: true, className: DECORATION },
+    }]);
+    editorRef.current?.revealPositionInCenter(startPos);
+
+    if (schema) {
+      const segments: string[] = [];
+      for (let i = 0; i < ancestors.length; i++) {
+        const a = ancestors[i];
+        if (a.type === "property") {
+          const key = a.children?.[0]?.value;
+          if (key !== undefined) segments.push(String(key));
+          if (a.children?.[1]?.type === "object" || a.children?.[1]?.type === "array") break;
+        }
+      }
+      if (segments.length > 0) {
+        const nodeId = schema.schemaUri.split("#")[0] + "#/" + segments.join("/");
+        if (nodeId in (schema.ast as Record<string, unknown>)) {
+          requestGraphFocus(nodeId);
+        }
+      }
+    }
+  }, [requestGraphFocus]);
+
+  useEffect(() => {
+    registerActivateEditorMatch(activateMatch);
+  }, [activateMatch, registerActivateEditorMatch]);
+
   useEffect(() => {
     saveFormat(SESSION_FORMAT_KEY, schemaFormat);
 
@@ -422,91 +504,12 @@ const MonacoEditor = () => {
                 if (e.key !== "Enter") return;
                 const matches = searchMatchesRef.current;
                 if (matches.length === 0) return;
-                const next = e.shiftKey
+                const direction = e.shiftKey ? "prev" : "next";
+                const next = direction === "prev"
                   ? (searchMatchIndexRef.current - 1 + matches.length) % matches.length
                   : (searchMatchIndexRef.current + 1) % matches.length;
-                searchMatchIndexRef.current = next;
-                const range = matches[next].range;
-                editorRef.current?.revealPositionInCenter({ lineNumber: range.startLineNumber, column: range.startColumn });
-                editorRef.current?.setPosition({ lineNumber: range.startLineNumber, column: range.startColumn });
-
-                // Apply per-match-type highlight and sync Graph View focus
-                const model = editorRef.current?.getModel();
-                const schema = compiledSchemaRef.current;
-                if (model && monacoRef.current) {
-                  const matchOffset = model.getOffsetAt({ lineNumber: range.startLineNumber, column: range.startColumn });
-                  const tree = parseTree(model.getValue());
-                  const DECORATION = "monaco-highlight-line";
-
-                  // Clear existing decorations
-                  const oldIds = model.getAllDecorations()
-                    .filter((d: any) => d.options.className === DECORATION)
-                    .map((d: any) => d.id);
-                  model.deltaDecorations(oldIds, []);
-
-                  if (tree) {
-                    // Build ancestor chain at match offset
-                    const ancestors: any[] = [];
-                    const visit = (node: any) => {
-                      if (matchOffset < node.offset || matchOffset > node.offset + node.length) return;
-                      ancestors.push(node);
-                      if (node.children) for (const child of node.children) visit(child);
-                    };
-                    visit(tree);
-
-                    // Determine if this is a node name match:
-                    // match lands on a property key whose value is object/array
-                    const deepest = ancestors[ancestors.length - 1];
-                    const parentProp = deepest?.parent?.type === "property" ? deepest.parent : null;
-                    const isNodeNameMatch =
-                      parentProp &&
-                      deepest === parentProp.children?.[0] && // match is on the key
-                      (parentProp.children?.[1]?.type === "object" || parentProp.children?.[1]?.type === "array");
-
-                    let highlightStart: number;
-                    let highlightEnd: number;
-
-                    if (isNodeNameMatch) {
-                      // Highlight entire object/array block
-                      const valueNode = parentProp.children[1];
-                      highlightStart = valueNode.offset;
-                      highlightEnd = valueNode.offset + valueNode.length;
-                    } else {
-                      // Highlight just the matching line
-                      highlightStart = model.getOffsetAt({ lineNumber: range.startLineNumber, column: 1 });
-                      highlightEnd = model.getOffsetAt({ lineNumber: range.endLineNumber, column: model.getLineMaxColumn(range.endLineNumber) });
-                    }
-
-                    const startPos = model.getPositionAt(highlightStart);
-                    const endPos = model.getPositionAt(highlightEnd);
-                    model.deltaDecorations([], [{
-                      range: new monacoRef.current.Range(startPos.lineNumber, 1, endPos.lineNumber, 1),
-                      options: { isWholeLine: true, className: DECORATION },
-                    }]);
-                    editorRef.current?.revealPositionInCenter(startPos);
-
-                    // Sync Graph View focus
-                    if (schema) {
-                      // Build JSON pointer: walk property ancestors, stop at first object/array value
-                      const segments: string[] = [];
-                      for (let i = 0; i < ancestors.length; i++) {
-                        const a = ancestors[i];
-                        if (a.type === "property") {
-                          const key = a.children?.[0]?.value;
-                          if (key !== undefined) segments.push(String(key));
-                          if (a.children?.[1]?.type === "object" || a.children?.[1]?.type === "array") break;
-                        }
-                      }
-                      // segments.length === 0 means root — skip
-                      if (segments.length > 0) {
-                        const nodeId = schema.schemaUri.split("#")[0] + "#/" + segments.join("/");
-                        if (nodeId in (schema.ast as Record<string, unknown>)) {
-                          requestGraphFocus(nodeId);
-                        }
-                      }
-                    }
-                  }
-                }
+                activateMatch(next);
+                navigateGraphMatch(direction);
               }}
             />
             {searchString && (
