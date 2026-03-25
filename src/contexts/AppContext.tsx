@@ -23,6 +23,9 @@ type AppContextType = {
 
   searchString: string;
   setSearchString: (search: string) => void;
+
+  graphFocusRequest: { nodeId: string; seq: number } | null;
+  requestGraphFocus: (nodeId: string) => void;
 };
 
 export const AppContext = createContext<AppContextType>({} as AppContextType);

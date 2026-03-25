@@ -39,6 +39,11 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
 
   const [selectedNode, setSelectedNode] = useState<SelectedNode | null>(null);
   const [searchString, setSearchString] = useState("");
+  const [graphFocusRequest, setGraphFocusRequest] = useState<{ nodeId: string; seq: number } | null>(null);
+  const graphFocusSeqRef = useRef(0);
+  const requestGraphFocus = useCallback((nodeId: string) => {
+    setGraphFocusRequest({ nodeId, seq: ++graphFocusSeqRef.current });
+  }, []);
 
   const toggleFullScreen = useCallback(() => {
     const el = containerRef.current;
@@ -84,6 +89,8 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
     setSelectedNode,
     searchString,
     setSearchString,
+    graphFocusRequest,
+    requestGraphFocus,
   };
 
   return <AppContext.Provider value={value}>{children}</AppContext.Provider>;
