@@ -48,7 +48,7 @@ const GraphView = ({
   compiledSchema: CompiledSchema | null;
 }) => {
   const { setCenter, getZoom, fitView } = useReactFlow();
-  const { selectedNode, setSelectedNode, searchString, graphFocusRequest } = useContext(AppContext);
+  const { selectedNode, setSelectedNode, searchString, graphFocusRequest, activateEditorMatch, registerNavigateGraphMatch } = useContext(AppContext);
   const containerRef = useRef<HTMLDivElement>(null);
 
   const [nodes, setNodes, onNodeChange] = useNodesState<GraphNode>([]);
@@ -83,11 +83,17 @@ const GraphView = ({
           }))
         );
 
+        activateEditorMatch(newIndex);
+
         return newIndex;
       });
     },
-    [matchedNodes]
+    [matchedNodes, activateEditorMatch]
   );
+
+  useEffect(() => {
+    registerNavigateGraphMatch(navigateMatch);
+  }, [navigateMatch, registerNavigateGraphMatch]);
 
   const onNodeClick: NodeMouseHandler = useCallback((_event, node) => {
     setSelectedNode({
