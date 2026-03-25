@@ -1,4 +1,5 @@
 import { useContext, useState, useEffect, useRef } from "react";
+import { CgClose } from "react-icons/cg";
 
 import { parseTree, findNodeAtLocation } from "jsonc-parser";
 import {
@@ -91,11 +92,13 @@ const saveSchemaJSON = (key: string, schema: JSONSchema) => {
 };
 
 const MonacoEditor = () => {
-  const { theme, isFullScreen, containerRef, schemaFormat, selectedNode } =
+  const { theme, isFullScreen, containerRef, schemaFormat, selectedNode, searchString, setSearchString } =
     useContext(AppContext);
 
   const editorRef = useRef<editor.IStandaloneCodeEditor | null>(null);
   const editorPanelRef = useRef<ImperativePanelHandle>(null);
+  const searchMatchesRef = useRef<any[]>([]);
+  const searchMatchIndexRef = useRef(0);
 
   const handleEditorDidMount: OnMount = (editor) => {
     editorRef.current = editor;
@@ -297,6 +300,37 @@ const MonacoEditor = () => {
           ref={editorPanelRef}
           collapsible
         >
+          <div className="flex items-center gap-1 px-2 py-1 border-b border-[var(--popup-border-color)] bg-[var(--validation-bg-color)]">
+            <input
+              type="text"
+              maxLength={30}
+              placeholder="Search node..."
+              className="flex-1 outline-none bg-transparent text-[var(--text-color)] text-sm placeholder:text-[var(--navigation-text-color)]"
+              value={searchString}
+              onChange={(e) => setSearchString(e.target.value)}
+              onKeyDown={(e) => {
+                if (e.key !== "Enter") return;
+                const matches = searchMatchesRef.current;
+                if (matches.length === 0) return;
+                const next = e.shiftKey
+                  ? (searchMatchIndexRef.current - 1 + matches.length) % matches.length
+                  : (searchMatchIndexRef.current + 1) % matches.length;
+                searchMatchIndexRef.current = next;
+                const range = matches[next].range;
+                editorRef.current?.revealPositionInCenter({ lineNumber: range.startLineNumber, column: range.startColumn });
+                editorRef.current?.setPosition({ lineNumber: range.startLineNumber, column: range.startColumn });
+              }}
+            />
+            {searchString && (
+              <button
+                onClick={() => setSearchString("")}
+                className="text-[var(--text-color)] hover:opacity-70 cursor-pointer"
+                title="Clear search"
+              >
+                <CgClose size={12} />
+              </button>
+            )}
+          </div>
           <Editor
             height="90%"
             width="100%"
