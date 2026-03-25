@@ -299,7 +299,57 @@ const handleSearch = useCallback((searchTerm: string) => {
       observer.disconnect();
       clearTimeout(timeoutId);
     };
-  }, [fitView]);
+  }, []);
+
+  useEffect(() => {
+    const trimmed = searchString.trim();
+
+    const timeout = setTimeout(() => {
+      if (!trimmed) {
+        setMatchedNodes([]);
+        setCurrentMatchIndex(0);
+        setErrorMessage("");
+        setNodes((nds) => nds.map((n) => ({ ...n, selected: false })));
+        fitView({ duration: 800, padding: 0.05 });
+        return;
+      }
+
+      const searchWords = trimmed.toLowerCase().match(/[a-zA-Z0-9_]+/g) || [];
+
+      const foundNodes =
+        searchWords.length === 0
+          ? []
+          : nodes.filter((node) => {
+              const labelWords = extractKeywords(node.data.nodeLabel);
+              return searchWords.every((word) => labelWords.includes(word));
+            });
+
+      setMatchedNodes(foundNodes);
+
+      if (foundNodes.length > 0) {
+        const firstNode = foundNodes[currentMatchIndex % foundNodes.length];
+        const x = firstNode.position.x + NODE_WIDTH / 2;
+        const y = firstNode.position.y + NODE_HEIGHT / 2;
+
+        setCenter(x, y, { zoom: Math.max(getZoom(), 1), duration: 500 });
+        setNodes((nds) => {
+          let changed = false;
+          const newNodes = nds.map((n) => {
+            const selected = n.id === firstNode.id;
+            if (n.selected !== selected) changed = true;
+            return { ...n, selected };
+          });
+          return changed ? newNodes : nds;
+        });
+
+        setErrorMessage("");
+      } else {
+        setErrorMessage(`${trimmed} is not in schema`);
+      }
+    }, 300);
+
+    return () => clearTimeout(timeout);
+  }, [searchString]);
 
   const handleKeyDown = useCallback(
     (e: React.KeyboardEvent<HTMLDivElement>) => {

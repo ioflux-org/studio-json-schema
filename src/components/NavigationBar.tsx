@@ -5,31 +5,37 @@ import { AppContext, type SchemaFormat } from "../contexts/AppContext";
 import FullscreenToggleButton from "./FullscreenToggleButton";
 
 const NavigationBar = () => {
-  const { theme, toggleTheme, schemaFormat, changeSchemaFormat } =
+  const { theme, toggleTheme, schemaFormat, changeSchemaFormat, isFullScreen } =
     useContext(AppContext);
 
   return (
-    <nav className="h-[8vh] flex justify-between items-center shadow-lg relative z-10">
-      <div className="flex items-center text-center select-none">
-        <img
-          src={theme === "dark" ? "logo-dark.svg" : "logo-light.svg"}
-          alt="Studio JSON Schema"
-          className="w-15 h-15 md:w-15 md:h-15"
-          draggable="false"
-        />
+    <nav className={`flex items-center relative z-10 bg-[var(--bg-color)] ${
+      isFullScreen
+        ? `w-full px-2 py-1 justify-end ${theme === "light" ? "shadow-md border-b-[1px] border-gray-200" : ""}`
+        : "h-[8vh] justify-between shadow-lg"
+    }`}>
+      {!isFullScreen && (
+        <div className="flex items-center text-center select-none">
+          <img
+            src={theme === "dark" ? "logo-dark.svg" : "logo-light.svg"}
+            alt="Studio JSON Schema"
+            className="w-15 h-15 md:w-15 md:h-15"
+            draggable="false"
+          />
 
-        <div className="flex font-mono flex-col">
-          <span className="text-2xl font-bold  text-[var(--tool-name-color)]">
-            Studio
-          </span>
-          <span className="text-xs opacity-70 text-[var(--tool-name-color)]">
-            JSON Schema
-          </span>
+          <div className="flex font-mono flex-col">
+            <span className="text-2xl font-bold  text-[var(--tool-name-color)]">
+              Studio
+            </span>
+            <span className="text-xs opacity-70 text-[var(--tool-name-color)]">
+              JSON Schema
+            </span>
+          </div>
         </div>
-      </div>
+      )}
 
-      <ul className="flex gap-5 mr-10">
-        <li>
+      <ul className={`flex items-center gap-5 ${isFullScreen ? 'mr-0' : 'mr-4'}`}>
+        <li className="flex items-center">
           <select
             onChange={(e) => changeSchemaFormat(e.target.value as SchemaFormat)}
             className="text-sm border rounded-sm bg-[var(--bg-color)] text-[var(--dropdown-text-color)] border-[var(--navigation-text-color)] cursor-pointer"
@@ -39,7 +45,7 @@ const NavigationBar = () => {
             <option value="yaml">YAML</option>
           </select>
         </li>
-        <li>
+        <li className="flex items-center">
           <button
             className="text-xl cursor-pointer"
             onClick={toggleTheme}
@@ -57,12 +63,12 @@ const NavigationBar = () => {
             style={{ fontSize: "10px" }}
           />
         </li>
-        <li>
+        <li className="flex items-center">
           <a
-            href="https://github.com/jagpreetrahi/visualize-json-schema"
+            href="https://github.com/ioflux-org/studio-json-schema"
             target="_blank"
             rel="noopener noreferrer"
-            className="text-xl"
+            className="text-xl flex items-center"
             data-tooltip-id="github"
           >
             <BsGithub className="text-[var(--navigation-text-color)]" />
@@ -73,12 +79,12 @@ const NavigationBar = () => {
             />
           </a>
         </li>
-        <li>
+        <li className="flex items-center">
           <a
-            href="https://github.com/jagpreetrahi/visualize-json-schema?tab=readme-ov-file#json-schema-visualizer"
+            href="https://github.com/ioflux-org/studio-json-schema?tab=readme-ov-file#json-schema-visualizer"
             target="_blank"
             rel="noopener noreferrer"
-            className="text-xl"
+            className="text-xl flex items-center"
             data-tooltip-id="learn-keywords"
           >
             <BsBook className="text-[var(--navigation-text-color)]" />
@@ -89,7 +95,7 @@ const NavigationBar = () => {
             />
           </a>
         </li>
-        <li>
+        <li className="flex items-center">
           <FullscreenToggleButton />
         </li>
       </ul>
