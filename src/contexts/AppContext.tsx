@@ -26,6 +26,12 @@ type AppContextType = {
 
   graphFocusRequest: { nodeId: string; seq: number } | null;
   requestGraphFocus: (nodeId: string) => void;
+
+  activateEditorMatch: (matchIndex: number) => void;
+  registerActivateEditorMatch: (fn: (matchIndex: number) => void) => void;
+
+  navigateGraphMatch: (direction: "next" | "prev") => void;
+  registerNavigateGraphMatch: (fn: (direction: "next" | "prev") => void) => void;
 };
 
 export const AppContext = createContext<AppContextType>({} as AppContextType);

@@ -45,6 +45,22 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
     setGraphFocusRequest({ nodeId, seq: ++graphFocusSeqRef.current });
   }, []);
 
+  const activateEditorMatchRef = useRef<(matchIndex: number) => void>(() => {});
+  const activateEditorMatch = useCallback((matchIndex: number) => {
+    activateEditorMatchRef.current(matchIndex);
+  }, []);
+  const registerActivateEditorMatch = useCallback((fn: (matchIndex: number) => void) => {
+    activateEditorMatchRef.current = fn;
+  }, []);
+
+  const navigateGraphMatchRef = useRef<(direction: "next" | "prev") => void>(() => {});
+  const navigateGraphMatch = useCallback((direction: "next" | "prev") => {
+    navigateGraphMatchRef.current(direction);
+  }, []);
+  const registerNavigateGraphMatch = useCallback((fn: (direction: "next" | "prev") => void) => {
+    navigateGraphMatchRef.current = fn;
+  }, []);
+
   const toggleFullScreen = useCallback(() => {
     const el = containerRef.current;
 
@@ -91,6 +107,10 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
     setSearchString,
     graphFocusRequest,
     requestGraphFocus,
+    activateEditorMatch,
+    registerActivateEditorMatch,
+    navigateGraphMatch,
+    registerNavigateGraphMatch,
   };
 
   return <AppContext.Provider value={value}>{children}</AppContext.Provider>;
