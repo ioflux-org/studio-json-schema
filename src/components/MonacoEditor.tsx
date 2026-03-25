@@ -21,7 +21,7 @@ import {
 import Editor, { type OnMount } from "@monaco-editor/react";
 import type { editor } from "monaco-editor";
 import defaultSchema from "../data/defaultJSONSchema.json";
-import { AppContext, type SchemaFormat } from "../contexts/AppContext";
+import { AppContext } from "../contexts/AppContext";
 import SchemaVisualization from "./SchemaVisualization";
 import NavigationBar from "./NavigationBar";
 import EditorToggleButton from "./EditorToggleButton";
@@ -71,6 +71,8 @@ const getValidationUI = (theme: "light" | "dark") => ({
   },
 });
 
+type SchemaFormat = "json" | "yaml";
+
 const saveFormat = (key: string, format: SchemaFormat) => {
   sessionStorage.setItem(key, format);
 };
@@ -90,7 +92,7 @@ const saveSchemaJSON = (key: string, schema: JSONSchema) => {
 };
 
 const MonacoEditor = () => {
-  const { theme, isFullScreen, containerRef, schemaFormat, changeSchemaFormat, selectedNode, searchString, setSearchString } =
+  const { theme, isFullScreen, containerRef, schemaFormat, selectedNode, searchString, setSearchString } =
     useContext(AppContext);
 
   const editorRef = useRef<editor.IStandaloneCodeEditor | null>(null);
@@ -399,12 +401,12 @@ const MonacoEditor = () => {
           ref={editorPanelRef}
           collapsible
         >
-          <div className="flex items-center gap-2 px-2 py-1 border-b border-[var(--popup-border-color)] bg-[var(--validation-bg-color)]">
+          <div className="flex items-center gap-1 px-2 py-1 border-b border-[var(--popup-border-color)] bg-[var(--validation-bg-color)]">
             <input
               type="text"
               maxLength={30}
               placeholder="Search node..."
-              className="flex-1 min-w-0 outline-none bg-transparent text-[var(--text-color)] text-sm placeholder:text-[var(--navigation-text-color)]"
+              className="flex-1 outline-none bg-transparent text-[var(--text-color)] text-sm placeholder:text-[var(--navigation-text-color)]"
               value={searchString}
               onChange={(e) => setSearchString(e.target.value)}
               onKeyDown={(e) => {
@@ -423,20 +425,12 @@ const MonacoEditor = () => {
             {searchString && (
               <button
                 onClick={() => setSearchString("")}
-                className="text-[var(--text-color)] hover:opacity-70 cursor-pointer flex-shrink-0"
+                className="text-[var(--text-color)] hover:opacity-70 cursor-pointer"
                 title="Clear search"
               >
                 <CgClose size={12} />
               </button>
             )}
-            <select
-              value={schemaFormat}
-              onChange={(e) => changeSchemaFormat(e.target.value as SchemaFormat)}
-              className="flex-shrink-0 bg-transparent text-[var(--text-color)] text-sm outline-none cursor-pointer border border-[var(--popup-border-color)] rounded px-1 py-0.5"
-            >
-              <option value="json">JSON</option>
-              <option value="yaml">YAML</option>
-            </select>
           </div>
           <Editor
             height="90%"
