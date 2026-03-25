@@ -19,8 +19,10 @@ type AppContextType = {
   changeSchemaFormat: (format: SchemaFormat) => void;
 
   selectedNode: SelectedNode | null;
-
   setSelectedNode: (selectedNode: SelectedNode | null) => void;
+
+  searchString: string;
+  setSearchString: (search: string) => void;
 };
 
 export const AppContext = createContext<AppContextType>({} as AppContextType);
