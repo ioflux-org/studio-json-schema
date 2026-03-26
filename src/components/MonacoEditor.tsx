@@ -377,19 +377,21 @@ const MonacoEditor = () => {
 
     if (schema) {
       const segments: string[] = [];
-      for (let i = 0; i < ancestors.length; i++) {
-        const a = ancestors[i];
+      for (const a of ancestors) {
         if (a.type === "property") {
           const key = a.children?.[0]?.value;
           if (key !== undefined) segments.push(String(key));
-          if (a.children?.[1]?.type === "object" || a.children?.[1]?.type === "array") break;
         }
       }
-      if (segments.length > 0) {
-        const nodeId = schema.schemaUri.split("#")[0] + "#/" + segments.join("/");
-        if (nodeId in (schema.ast as Record<string, unknown>)) {
+      const baseUri = schema.schemaUri.split("#")[0];
+      const ast = schema.ast as Record<string, unknown>;
+      while (segments.length > 0) {
+        const nodeId = baseUri + "#/" + segments.join("/");
+        if (nodeId in ast) {
           requestGraphFocus(nodeId);
+          break;
         }
+        segments.pop();
       }
     }
   }, [requestGraphFocus]);
