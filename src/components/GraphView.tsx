@@ -313,13 +313,7 @@ const GraphView = ({
           ? []
           : nodes.filter((node) => {
               if (node.data.nodeLabel === "root") return false;
-              const nodeText = [
-                node.data.nodeLabel,
-                ...Object.keys(node.data.nodeData),
-                ...Object.values(node.data.nodeData).map((d) =>
-                  Array.isArray(d.value) ? d.value.join(" ") : String(d.value ?? "")
-                ),
-              ].join(" ").toLowerCase();
+              const nodeText = node.data.nodeLabel.toLowerCase();
               return searchWords.every((word) => nodeText.includes(word));
             });
 
