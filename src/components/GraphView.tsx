@@ -33,6 +33,7 @@ import {
 import { sortAST } from "../utils/sortAST";
 import { resolveCollisions } from "../utils/resolveCollisions";
 import { MdNavigateBefore, MdNavigateNext } from "react-icons/md";
+import { CgClose } from "react-icons/cg";
 
 const nodeTypes = { customNode: CustomNode };
 const dagreGraph = new dagre.graphlib.Graph().setDefaultEdgeLabel(() => ({}));
@@ -56,6 +57,8 @@ const GraphView = ({
   const [hoveredEdgeId, setHoveredEdgeId] = useState<string | null>(null);
   const [matchedNodes, setMatchedNodes] = useState<GraphNode[]>([]);
   const [currentMatchIndex, setCurrentMatchIndex] = useState(0);
+  const [errorMessage, setErrorMessage] = useState("");
+  const [showErrorPopup, setShowErrorPopup] = useState(true);
   const matchCount = matchedNodes.length;
 
   const navigateMatch = useCallback(
@@ -274,6 +277,18 @@ const GraphView = ({
   }, [nodes, collisionResolved, allNodesMeasured, setNodes]);
 
   useEffect(() => {
+    if (errorMessage) {
+      setShowErrorPopup(true);
+      const timer = setTimeout(() => {
+        setShowErrorPopup(false);
+      }, 3000);
+      return () => clearTimeout(timer);
+    } else {
+      setShowErrorPopup(false);
+    }
+  }, [errorMessage]);
+
+  useEffect(() => {
     if (!containerRef.current) return;
 
     let timeoutId: ReturnType<typeof setTimeout>;
@@ -336,6 +351,9 @@ const GraphView = ({
           return changed ? newNodes : nds;
         });
 
+        setErrorMessage("");
+      } else {
+        setErrorMessage(`${trimmed} is not in schema`);
       }
     }, 300);
 
@@ -402,6 +420,20 @@ const GraphView = ({
             setSelectedNode(null);
           }}
         />
+      )}
+      {/*Error Message */}
+      {errorMessage && showErrorPopup && (
+        <div className="absolute bottom-[50px] left-[100px] flex gap-2 px-2 py-1 bg-red-500 text-white rounded-md shadow-lg">
+          <div className="text-sm font-medium tracking-wide font-roboto">
+            {errorMessage}
+          </div>
+          <button
+            className="cursor-pointer"
+            onClick={() => setShowErrorPopup(false)}
+          >
+            <CgClose size={18} />
+          </button>
+        </div>
       )}
       {matchCount > 1 && (
         <div className="absolute bottom-3 left-1/2 -translate-x-1/2 flex items-center gap-0.5 bg-[var(--node-bg-color)] px-1.5 py-0.5 rounded border border-[var(--popup-border-color)] opacity-80 shadow-sm">
