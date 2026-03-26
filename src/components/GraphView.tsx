@@ -33,7 +33,6 @@ import {
 import { sortAST } from "../utils/sortAST";
 import { resolveCollisions } from "../utils/resolveCollisions";
 import { MdNavigateBefore, MdNavigateNext } from "react-icons/md";
-import { extractKeywords } from "../utils/searchNodeHelpers";
 
 const nodeTypes = { customNode: CustomNode };
 const dagreGraph = new dagre.graphlib.Graph().setDefaultEdgeLabel(() => ({}));
@@ -320,9 +319,8 @@ const GraphView = ({
                 ...Object.values(node.data.nodeData).map((d) =>
                   Array.isArray(d.value) ? d.value.join(" ") : String(d.value ?? "")
                 ),
-              ].join(" ");
-              const nodeWords = extractKeywords(nodeText);
-              return searchWords.every((word) => nodeWords.includes(word));
+              ].join(" ").toLowerCase();
+              return searchWords.every((word) => nodeText.includes(word));
             });
 
       setMatchedNodes(foundNodes);
