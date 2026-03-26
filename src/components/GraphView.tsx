@@ -412,34 +412,27 @@ const GraphView = ({
           }}
         />
       )}
-      <div className="absolute bottom-[10px] left-[50px] flex items-center gap-2">
-        {matchCount > 1 && (
-          <div className="flex items-center gap-1 bg-[var(--node-bg-color)] px-2 py-1 rounded border border-[var(--text-color)] opacity-80">
-            <button
-              onClick={() => navigateMatch("prev")}
-              className="hover:bg-[var(--text-color)] hover:bg-opacity-20 rounded p-1 transition-colors"
-              title="Previous match"
-            >
-              <MdNavigateBefore
-                size={20}
-                className="text-[var(--text-color)]"
-              />
-            </button>
-
-            <span className="text-xs text-[var(--text-color)] min-w-[40px] text-center">
-              {currentMatchIndex + 1}/{matchCount}
-            </span>
-
-            <button
-              onClick={() => navigateMatch("next")}
-              className="hover:bg-[var(--text-color)] hover:bg-opacity-20 rounded p-1 transition-colors"
-              title="Next match"
-            >
-              <MdNavigateNext size={20} className="text-[var(--text-color)]" />
-            </button>
-          </div>
-        )}
-      </div>
+      {matchCount > 1 && (
+        <div className="absolute bottom-3 left-1/2 -translate-x-1/2 flex items-center gap-0.5 bg-[var(--node-bg-color)] px-1.5 py-0.5 rounded border border-[var(--popup-border-color)] opacity-80 shadow-sm">
+          <button
+            onClick={() => navigateMatch("prev")}
+            className="hover:bg-[var(--text-color)] hover:bg-opacity-20 rounded p-0.5 transition-colors"
+            title="Previous match"
+          >
+            <MdNavigateBefore size={14} className="text-[var(--text-color)]" />
+          </button>
+          <span className="text-[10px] text-[var(--text-color)] min-w-[32px] text-center">
+            {currentMatchIndex + 1}/{matchCount}
+          </span>
+          <button
+            onClick={() => navigateMatch("next")}
+            className="hover:bg-[var(--text-color)] hover:bg-opacity-20 rounded p-0.5 transition-colors"
+            title="Next match"
+          >
+            <MdNavigateNext size={14} className="text-[var(--text-color)]" />
+          </button>
+        </div>
+      )}
     </div>
   );
 };
