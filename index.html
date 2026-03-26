@@ -15,6 +15,15 @@
     <meta property="og:url" content="https://studio.ioflux.org">
     <meta property="og:image" content="https://studio.ioflux.org/example-visualization.png">
     <meta name="twitter:card" content="summary_large_image">
+    <script>
+      (function() {
+        var saved = localStorage.getItem("theme");
+        var theme = (saved === "light" || saved === "dark")
+          ? saved
+          : (window.matchMedia("(prefers-color-scheme: dark)").matches ? "dark" : "light");
+        document.documentElement.setAttribute("data-theme", theme);
+      })();
+    </script>
   </head>
   <body>
     <div id="root"></div>
