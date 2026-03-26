@@ -48,7 +48,7 @@ const GraphView = ({
   compiledSchema: CompiledSchema | null;
 }) => {
   const { setCenter, getZoom, fitView } = useReactFlow();
-  const { selectedNode, setSelectedNode, searchString, graphFocusRequest, activateEditorMatch, registerNavigateGraphMatch } = useContext(AppContext);
+  const { selectedNode, setSelectedNode, searchString, graphFocusRequest, activateEditorMatch, registerNavigateGraphMatch, setMatchedNodeIds } = useContext(AppContext);
   const containerRef = useRef<HTMLDivElement>(null);
 
   const [nodes, setNodes, onNodeChange] = useNodesState<GraphNode>([]);
@@ -300,6 +300,7 @@ const GraphView = ({
     const timeout = setTimeout(() => {
       if (!trimmed) {
         setMatchedNodes([]);
+        setMatchedNodeIds([]);
         setCurrentMatchIndex(0);
         setNodes((nds) => nds.map((n) => ({ ...n, selected: false })));
         fitView({ duration: 800, padding: 0.05 });
@@ -325,6 +326,7 @@ const GraphView = ({
             });
 
       setMatchedNodes(foundNodes);
+      setMatchedNodeIds(foundNodes.map((n) => n.id));
 
       if (foundNodes.length > 0) {
         const firstNode = foundNodes[currentMatchIndex % foundNodes.length];
