@@ -61,6 +61,8 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
     navigateGraphMatchRef.current = fn;
   }, []);
 
+  const [matchedNodeIds, setMatchedNodeIds] = useState<string[]>([]);
+
   const toggleFullScreen = useCallback(() => {
     const el = containerRef.current;
 
@@ -111,6 +113,8 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
     registerActivateEditorMatch,
     navigateGraphMatch,
     registerNavigateGraphMatch,
+    matchedNodeIds,
+    setMatchedNodeIds,
   };
 
   return <AppContext.Provider value={value}>{children}</AppContext.Provider>;

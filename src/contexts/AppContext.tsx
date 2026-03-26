@@ -32,6 +32,9 @@ type AppContextType = {
 
   navigateGraphMatch: (direction: "next" | "prev") => void;
   registerNavigateGraphMatch: (fn: (direction: "next" | "prev") => void) => void;
+
+  matchedNodeIds: string[];
+  setMatchedNodeIds: (ids: string[]) => void;
 };
 
 export const AppContext = createContext<AppContextType>({} as AppContextType);
