@@ -9,7 +9,8 @@
     "dev": "vite",
     "build": "tsc -b && vite build",
     "lint": "eslint .",
-    "preview": "vite preview"
+    "preview": "npm run build && wrangler dev",
+    "deploy": "npm run build && wrangler deploy"
   },
   "dependencies": {
     "@apidevtools/json-schema-ref-parser": "^14.1.1",
@@ -29,6 +30,7 @@
     "tailwindcss": "^4.1.10"
   },
   "devDependencies": {
+    "@cloudflare/vite-plugin": "^1.30.2",
     "@eslint/js": "^9.25.0",
     "@types/js-yaml": "^4.0.9",
     "@types/react": "^19.1.2",
@@ -41,6 +43,7 @@
     "globals": "^16.0.0",
     "typescript": "~5.8.3",
     "typescript-eslint": "^7.3.1",
-    "vite": "^6.3.5"
+    "vite": "^6.3.5",
+    "wrangler": "^4.78.0"
   }
 }
