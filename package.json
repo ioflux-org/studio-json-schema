@@ -16,7 +16,7 @@
     "@dagrejs/dagre": "^1.1.5",
     "@hyperjump/json-schema": "^1.14.1",
     "@monaco-editor/react": "^4.7.0",
-    "@tailwindcss/vite": "^4.1.10",
+    "@tailwindcss/vite": "^4.2.2",
     "@xyflow/react": "^12.8.3",
     "js-yaml": "^4.1.1",
     "jsonc-parser": "^3.3.1",
