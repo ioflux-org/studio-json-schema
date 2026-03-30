@@ -20,7 +20,7 @@ import {
 import Editor, { type OnMount } from "@monaco-editor/react";
 import type { editor } from "monaco-editor";
 import defaultSchema from "../data/defaultJSONSchema.json";
-import { AppContext } from "../contexts/AppContext";
+import { AppContext, type SchemaFormat } from "../contexts/AppContext";
 import SchemaVisualization from "./SchemaVisualization";
 import NavigationBar from "./NavigationBar";
 import EditorToggleButton from "./EditorToggleButton";
@@ -69,8 +69,6 @@ const getValidationUI = (theme: "light" | "dark") => ({
     className: "text-red-400",
   },
 });
-
-type SchemaFormat = "json" | "yaml";
 
 const saveFormat = (key: string, format: SchemaFormat) => {
   sessionStorage.setItem(key, format);
@@ -402,7 +400,7 @@ const MonacoEditor = () => {
             </select>
           </div>
           <Editor
-            height="90%"
+            height="87%"
             width="100%"
             language={schemaFormat}
             value={schemaText}
