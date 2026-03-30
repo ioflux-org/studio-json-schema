@@ -5,7 +5,7 @@ import { AppContext } from "../contexts/AppContext";
 import FullscreenToggleButton from "./FullscreenToggleButton";
 
 const NavigationBar = () => {
-  const { theme, toggleTheme, schemaFormat, changeSchemaFormat, isFullScreen, searchString, setSearchString, navigateGraphMatch } =
+  const { theme, toggleTheme, isFullScreen, searchString, setSearchString, navigateGraphMatch } =
     useContext(AppContext);
 
   return (
