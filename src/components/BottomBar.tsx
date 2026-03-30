@@ -10,7 +10,7 @@ const BottomBar = () => {
         <ul className="flex gap-4">
           <li>
             <a
-              href="https://github.com/jagpreetrahi/visualize-json-schema"
+              href="https://github.com/ioflux-org/studio-json-schema"
               target="_blank"
               rel="noopener noreferrer"
               className="flex items-center gap-2 px-1"

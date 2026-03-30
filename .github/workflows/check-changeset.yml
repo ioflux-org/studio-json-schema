@@ -1,0 +1,32 @@
+on:
+  pull_request:
+    branches:
+      - main
+    # Avoid triggering this check for automated versioning PRs.
+    # These PRs only update metadata and delete changesets, so they
+    # don't require a new changeset file to be added.
+    paths-ignore:
+      - "package.json"
+      - "CHANGELOG.md"
+      - ".changeset/**"
+
+jobs:
+  changeset-check:
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Check for changeset
+        run: |
+          CHANGED=$(git diff --name-only origin/main...HEAD | grep "^.changeset/.*\.md$" || true)
+
+          if [ -z "$CHANGED" ]; then
+            echo "❌ No changeset found. Run 'npx changeset' locally to create one for your changes."
+            exit 1
+          fi
+
+          echo "✅ Changeset detected:"
+          echo "$CHANGED"
