@@ -356,7 +356,23 @@ const GraphView = ({
     }, 300);
 
     return () => clearTimeout(timeout);
-  }, [searchString]);
+  }, [searchString, nodes]);
+
+  const handleKeyDown = useCallback(
+    (e: React.KeyboardEvent<HTMLDivElement>) => {
+      if (matchCount <= 1) return;
+
+      if (e.key === "ArrowRight" || e.key === "Enter") {
+        e.preventDefault();
+        navigateMatch("next");
+      } else if (e.key === "ArrowLeft") {
+        e.preventDefault();
+        navigateMatch("prev");
+      }
+    },
+    [matchCount, navigateMatch]
+  );
+
   return (
     <div
       ref={containerRef}
