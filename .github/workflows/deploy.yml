@@ -1,17 +1,16 @@
-name: Deploy and Release
+name: Deploy Website
 
 on:
   push:
     branches:
-    - main
-    paths-ignore:
-    - ".github/**"
-    - "**.md"
+      - main
+    paths:
+      - "package.json"
+      - "CHANGELOG.md"
   workflow_dispatch:
 
-
 concurrency:
-  group: website-deploy-${{ github.ref }}
+  group: website-deploy-${{ github.ref }}-${{ github.event_name }}
   cancel-in-progress: true
 
 permissions:
@@ -21,55 +20,59 @@ permissions:
 
 jobs:
   deploy-and-release:
+    if: |
+      github.event_name == 'workflow_dispatch' ||
+      (github.event_name == 'push' && contains(github.event.head_commit.message, 'chore: version bump'))
     runs-on: ubuntu-latest
     steps:
-    - name: Checkout
-      uses: actions/checkout@v4
-      with:
-        fetch-depth: 0
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
 
-    - name: Setup Node.js
-      uses: actions/setup-node@v4
-      with:
-        node-version: lts/*
-        cache: npm
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: lts/*
+          cache: npm
 
-    - name: Install Dependencies and Build
-      run: |
-        npm ci
-        npm run build
+      - name: Install Dependencies and Build
+        run: |
+          npm ci
+          npm run build
 
-    - name: Upload build artifact
-      uses: actions/upload-pages-artifact@v3
-      with:
-        path: dist
+      - name: Upload build artifact
+        uses: actions/upload-pages-artifact@v3
+        with:
+          path: dist
 
-    - name: Deploy to GitHub Pages
-      uses: actions/deploy-pages@v4
+      - name: Deploy to GitHub Pages
+        uses: actions/deploy-pages@v4
 
-    - name: Create Tag and Release
-      env:
-        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-      run: |
-        # Read version from package.json
-        VERSION=$(jq -r '.version' package.json)
-        TAG_NAME="v${VERSION}"
+      - name: Create Tag and Release
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          # Read version from package.json
+          VERSION=$(jq -r '.version' package.json)
+          TAG_NAME="v${VERSION}"
 
-        echo "Releasing version: $TAG_NAME"
+          echo "Releasing version: $TAG_NAME"
 
-        # Check if tag already exists to avoid errors on re-runs
-        if git rev-parse "$TAG_NAME" >/dev/null 2>&1; then
-          echo "Tag $TAG_NAME already exists. Skipping release creation."
-        else
-          # Create and push the tag
-          git config user.name "github-actions[bot]"
-          git config user.email "github-actions[bot]@users.noreply.github.com"
-          git tag "$TAG_NAME"
-          git push origin "$TAG_NAME"
+          # Check if tag already exists to avoid errors on re-runs
+          if git rev-parse "$TAG_NAME" >/dev/null 2>&1; then
+            echo "Tag $TAG_NAME already exists. Skipping release creation."
+          else
+            # Create and push the tag
+            git config user.name "github-actions[bot]"
+            git config user.email "github-actions[bot]@users.noreply.github.com"
 
-          # Create the GitHub Release using the GitHub CLI (gh)
-          # --generate-notes automatically creates the changelog
-          gh release create "$TAG_NAME" \
-            --title "$TAG_NAME" \
-            --generate-notes
-        fi
+            git tag "$TAG_NAME"
+            git push origin "$TAG_NAME"
+
+            # Create the GitHub Release using the GitHub CLI (gh)
+            # --generate-notes automatically creates the changelog
+            gh release create "$TAG_NAME" \
+              --title "$TAG_NAME" \
+              --generate-notes
+          fi
