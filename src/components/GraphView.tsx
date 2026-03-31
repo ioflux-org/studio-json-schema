@@ -417,6 +417,8 @@ const GraphView = ({
         nodeTypes={nodeTypes}
         minZoom={0.05}
         maxZoom={5}
+        fitView
+        fitViewOptions={{ padding: 0.05, duration: 800 }}
         onEdgeMouseEnter={(_, edge) => setHoveredEdgeId(edge.id)}
         onEdgeMouseLeave={() => setHoveredEdgeId(null)}
         onPaneClick={() => {
