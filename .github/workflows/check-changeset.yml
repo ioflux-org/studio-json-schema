@@ -1,10 +1,17 @@
-name: Check for Changesets
+name: Check Changeset
 
 on:
   pull_request:
     types: [opened, synchronize, reopened, labeled, unlabeled]
     branches:
       - main
+    # Avoid triggering this check for automated versioning PRs.
+    # These PRs only update metadata and delete changesets, so they
+    # don't require a new changeset file to be added.
+    paths-ignore:
+      - "package*.json"
+      - "CHANGELOG.md"
+      - ".changeset/**"
 
 permissions:
   pull-requests: write # Required for leaving comments
@@ -70,12 +77,6 @@ jobs:
                 owner,
                 repo,
                 issue_number,
-                body: `${marker}\n### ⚠️ Changeset Missing\n\n
-                This PR does not have a changeset file. To help us effectively version these updates, please run the following command locally:\n\n
-                \`\`\`bash\nnpx changeset\n\`\`\`\n\n
-                Follow the prompts to select the version bump and write a short summary.Run: 
-                \n\n\`\`\`bash\ngit add ./.changeset/\n\`\`\`\n\n
-                Then commit and push the changes to this branch.\n\n
-                _If this PR doesn't require a version bump (e.g., docs, CI updates), maintainers can apply the \`skip changeset\` label to bypass this check._`
+                body: `${marker}\n### ⚠️ Changeset Missing\n\nThis PR does not have a changeset file. To help us effectively version these updates, please run the following command locally:\n\n\`\`\`bash\nnpx changeset\n\`\`\`\n\nFollow the prompts to select the version bump and write a short summary. Then, commit the new file in the \`.changeset\` directory to this branch.\n\n_If this PR doesn't require a version bump (e.g., docs, CI updates), maintainers can apply the \`skip changeset\` label to bypass this check._`
               });
             }
