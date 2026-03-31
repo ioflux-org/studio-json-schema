@@ -79,22 +79,22 @@ jobs:
                 issue_number,
                 body: `${marker}
                 ### ⚠️ Changeset Missing
-                
+
                 This PR does not have a changeset file. To help us effectively version these updates, please run the following command locally:
-                
+
                 \`\`\`bash
                 npx changeset
                 \`\`\`
-                
+
                 Follow the prompts to select the version bump and write a short summary.
-                
+
                 \`\`\`bash
                 git add .changeset/
                 \`\`\`
-                
+
                 Then commit and push the changes to this branch.
-                
-                If this PR doesn't require a version bump (e.g., docs, CI updates), maintainers can apply the \`skip changeset\` label to bypass this check.
+
+                _If this PR doesn't require a version bump (e.g., docs, CI updates), maintainers can apply the \`skip changeset\` label to bypass this check._
                 `
               });
             }
