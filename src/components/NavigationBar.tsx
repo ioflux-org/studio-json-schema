@@ -62,7 +62,7 @@ const NavigationBar = () => {
               onChange={(e) => setSearchString(e.target.value)}
               onKeyDown={(e) => {
                 if (e.key !== "Enter") return;
-                navigateGraphMatch("next");
+                navigateGraphMatch(e.shiftKey ? "prev" : "next");
               }}
             />
             <div className="flex-shrink-0 w-[40px] flex justify-end">
