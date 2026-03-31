@@ -205,6 +205,7 @@ const MonacoEditor = () => {
   }, [selectedNode?.id]);
 
   const getNodeJsonRange = useCallback((nodeId: string) => {
+    if (schemaFormat === "yaml") return null;
     const model = editorRef.current?.getModel();
     if (!model || !monacoRef.current) return null;
     const fragment = nodeId.split("#")[1] ?? "";
@@ -219,7 +220,7 @@ const MonacoEditor = () => {
     const startPos = model.getPositionAt(highlightNode.offset);
     const endPos = model.getPositionAt(highlightNode.offset + highlightNode.length);
     return { startPos, endPos };
-  }, []);
+  }, [schemaFormat]);
 
   useEffect(() => {
     if (!editorRef.current || !monacoRef.current) return;
