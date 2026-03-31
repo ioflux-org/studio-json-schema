@@ -49,13 +49,13 @@ const NavigationBar = () => {
 
       <ul className={`flex items-center gap-5 ${isFullScreen ? 'mr-0' : 'mr-4'}`}>
         <li className="flex items-center gap-1">
-          <div className="flex items-center gap-2 px-3 py-1 rounded-lg border border-[var(--navigation-text-color)] w-[200px]">
+          <div className={`flex items-center gap-2 px-3 py-1 rounded-md w-[200px] ${theme === 'dark' ? 'bg-white/5 border border-[var(--popup-border-color)]' : 'bg-gray-100 border border-gray-300'}`}>
             <RiSearchLine className="text-[var(--navigation-text-color)] flex-shrink-0 opacity-60" size={14} aria-hidden="true" />
             <input
               ref={searchInputRef}
               type="text"
               maxLength={30}
-              placeholder="Search"
+              placeholder="Search Node"
               aria-label="Search nodes"
               className="outline-none bg-transparent text-[var(--navigation-text-color)] text-sm placeholder:text-[var(--navigation-text-color)] flex-1 min-w-0"
               value={searchString}
