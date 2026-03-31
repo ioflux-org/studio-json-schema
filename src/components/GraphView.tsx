@@ -50,6 +50,7 @@ const GraphView = ({
   const { setCenter, getZoom, fitView } = useReactFlow();
   const { selectedNode, setSelectedNode, searchString, graphFocusRequest, activateEditorMatch, registerNavigateGraphMatch, setMatchedNodeIds } = useContext(AppContext);
   const containerRef = useRef<HTMLDivElement>(null);
+  const lastHandledGraphFocusSeqRef = useRef<number | null>(null);
 
   const [nodes, setNodes, onNodeChange] = useNodesState<GraphNode>([]);
   const [edges, setEdges, onEdgeChange] = useEdgesState<GraphEdge>([]);
@@ -117,8 +118,12 @@ const GraphView = ({
   // Sync graph focus when Enter is pressed in search
   useEffect(() => {
     if (!graphFocusRequest) return;
+    if (lastHandledGraphFocusSeqRef.current === graphFocusRequest.seq) return;
+
     const graphNode = nodes.find((n) => n.id === graphFocusRequest.nodeId);
     if (!graphNode || graphNode.data.nodeLabel === "root") return;
+
+    lastHandledGraphFocusSeqRef.current = graphFocusRequest.seq;
 
     // Update matchedNodes so the nav buttons appear and navigateMatch works
     setMatchedNodes((prev) => {
