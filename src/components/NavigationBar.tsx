@@ -1,5 +1,6 @@
-import { BsGithub, BsMoonStars, BsBook, BsSun, BsSearch } from "react-icons/bs";
-import { useContext } from "react";
+import { BsGithub, BsMoonStars, BsBook, BsSun } from "react-icons/bs";
+import { RiSearchLine, RiCloseLine } from "react-icons/ri";
+import { useContext, useEffect, useRef } from "react";
 import { Tooltip } from "react-tooltip";
 import { AppContext } from "../contexts/AppContext";
 import FullscreenToggleButton from "./FullscreenToggleButton";
@@ -7,6 +8,18 @@ import FullscreenToggleButton from "./FullscreenToggleButton";
 const NavigationBar = () => {
   const { theme, toggleTheme, isFullScreen, searchString, setSearchString, navigateGraphMatch } =
     useContext(AppContext);
+  const searchInputRef = useRef<HTMLInputElement>(null);
+
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if ((e.ctrlKey || e.metaKey) && e.key === "k") {
+        e.preventDefault();
+        searchInputRef.current?.focus();
+      }
+    };
+    window.addEventListener("keydown", handleKeyDown);
+    return () => window.removeEventListener("keydown", handleKeyDown);
+  }, []);
 
   return (
     <nav className={`flex items-center relative z-10 bg-[var(--bg-color)] ${
@@ -36,14 +49,15 @@ const NavigationBar = () => {
 
       <ul className={`flex items-center gap-5 ${isFullScreen ? 'mr-0' : 'mr-4'}`}>
         <li className="flex items-center gap-1">
-          <div className="flex items-center gap-2 border-b border-[var(--navigation-text-color)]">
-            <BsSearch className="text-[var(--navigation-text-color)] flex-shrink-0" size={12} aria-hidden="true" />
+          <div className="flex items-center gap-2 px-3 py-1 rounded-lg border border-[var(--navigation-text-color)] w-[200px]">
+            <RiSearchLine className="text-[var(--navigation-text-color)] flex-shrink-0 opacity-60" size={14} aria-hidden="true" />
             <input
-              type="search"
+              ref={searchInputRef}
+              type="text"
               maxLength={30}
-              placeholder="Search node..."
+              placeholder="Search"
               aria-label="Search nodes"
-              className="outline-none bg-transparent text-[var(--navigation-text-color)] text-sm placeholder:text-[var(--navigation-text-color)] w-[130px]"
+              className="outline-none bg-transparent text-[var(--navigation-text-color)] text-sm placeholder:text-[var(--navigation-text-color)] flex-1 min-w-0"
               value={searchString}
               onChange={(e) => setSearchString(e.target.value)}
               onKeyDown={(e) => {
@@ -51,6 +65,18 @@ const NavigationBar = () => {
                 navigateGraphMatch("next");
               }}
             />
+            <div className="flex-shrink-0 w-[40px] flex justify-end">
+              {searchString ? (
+                <button
+                  onClick={() => setSearchString("")}
+                  className="text-[var(--navigation-text-color)] opacity-50 hover:opacity-100 cursor-pointer"
+                >
+                  <RiCloseLine size={16} />
+                </button>
+              ) : (
+                <kbd className="text-[var(--navigation-text-color)] text-xs border border-[var(--navigation-text-color)] rounded opacity-50 px-1 py-0.5 font-sans leading-none">⌘K</kbd>
+              )}
+            </div>
           </div>
         </li>
         <li className="flex items-center">
