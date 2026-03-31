@@ -97,15 +97,12 @@ const MonacoEditor = () => {
   const editorPanelRef = useRef<ImperativePanelHandle>(null);
   const searchMatchesRef = useRef<any[]>([]);
   const searchMatchIndexRef = useRef(0);
-  const compiledSchemaRef = useRef<CompiledSchema | null>(null);
-
   const handleEditorDidMount: OnMount = (editor, monaco) => {
     editorRef.current = editor;
     monacoRef.current = monaco;
   };
 
   const [compiledSchema, setCompiledSchema] = useState<CompiledSchema | null>(null);
-  compiledSchemaRef.current = compiledSchema;
 
   const initialSchemaJSON = loadSchemaJSON(SESSION_SCHEMA_KEY);
 
