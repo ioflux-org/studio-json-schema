@@ -133,7 +133,7 @@ const GraphView = ({
     const y = graphNode.position.y + NODE_HEIGHT / 2;
     setCenter(x, y, { zoom: Math.max(getZoom(), 1), duration: 500 });
     setNodes((nds) => nds.map((n) => ({ ...n, selected: n.id === graphNode.id })));
-  }, [graphFocusRequest]);
+  }, [graphFocusRequest, nodes]);
 
   const generateNodesAndEdges = useCallback(
     (
@@ -367,7 +367,7 @@ const GraphView = ({
 
       if (e.key === "Enter") {
         e.preventDefault();
-        navigateMatch("next");
+        navigateMatch(e.shiftKey ? "prev" : "next");
       }
     },
     [matchCount, navigateMatch]
