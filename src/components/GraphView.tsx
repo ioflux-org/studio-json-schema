@@ -336,7 +336,8 @@ const GraphView = ({
       setMatchedNodeIds(foundNodes.map((n) => n.id));
 
       if (foundNodes.length > 0) {
-        const firstNode = foundNodes[currentMatchIndex % foundNodes.length];
+        setCurrentMatchIndex(0);
+        const firstNode = foundNodes[0];
         const x = firstNode.position.x + NODE_WIDTH / 2;
         const y = firstNode.position.y + NODE_HEIGHT / 2;
 
