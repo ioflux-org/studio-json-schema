@@ -275,7 +275,8 @@ const GraphView = ({
     const observer = new ResizeObserver(() => {
       clearTimeout(timeoutId);
       timeoutId = setTimeout(() => {
-        fitView({ duration: 800, padding: 0.05 });
+          const currentZoom = getZoom();
+          fitView({ duration: 800, minZoom: currentZoom, maxZoom: currentZoom, padding: 0.05 });
       }, 100);
     });
 
@@ -302,10 +303,13 @@ const GraphView = ({
 
       const searchWords = trimmed.toLowerCase().match(/[a-zA-Z0-9_]+/g) || [];
 
-      const foundNodes = nodes.filter((node) => {
-        const labelWords = extractKeywords(node.data.nodeLabel);
-        return searchWords.every((word) => labelWords.includes(word));
-      });
+      const foundNodes =
+        searchWords.length === 0
+          ? []
+          : nodes.filter((node) => {
+              const labelWords = extractKeywords(node.data.nodeLabel);
+              return searchWords.every((word) => labelWords.includes(word));
+            });
 
       setMatchedNodes(foundNodes);
 
