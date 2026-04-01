@@ -97,6 +97,7 @@ const MonacoEditor = () => {
   const editorPanelRef = useRef<ImperativePanelHandle>(null);
   const searchMatchesRef = useRef<any[]>([]);
   const searchMatchIndexRef = useRef(0);
+  const parsedTreeRef = useRef<{ versionId: number; tree: any } | null>(null);
   const handleEditorDidMount: OnMount = (editor, monaco) => {
     editorRef.current = editor;
     monacoRef.current = monaco;
@@ -212,7 +213,11 @@ const MonacoEditor = () => {
     const path = fragment.split("/").filter((s) => s !== "").map((s) =>
       /^\d+$/.test(s) ? parseInt(s, 10) : decodeURIComponent(s)
     );
-    const tree = parseTree(model.getValue());
+    const versionId = model.getVersionId();
+    if (!parsedTreeRef.current || parsedTreeRef.current.versionId !== versionId) {
+      parsedTreeRef.current = { versionId, tree: parseTree(model.getValue()) };
+    }
+    const tree = parsedTreeRef.current.tree;
     if (!tree) return null;
     const node = findNodeAtLocation(tree, path);
     if (!node) return null;
