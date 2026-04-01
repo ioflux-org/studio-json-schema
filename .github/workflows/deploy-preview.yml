@@ -1,37 +1,36 @@
 name: Deploy PR Preview
 
 on:
-  pull_request:
-    types: [opened, synchronize, reopened]
-
-concurrency:
-  group: preview-${{ github.event.pull_request.number }}
-  cancel-in-progress: true
+  workflow_run:
+    workflows: ["Build PR Preview"]
+    types:
+      - completed
 
 permissions:
+  actions: read
   deployments: write
   contents: read
   pull-requests: write
 
 jobs:
   deploy-preview:
+    if: ${{ github.event.workflow_run.conclusion == 'success' }}
     runs-on: ubuntu-latest
     timeout-minutes: 15
     steps:
-      - name: Checkout
-        uses: actions/checkout@v4
-
-      - name: Setup Node.js
-        uses: actions/setup-node@v4
+      - name: Download artifact from Build Job
+        uses: actions/download-artifact@v4
         with:
-          node-version: 20
-          cache: npm
+          name: preview-dist
+          path: artifact
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+          run-id: ${{ github.event.workflow_run.id }}
 
-      - name: Install dependencies
-        run: npm ci
-
-      - name: Build Site
-        run: npm run build
+      - name: Read PR number
+        id: pr
+        run: |
+          PR_NUMBER=$(cat artifact/pr_number.txt)
+          echo "pr_number=$PR_NUMBER" >> $GITHUB_OUTPUT
 
       - name: Publish to Cloudflare Pages
         id: cloudflare_deploy
@@ -40,21 +39,22 @@ jobs:
           apiToken: ${{ secrets.CLOUDFLARE_API_TOKEN }}
           accountId: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
           command: >
-            pages deploy dist
+            pages deploy artifact/dist
             --project-name=${{ vars.CLOUDFLARE_PROJECT_NAME }}
-            --branch=pr-${{ github.event.pull_request.number }}
+            --branch=pr-${{ steps.pr.outputs.pr_number }}
 
       - name: Comment PR with Preview Link
         uses: thollander/actions-comment-pull-request@v3
         with:
+          pr-number: ${{ steps.pr.outputs.pr_number }}
           message: |
             ### Preview Deployed!
-            
+
             | Item | Status |
             | :--- | :--- |
             | **Latest Deploy** | [Visit Preview](${{ steps.cloudflare_deploy.outputs.pages-deployment-alias-url }}) |
-            | **Environment** | `Preview (PR-${{ github.event.pull_request.number }})` |
+            | **Environment** | `Preview (PR-${{ steps.pr.outputs.pr_number }})` |
             | **Action** | [View Logs](${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}) |
-            
-            _Last updated at ${{ github.event.pull_request.updated_at }}_
+
+            _Last updated at ${{ github.event.workflow_run.updated_at }}_
           comment-tag: preview_deploy_status # This ensures it updates the same comment instead of spamming
