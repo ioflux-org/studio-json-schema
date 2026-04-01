@@ -3,6 +3,9 @@ name: Build PR Preview
 on:
   pull_request:
     types: [opened, synchronize, reopened]
+  push:
+    branches:
+      - changeset-release/**
 
 concurrency:
   group: preview-build-${{ github.event.pull_request.number }}

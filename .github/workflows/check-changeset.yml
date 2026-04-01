@@ -1,0 +1,82 @@
+name: Check Changeset
+
+on:
+  pull_request:
+    types: [opened, synchronize, reopened, labeled, unlabeled]
+    branches:
+      - main
+    # Avoid triggering this check for automated versioning PRs.
+    # These PRs only update metadata and delete changesets, so they
+    # don't require a new changeset file to be added.
+    paths-ignore:
+      - "package*.json"
+      - "CHANGELOG.md"
+      - ".changeset/**"
+
+permissions:
+  pull-requests: write # Required for leaving comments
+  contents: read
+
+jobs:
+  changeset-check:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Check for Bypass Label
+        id: check-label
+        run: |
+          if [[ "${{ contains(github.event.pull_request.labels.*.name, 'skip changeset') }}" == "true" ]]; then
+            echo "skip=true" >> "$GITHUB_OUTPUT"
+            echo "✅ 'skip changeset' label found. Bypassing check."
+          else
+            echo "skip=false" >> "$GITHUB_OUTPUT"
+          fi
+
+      - uses: actions/checkout@v4
+        if: steps.check-label.outputs.skip != 'true'
+        with:
+          fetch-depth: 0
+
+      - name: Check for changeset
+        id: check
+        if: steps.check-label.outputs.skip != 'true'
+        run: |
+          CHANGED=$(git diff --name-only origin/main...HEAD | grep "^.changeset/.*\.md$" || true)
+
+          if [ -z "$CHANGED" ]; then
+            echo "found=false" >> "$GITHUB_OUTPUT"
+            echo "❌ No changeset found. Run 'npx changeset' locally to create one for your changes."
+            exit 1
+          else
+            echo "found=true" >> "$GITHUB_OUTPUT"
+            echo "✅ Changeset detected:"
+            echo "$CHANGED"
+          fi
+
+      - name: Comment on PR if missing
+        if: failure() && steps.check.outputs.found == 'false'
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const marker = '<!-- changeset-bot-comment -->';
+            const { owner, repo } = context.repo;
+            const issue_number = context.issue.number;
+            
+            // Fetch existing comments on the PR
+            const comments = await github.rest.issues.listComments({
+              owner,
+              repo,
+              issue_number
+            });
+            
+            const hasCommented = comments.data.some(c => c.body.includes(marker));
+            
+            // Only comment if we haven't already
+            if (!hasCommented) {
+              await github.rest.issues.createComment({
+                owner,
+                repo,
+                issue_number,
+                body: `${marker}\n### ⚠️ Changeset Missing\n\nThis PR does not have a changeset file. To help us effectively version these updates, please run the following command locally:\n\n\`\`\`bash\nnpx changeset\n\`\`\`\n\nFollow the prompts to select the version bump and write a short summary.Run:\n\n\`\`\`bash\ngit add ./.changeset/\n\`\`\`\n\nThen commit and push the changes to this branch.\n\n_If this PR doesn't require a version bump (e.g., docs, CI updates), maintainers can apply the \`skip changeset\` label to bypass this check._`
+              });
+            }

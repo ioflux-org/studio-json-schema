@@ -1,4 +1,5 @@
 import { useContext, useState, useEffect, useRef } from "react";
+
 import { parseTree, findNodeAtLocation } from "jsonc-parser";
 import {
   Panel,
@@ -20,9 +21,9 @@ import { type Browser } from "@hyperjump/browser";
 import Editor, { type OnMount } from "@monaco-editor/react";
 import type { editor } from "monaco-editor";
 import defaultSchema from "../data/defaultJSONSchema.json";
-import { AppContext } from "../contexts/AppContext";
+import { AppContext, type SchemaFormat } from "../contexts/AppContext";
 import SchemaVisualization from "./SchemaVisualization";
-import FullscreenToggleButton from "./FullscreenToggleButton";
+import NavigationBar from "./NavigationBar";
 import EditorToggleButton from "./EditorToggleButton";
 import { parseSchema } from "../utils/parseSchema";
 import YAML from "js-yaml";
@@ -74,8 +75,6 @@ const getValidationUI = (theme: "light" | "dark") => ({
   },
 });
 
-type SchemaFormat = "json" | "yaml";
-
 const saveFormat = (key: string, format: SchemaFormat) => {
   sessionStorage.setItem(key, format);
 };
@@ -95,7 +94,7 @@ const saveSchemaJSON = (key: string, schema: JSONSchema) => {
 };
 
 const MonacoEditor = () => {
-  const { theme, isFullScreen, containerRef, schemaFormat, selectedNode } =
+  const { theme, isFullScreen, containerRef, schemaFormat, changeSchemaFormat, selectedNode } =
     useContext(AppContext);
 
   const editorRef = useRef<editor.IStandaloneCodeEditor | null>(null);
@@ -295,11 +294,7 @@ const MonacoEditor = () => {
       }`}
     >
       {isFullScreen && (
-        <div className="w-full px-1 bg-[var(--view-bg-color)] justify-items-end">
-          <div className="text-[var(--view-text-color)]">
-            <FullscreenToggleButton />
-          </div>
-        </div>
+        <NavigationBar />
       )}
       <PanelGroup direction="horizontal">
         <Panel
@@ -308,8 +303,18 @@ const MonacoEditor = () => {
           ref={editorPanelRef}
           collapsible
         >
+          <div className="flex items-center gap-2 px-2 py-1 bg-[var(--validation-bg-color)]">
+            <select
+              value={schemaFormat}
+              onChange={(e) => changeSchemaFormat(e.target.value as SchemaFormat)}
+              className="ml-auto flex-shrink-0 bg-[var(--bg-color)] text-[var(--text-color)] text-sm outline-none cursor-pointer border border-[var(--popup-border-color)] rounded-sm"
+            >
+              <option value="json">JSON</option>
+              <option value="yaml">YAML</option>
+            </select>
+          </div>
           <Editor
-            height="90%"
+            height="87%"
             width="100%"
             language={schemaFormat}
             value={schemaText}

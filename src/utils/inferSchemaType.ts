@@ -1,50 +1,49 @@
 import type { GraphNode } from "./processAST";
 
+const objectKeywords = new Set([
+    "properties",
+    "additionalProperties",
+    "patternProperties",
+    "dependentSchemas",
+    "propertyNames",
+    "dependentRequired",
+    "maxProperties",
+    "minProperties",
+    "required",
+]);
+const arrayKeywords = new Set([
+    "items",
+    "prefixItems",
+    "contains",
+    "maxItems",
+    "minItems",
+    "maxContains",
+    "minContains",
+    "uniqueItems",
+]);
+const stringKeywords = new Set([
+    "maxLength",
+    "minLength",
+    "pattern",
+]);
+const numberKeywords = new Set([
+    "exclusiveMaximum",
+    "exclusiveMinimum",
+    "maximum",
+    "minimum",
+    "multipleOf",
+]);
+const refKeyword = new Set([
+    "$ref"
+]);
+
 export const inferSchemaType = (nodeData: GraphNode["data"]["nodeData"]): [string, string] => {
     if (typeof nodeData.type?.value === "string") {
         return ["objectSchema", nodeData.type.value as string];
     }
 
-    const objectKeywords = new Set([
-        "properties",
-        "additionalProperties",
-        "patternProperties",
-        "dependentSchemas",
-        "propertyNames",
-        "dependentRequired",
-        "maxProperties",
-        "minProperties",
-        "required",
-    ]);
-    const arrayKeywords = new Set([
-        "items",
-        "prefixItems",
-        "contains",
-        "maxItems",
-        "minItems",
-        "maxContains",
-        "minContains",
-        "uniqueItems",
-    ]);
-    const stringKeywords = new Set([
-        "maxLength",
-        "minLength",
-        "pattern",
-    ]);
-    const numberKeywords = new Set([
-        "exclusiveMaximum",
-        "exclusiveMinimum",
-        "maximum",
-        "minimum",
-        "multipleOf",
-    ]);
-
-    const refKeyword = new Set([
-        "$ref"
-    ]);
-
     const hasAnyKeyword = (keywords: Set<string>) => {
-        return [...keywords].some((key) => key in nodeData);
+        return Object.keys(nodeData).some((key) => keywords.has(key));
     }
 
     const getBooleanSchemaValue = (value: string): string => {
