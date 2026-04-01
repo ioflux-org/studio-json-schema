@@ -15,8 +15,14 @@ const NavigationBar = () => {
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
       if ((e.ctrlKey || e.metaKey) && e.key === "k") {
-        e.preventDefault();
-        searchInputRef.current?.focus();
+        const active = document.activeElement;
+        const inEditor = active?.closest(".monaco-editor") !== null;
+        const inInput = active instanceof HTMLInputElement || active instanceof HTMLTextAreaElement || (active as HTMLElement)?.isContentEditable;
+        if (inEditor || inInput) return;
+        if (!mobileSearchOpen && searchInputRef.current) {
+          e.preventDefault();
+          searchInputRef.current.focus();
+        }
       }
       if (e.key === "Escape" && mobileSearchOpen) {
         setMobileSearchOpen(false);
