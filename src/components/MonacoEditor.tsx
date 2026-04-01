@@ -373,7 +373,7 @@ const MonacoEditor = () => {
   return (
     <div
       ref={containerRef}
-      className={`h-[92vh] flex flex-col ${
+      className={`flex-1 min-h-0 flex flex-col ${
         isAnimating ? "panel-animating" : ""
       }`}
     >
