@@ -318,7 +318,7 @@ const GraphView = ({
     const trimmed = searchString.trim();
 
     const timeout = setTimeout(() => {
-      if (!trimmed) {
+      if (!trimmed || trimmed.length < 3) {
         setMatchedNodes([]);
         setMatchedNodeIds([]);
         setCurrentMatchIndex(0);
