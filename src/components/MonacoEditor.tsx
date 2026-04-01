@@ -17,6 +17,7 @@ import {
   type SchemaDocument,
 } from "@hyperjump/json-schema/experimental";
 import { type Browser } from "@hyperjump/browser";
+import { parseIri } from "@hyperjump/uri";
 
 import Editor, { type OnMount } from "@monaco-editor/react";
 import type { editor } from "monaco-editor";
@@ -34,16 +35,10 @@ type ValidationStatus = {
   message: string;
 };
 
-type SchemaBrowser = Browser & {
-  _cache: Record<string, SchemaDocument>;
-}
-
 type CreateBrowser = (
   id: string,
   schemaDoc: SchemaDocument
-) => {
-  _cache: Record<string, SchemaDocument>;
-};
+) => Browser<SchemaDocument>;
 
 const DEFAULT_SCHEMA_ID = "https://studio.ioflux.org/schema";
 const DEFAULT_SCHEMA_DIALECT = "https://json-schema.org/draft/2020-12/schema";
@@ -245,19 +240,19 @@ const MonacoEditor = () => {
         );
 
         const createBrowser: CreateBrowser = (id, schemaDoc) => {
+          const { fragment } = parseIri(schemaDoc.baseUri);
           return {
             _cache: {
               [id]: schemaDoc,
             },
+            cursor: schemaDoc.anchorLocation(fragment),
+            document: schemaDoc,
+            uri: schemaDoc.baseUri,
           };
         };
 
         const browser = createBrowser(schemaId, schemaDocument);
-
-        // The Hyperjump `getSchema` expects a full browser instance, but we only need the _cache
-        // property for local-only resolution. This cast is safe because our usage only triggers cache lookup.
-        // We are casting a minimal object to 'SchemaBrowser' (Browser & { _cache }).
-        const schema = await getSchema(schemaDocument.baseUri, browser as SchemaBrowser);
+        const schema = await getSchema(schemaDocument.baseUri, browser);
 
         setCompiledSchema(await compile(schema));
         setSchemaValidation(
