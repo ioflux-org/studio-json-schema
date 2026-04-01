@@ -360,6 +360,11 @@ const GraphView = ({
 
         setErrorMessage("");
       } else {
+        setMatchedNodes([]);
+        setMatchedNodeIds([]);
+        setCurrentMatchIndex(0);
+        setNodes((nds) => nds.map((n) => ({ ...n, selected: false })));
+        fitView({ duration: 800, padding: 0.05 });
         setErrorMessage(`${trimmed} is not in schema`);
       }
     }, 300);
