@@ -135,6 +135,31 @@ const MonacoEditor = () => {
     setEditorVisible(true);
   }, [isMobile]);
 
+  useEffect(() => {
+    if (!isMobile) return;
+    const viewport = window.visualViewport;
+    if (!viewport) return;
+
+    const handleViewportResize = () => {
+      const keyboardHeight = window.innerHeight - viewport.height;
+      const isKeyboardOpen = keyboardHeight > 100;
+      if (isKeyboardOpen) {
+        const availableHeight = viewport.height;
+        const totalHeight = window.innerHeight;
+        const editorPercent = Math.round((availableHeight / totalHeight) * 100 * 0.55);
+        editorPanelRef.current?.resize(Math.min(editorPercent, 70));
+        if (!editorVisible) {
+          setEditorVisible(true);
+        }
+      } else {
+        editorPanelRef.current?.resize(40);
+      }
+    };
+
+    viewport.addEventListener("resize", handleViewportResize);
+    return () => viewport.removeEventListener("resize", handleViewportResize);
+  }, [isMobile, editorVisible]);
+
   const toggleEditorVisibility = () => {
     if (!editorPanelRef.current) return;
 
