@@ -1,0 +1,60 @@
+name: Deploy PR Preview
+
+on:
+  workflow_run:
+    workflows: ["Build PR Preview"]
+    types:
+      - completed
+
+permissions:
+  actions: read
+  deployments: write
+  contents: read
+  pull-requests: write
+
+jobs:
+  deploy-preview:
+    if: ${{ github.event.workflow_run.conclusion == 'success' }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - name: Download artifact from Build Job
+        uses: actions/download-artifact@v4
+        with:
+          name: preview-dist
+          path: artifact
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+          run-id: ${{ github.event.workflow_run.id }}
+
+      - name: Read PR number
+        id: pr
+        run: |
+          PR_NUMBER=$(cat artifact/pr_number.txt)
+          echo "pr_number=$PR_NUMBER" >> $GITHUB_OUTPUT
+
+      - name: Publish to Cloudflare Pages
+        id: cloudflare_deploy
+        uses: cloudflare/wrangler-action@v3
+        with:
+          apiToken: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          accountId: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+          command: >
+            pages deploy artifact/dist
+            --project-name=${{ vars.CLOUDFLARE_PROJECT_NAME }}
+            --branch=pr-${{ steps.pr.outputs.pr_number }}
+
+      - name: Comment PR with Preview Link
+        uses: thollander/actions-comment-pull-request@v3
+        with:
+          pr-number: ${{ steps.pr.outputs.pr_number }}
+          message: |
+            ### Preview Deployed!
+
+            | Item | Status |
+            | :--- | :--- |
+            | **Latest Deploy** | [Visit Preview](${{ steps.cloudflare_deploy.outputs.pages-deployment-alias-url }}) |
+            | **Environment** | `Preview (PR-${{ steps.pr.outputs.pr_number }})` |
+            | **Action** | [View Logs](${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}) |
+
+            _Last updated at ${{ github.event.workflow_run.updated_at }}_
+          comment-tag: preview_deploy_status # This ensures it updates the same comment instead of spamming

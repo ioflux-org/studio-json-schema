@@ -289,7 +289,8 @@ const handleSearch = useCallback((searchTerm: string) => {
     const observer = new ResizeObserver(() => {
       clearTimeout(timeoutId);
       timeoutId = setTimeout(() => {
-        fitView({ duration: 800, padding: 0.05 });
+          const currentZoom = getZoom();
+          fitView({ duration: 800, minZoom: currentZoom, maxZoom: currentZoom, padding: 0.05 });
       }, 100);
     });
 
