@@ -144,10 +144,10 @@ const MonacoEditor = () => {
       const keyboardHeight = window.innerHeight - viewport.height;
       const isKeyboardOpen = keyboardHeight > 100;
       if (isKeyboardOpen) {
-        const availableHeight = viewport.height;
         const totalHeight = window.innerHeight;
-        const editorPercent = Math.round((availableHeight / totalHeight) * 100 * 0.55);
-        editorPanelRef.current?.resize(Math.min(editorPercent, 70));
+        const visiblePercent = Math.round((viewport.height / totalHeight) * 100);
+        const editorPercent = Math.max(40, Math.min(Math.round(visiblePercent * 0.55), 70));
+        editorPanelRef.current?.resize(editorPercent);
         if (!editorVisible) {
           setEditorVisible(true);
         }
