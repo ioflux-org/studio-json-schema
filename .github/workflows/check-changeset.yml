@@ -39,7 +39,7 @@ jobs:
         with:
           script: |
             const { owner, repo } = context.repo;
-            const pull_number = context.issue.number;
+            const pull_number = context.payload.pull_request.number;
             
             // Fetch list of files changed in the PR
             const files = await github.paginate(github.rest.pulls.listFiles, {
@@ -65,7 +65,7 @@ jobs:
           script: |
             const marker = '<!-- changeset-bot-comment -->';
             const { owner, repo } = context.repo;
-            const issue_number = context.issue.number;
+            const issue_number = context.payload.pull_request.number;
             
             // Fetch existing comments on the PR
             const comments = await github.rest.issues.listComments({
