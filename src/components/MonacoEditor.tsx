@@ -417,11 +417,11 @@ const MonacoEditor = () => {
       </PanelGroup>
       {isMobile && !editorVisible && (
         <div
-          className="absolute bottom-0 inset-x-0 flex justify-center z-10"
+          className="absolute bottom-0 inset-x-0 flex justify-center z-10 pointer-events-none"
           style={{ paddingBottom: "max(0.75rem, env(safe-area-inset-bottom))" }}
         >
           <EditorToggleButton
-            className=""
+            className="pointer-events-auto"
             editorVisible={editorVisible}
             toggleEditorVisibility={toggleEditorVisibility}
             isMobile={true}
