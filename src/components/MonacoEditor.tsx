@@ -121,6 +121,20 @@ const MonacoEditor = () => {
   const [editorVisible, setEditorVisible] = useState(true);
   const [isAnimating, setIsAnimating] = useState(false);
 
+  const MOBILE_BREAKPOINT = 768;
+  const [isMobile, setIsMobile] = useState(() => window.innerWidth < MOBILE_BREAKPOINT);
+
+  useEffect(() => {
+    const handleResize = () => setIsMobile(window.innerWidth < MOBILE_BREAKPOINT);
+    window.addEventListener("resize", handleResize);
+    return () => window.removeEventListener("resize", handleResize);
+  }, []);
+
+  useEffect(() => {
+    editorPanelRef.current?.resize(isMobile ? 40 : DEFAULT_EDITOR_PANEL_WIDTH);
+    setEditorVisible(true);
+  }, [isMobile]);
+
   const toggleEditorVisibility = () => {
     if (!editorPanelRef.current) return;
 
@@ -129,7 +143,7 @@ const MonacoEditor = () => {
     if (editorVisible) {
       editorPanelRef.current.collapse();
     } else {
-      editorPanelRef.current.resize(DEFAULT_EDITOR_PANEL_WIDTH);
+      editorPanelRef.current.resize(isMobile ? 40 : DEFAULT_EDITOR_PANEL_WIDTH);
     }
 
     setEditorVisible((prev) => !prev);
@@ -278,69 +292,121 @@ const MonacoEditor = () => {
     return () => clearTimeout(timeout);
   }, [schemaText, schemaFormat]);
 
+  const editorPanel = (
+    <Panel
+      className="flex flex-col"
+      defaultSize={isMobile ? 40 : DEFAULT_EDITOR_PANEL_WIDTH}
+      ref={editorPanelRef}
+      collapsible
+    >
+      <div className="flex items-center gap-2 px-2 py-1 bg-[var(--validation-bg-color)]">
+        <select
+          value={schemaFormat}
+          onChange={(e) => changeSchemaFormat(e.target.value as SchemaFormat)}
+          className="ml-auto flex-shrink-0 bg-[var(--bg-color)] text-[var(--text-color)] text-sm outline-none cursor-pointer border border-[var(--popup-border-color)] rounded-sm"
+        >
+          <option value="json">JSON</option>
+          <option value="yaml">YAML</option>
+        </select>
+      </div>
+      <div className="flex-1 min-h-0">
+        <Editor
+          height="100%"
+          width="100%"
+          language={schemaFormat}
+          value={schemaText}
+          theme={theme === "light" ? "vs-light" : "vs-dark"}
+          options={{
+            minimap: { enabled: false },
+            occurrencesHighlight: "off",
+          }}
+          onChange={(value) => setSchemaText(value ?? "")}
+          onMount={handleEditorDidMount}
+        />
+      </div>
+      <div
+        role="status"
+        aria-live="polite"
+        aria-label={`Schema validation: ${schemaValidation.message}`}
+        className="shrink-0 px-2 py-1.5 bg-[var(--validation-bg-color)] text-sm"
+      >
+        <span className={VALIDATION_UI[schemaValidation.status].className}>
+          {schemaValidation.message}
+        </span>
+      </div>
+    </Panel>
+  );
+
+  const visualizationPanel = (
+    <Panel
+      minSize={isMobile ? undefined : 60}
+      className="flex flex-col relative bg-[var(--visualize-bg-color)]"
+    >
+      <SchemaVisualization compiledSchema={compiledSchema} />
+    </Panel>
+  );
+
+  const resizeHandle = (
+    <PanelResizeHandle className={`${isMobile ? "h-[1px]" : "w-[1px]"} bg-gray-400 relative`}>
+      {editorVisible && (
+        <div className={isMobile ? "absolute inset-x-0 flex justify-center -bottom-4 z-10" : undefined}>
+          <EditorToggleButton
+            className={isMobile ? "" : "absolute top-2 left-2 z-10"}
+            editorVisible={editorVisible}
+            toggleEditorVisibility={toggleEditorVisibility}
+            isMobile={isMobile}
+          />
+        </div>
+      )}
+    </PanelResizeHandle>
+  );
+
   return (
     <div
       ref={containerRef}
-      className={`h-[92vh] flex flex-col ${
+      className={`flex-1 min-h-0 flex flex-col relative ${
         isAnimating ? "panel-animating" : ""
       }`}
     >
       {isFullScreen && (
         <NavigationBar />
       )}
-      <PanelGroup direction="horizontal">
-        <Panel
-          className="flex flex-col"
-          defaultSize={DEFAULT_EDITOR_PANEL_WIDTH}
-          ref={editorPanelRef}
-          collapsible
-        >
-          <div className="flex items-center gap-2 px-2 py-1 bg-[var(--validation-bg-color)]">
-            <select
-              value={schemaFormat}
-              onChange={(e) => changeSchemaFormat(e.target.value as SchemaFormat)}
-              className="ml-auto flex-shrink-0 bg-[var(--bg-color)] text-[var(--text-color)] text-sm outline-none cursor-pointer border border-[var(--popup-border-color)] rounded-sm"
-            >
-              <option value="json">JSON</option>
-              <option value="yaml">YAML</option>
-            </select>
-          </div>
-          <Editor
-            height="87%"
-            width="100%"
-            language={schemaFormat}
-            value={schemaText}
-            theme={theme === "light" ? "vs-light" : "vs-dark"}
-            options={{
-              minimap: { enabled: false },
-              occurrencesHighlight: "off",
-            }}
-            onChange={(value) => setSchemaText(value ?? "")}
-            onMount={handleEditorDidMount}
-          />
-          <div className="flex-1 p-2 bg-[var(--validation-bg-color)] text-sm overflow-y-auto">
-            <div className={VALIDATION_UI[schemaValidation.status].className}>
-              {schemaValidation.message}
-            </div>
-          </div>
-        </Panel>
-        <PanelResizeHandle className="w-[1px] bg-gray-400 relative">
-          <div>
+      <PanelGroup direction={isMobile ? "vertical" : "horizontal"}>
+        {isMobile ? (
+          <>
+            {visualizationPanel}
+            {resizeHandle}
+            {editorPanel}
+          </>
+        ) : (
+          <>
+            {editorPanel}
+            {resizeHandle}
+            {visualizationPanel}
+          </>
+        )}
+      </PanelGroup>
+      {!editorVisible && (
+        isMobile ? (
+          <div className="absolute bottom-0 inset-x-0 flex justify-center z-10 pb-1">
             <EditorToggleButton
-              className={"absolute top-2 left-2 z-10"}
+              className=""
               editorVisible={editorVisible}
               toggleEditorVisibility={toggleEditorVisibility}
+              isMobile={isMobile}
             />
           </div>
-        </PanelResizeHandle>
-
-        <Panel
-          minSize={60}
-          className="flex flex-col relative bg-[var(--visualize-bg-color)]"
-        >
-          <SchemaVisualization compiledSchema={compiledSchema} />
-        </Panel>
-      </PanelGroup>
+        ) : (
+          <div className="absolute left-0 top-0 h-full flex items-center z-10 pl-1">
+            <EditorToggleButton
+              className=""
+              editorVisible={editorVisible}
+              toggleEditorVisibility={toggleEditorVisibility}
+              isMobile={isMobile}
+            />
+          </div>
+        )
+      )}
     </div>
   );
 };
