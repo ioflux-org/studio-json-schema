@@ -8,7 +8,7 @@ import "./App.css";
 function App() {
   return (
     <AppProvider>
-      <div className="flex flex-col h-screen overflow-hidden">
+      <div className="flex flex-col overflow-hidden" style={{ height: "100dvh" }}>
         <NavigationBar />
         <MonacoEditor />
         {/* <BottomBar /> */}
