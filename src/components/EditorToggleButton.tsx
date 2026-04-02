@@ -16,20 +16,20 @@ const EditorToggleButton = ({
     <div className={className}>
       <button
         onClick={toggleEditorVisibility}
-        className={`flex ${isMobile ? "px-2 py-1" : "px-1 py-2"} rounded-lg cursor-pointer bg-[var(--view-bg-color)] duration-300 border-2 hover:scale-105 text-[var(--navigation-text-color)]`}
+        className={`flex items-center justify-center rounded-lg cursor-pointer bg-[var(--view-bg-color)] duration-300 border-2 hover:scale-105 text-[var(--navigation-text-color)] ${isMobile ? "w-12 h-12" : "px-1 py-2"}`}
         data-tooltip-id="editor-toggle-tooltip"
         aria-label={editorVisible ? "Hide Editor" : "Show Editor"}
       >
         {isMobile ? (
           editorVisible ? (
-            <span className="flex flex-col">
-              <BsChevronDown size={10} />
-              <BsChevronDown size={10} />
+            <span className="flex flex-col items-center gap-0.5">
+              <BsChevronDown size={12} />
+              <BsChevronDown size={12} />
             </span>
           ) : (
-            <span className="flex flex-col-reverse">
-              <BsChevronUp size={10} />
-              <BsChevronUp size={10} />
+            <span className="flex flex-col items-center gap-0.5">
+              <BsChevronUp size={12} />
+              <BsChevronUp size={12} />
             </span>
           )
         ) : (
