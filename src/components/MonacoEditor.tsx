@@ -300,7 +300,11 @@ const MonacoEditor = () => {
       collapsible
     >
       <div className="flex items-center gap-2 px-2 py-1 bg-[var(--validation-bg-color)]">
+        <label htmlFor="schema-format-select" className="sr-only">
+          Schema format
+        </label>
         <select
+          id="schema-format-select"
           value={schemaFormat}
           onChange={(e) => changeSchemaFormat(e.target.value as SchemaFormat)}
           className="ml-auto flex-shrink-0 bg-[var(--bg-color)] text-[var(--text-color)] text-sm outline-none cursor-pointer border border-[var(--popup-border-color)] rounded-sm"
@@ -347,11 +351,11 @@ const MonacoEditor = () => {
   );
 
   const resizeHandle = (
-    <PanelResizeHandle className={`${isMobile ? "h-[1px]" : "w-[1px]"} bg-gray-400 relative`}>
-      {editorVisible && (
-        <div className={isMobile ? "absolute inset-x-0 flex justify-center -bottom-4 z-10" : undefined}>
+    <PanelResizeHandle className={`${isMobile ? "h-[1px]" : "w-[1px]"} ${isMobile && !editorVisible ? "bg-transparent" : "bg-gray-400"} relative`}>
+      {(!isMobile || editorVisible) && (
+        <div>
           <EditorToggleButton
-            className={isMobile ? "" : "absolute top-2 left-2 z-10"}
+            className={isMobile ? "absolute left-1/2 -translate-x-1/2 -translate-y-1/2 z-10" : "absolute top-2 left-2 z-10"}
             editorVisible={editorVisible}
             toggleEditorVisibility={toggleEditorVisibility}
             isMobile={isMobile}
@@ -371,7 +375,7 @@ const MonacoEditor = () => {
       {isFullScreen && (
         <NavigationBar />
       )}
-      <PanelGroup direction={isMobile ? "vertical" : "horizontal"}>
+      <PanelGroup className="flex-1" direction={isMobile ? "vertical" : "horizontal"}>
         {isMobile ? (
           <>
             {visualizationPanel}
@@ -386,26 +390,18 @@ const MonacoEditor = () => {
           </>
         )}
       </PanelGroup>
-      {!editorVisible && (
-        isMobile ? (
-          <div className="absolute bottom-0 inset-x-0 flex justify-center z-10 pb-1">
-            <EditorToggleButton
-              className=""
-              editorVisible={editorVisible}
-              toggleEditorVisibility={toggleEditorVisibility}
-              isMobile={isMobile}
-            />
-          </div>
-        ) : (
-          <div className="absolute left-0 top-0 h-full flex items-center z-10 pl-1">
-            <EditorToggleButton
-              className=""
-              editorVisible={editorVisible}
-              toggleEditorVisibility={toggleEditorVisibility}
-              isMobile={isMobile}
-            />
-          </div>
-        )
+      {isMobile && !editorVisible && (
+        <div
+          className="absolute bottom-0 inset-x-0 flex justify-center z-10"
+          style={{ paddingBottom: "max(0.75rem, env(safe-area-inset-bottom))" }}
+        >
+          <EditorToggleButton
+            className=""
+            editorVisible={editorVisible}
+            toggleEditorVisibility={toggleEditorVisibility}
+            isMobile={true}
+          />
+        </div>
       )}
     </div>
   );
