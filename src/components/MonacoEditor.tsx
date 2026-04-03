@@ -177,7 +177,6 @@ const MonacoEditor = () => {
 
       editorRef.current.revealPositionInCenter(startPos);
       editorRef.current.setPosition(startPos);
-      editorRef.current.focus();
 
       const decoration = {
         range: new (window as any).monaco.Range(
