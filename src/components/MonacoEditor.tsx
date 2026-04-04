@@ -166,14 +166,45 @@ const MonacoEditor = () => {
         return /^\d+$/.test(decoded) ? parseInt(decoded, 10) : decoded;
       });
 
-    const tree = parseTree(text);
+    let textToParse = text;
+    if (schemaFormat === "yaml") {
+      try {
+        const obj = YAML.load(text);
+        textToParse = JSON.stringify(obj, null, 2);
+      } catch (err) {
+        return;
+      }
+    }
+
+    const tree = parseTree(textToParse);
     if (!tree) return;
 
     const node = findNodeAtLocation(tree, path);
 
     if (node) {
-      const startPos = model.getPositionAt(node.offset);
-      const endPos = model.getPositionAt(node.offset + node.length);
+      let startPos, endPos;
+
+      if (schemaFormat === "yaml") {
+        // Approximate the line numbers from the JSON counterpart.
+        // JSON adds an opening `{` which generally shifts lines by +1 compared to YAML.
+        const startLineJSON = textToParse.substring(0, node.offset).split("\n").length;
+        const endLineJSON = textToParse.substring(0, node.offset + node.length).split("\n").length;
+        
+        const startLine = Math.max(1, startLineJSON - 1);
+        const endLine = Math.max(1, endLineJSON - 1);
+
+        startPos = { 
+          lineNumber: Math.min(startLine, model.getLineCount()), 
+          column: 1 
+        };
+        endPos = { 
+          lineNumber: Math.min(endLine, model.getLineCount()), 
+          column: 1 
+        };
+      } else {
+        startPos = model.getPositionAt(node.offset);
+        endPos = model.getPositionAt(node.offset + node.length);
+      }
 
       editorRef.current.revealPositionInCenter(startPos);
       editorRef.current.setPosition(startPos);
@@ -255,13 +286,13 @@ const MonacoEditor = () => {
         setSchemaValidation(
           !dialect && typeof parsedSchema !== "boolean"
             ? {
-                status: "warning",
-                message: VALIDATION_UI["warning"].message,
-              }
+              status: "warning",
+              message: VALIDATION_UI["warning"].message,
+            }
             : {
-                status: "success",
-                message: VALIDATION_UI["success"].message,
-              }
+              status: "success",
+              message: VALIDATION_UI["success"].message,
+            }
         );
 
         saveSchemaJSON(SESSION_SCHEMA_KEY, copy);
@@ -281,9 +312,8 @@ const MonacoEditor = () => {
   return (
     <div
       ref={containerRef}
-      className={`h-[92vh] flex flex-col ${
-        isAnimating ? "panel-animating" : ""
-      }`}
+      className={`h-[92vh] flex flex-col ${isAnimating ? "panel-animating" : ""
+        }`}
     >
       {isFullScreen && (
         <NavigationBar />
