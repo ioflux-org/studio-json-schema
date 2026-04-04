@@ -48,7 +48,8 @@ jobs:
               pull_number
             });
             
-            const changesetFiles = files.filter(f => f.filename.startsWith('.changeset/') && f.filename.endsWith('.md'));
+             const changesetFiles = files.filter(f =>  f.filename.startsWith('.changeset/') && f.filename.endsWith('.md') && f.filename !== '.changeset/README.md' );
+
             
             if (changesetFiles.length === 0) {
               core.setOutput('found', 'false');
