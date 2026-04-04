@@ -74,7 +74,9 @@ jobs:
               issue_number
             });
             
-            const hasCommented = comments.data.some(c => c.body.includes(marker));
+            const hasCommented = comments.data.some(c => 
+              c.user.login === 'github-actions[bot]' && c.body.includes(marker)
+            );
             
             // Only comment if we haven't already
             if (!hasCommented) {
