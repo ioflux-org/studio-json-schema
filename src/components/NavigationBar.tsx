@@ -105,7 +105,7 @@ const NavigationBar = () => {
               onChange={(e) => setSearchString(e.target.value)}
               onKeyDown={handleKeyDown}
             />
-            <div className="w-[40px] flex justify-end pr-5">
+            <div className="w-[40px] flex justify-end items-center">
               {searchString ? (
                 <button
                   onClick={() => {
@@ -117,7 +117,7 @@ const NavigationBar = () => {
                   <RiCloseLine />
                 </button>
               ) : (
-                <kbd className="text-[var(--navigation-text-color)] text-xs border border-[var(--navigation-text-color)] rounded opacity-70 p-0.5 font-sans leading-none">
+                <kbd className="text-[var(--navigation-text-color)] text-[10px] border border-[var(--navigation-text-color)] rounded px-1.5 py-0.5 font-sans leading-none opacity-70">
                   ⌘K
                 </kbd>
               )}
