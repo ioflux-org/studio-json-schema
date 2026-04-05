@@ -314,7 +314,10 @@ const GraphView = ({
       setMatchedNodes(foundNodes);
 
       if (foundNodes.length > 0) {
-        const firstNode = foundNodes[currentMatchIndex % foundNodes.length];
+        const nextMatchIndex = 0;
+        setCurrentMatchIndex(nextMatchIndex);
+
+        const firstNode = foundNodes[nextMatchIndex];
         const x = firstNode.position.x + NODE_WIDTH / 2;
         const y = firstNode.position.y + NODE_HEIGHT / 2;
 
