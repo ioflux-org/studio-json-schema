@@ -4,8 +4,10 @@ export type SchemaFormat = "json" | "yaml";
 
 export type SelectedNode = {
   id: string;
-  data: Record<string, unknown>;
+  data?: Record<string, unknown>;
 };
+
+export type NavigationDirection = "next" | "prev";
 
 type AppContextType = {
   containerRef: Ref<HTMLDivElement>;
@@ -24,17 +26,8 @@ type AppContextType = {
   searchString: string;
   setSearchString: (search: string) => void;
 
-  graphFocusRequest: { nodeId: string; seq: number } | null;
-  requestGraphFocus: (nodeId: string) => void;
-
-  activateEditorMatch: (matchIndex: number) => void;
-  registerActivateEditorMatch: (fn: (matchIndex: number) => void) => void;
-
-  navigateGraphMatch: (direction: "next" | "prev") => void;
-  registerNavigateGraphMatch: (fn: (direction: "next" | "prev") => void) => void;
-
-  matchedNodeIds: string[];
-  setMatchedNodeIds: (ids: string[]) => void;
+  registerNavigateMatch: (fn: (dir: NavigationDirection) => void) => {};
+  triggerNavigateMatch: (dir: NavigationDirection) => {};
 };
 
 export const AppContext = createContext<AppContextType>({} as AppContextType);

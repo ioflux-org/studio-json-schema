@@ -1,22 +1,14 @@
-body{
-  background-color: var(--bg-color)
-}
-
-/* Match native search cancel button to --navigation-text-color */
-[data-theme="light"] input[type="search"]::-webkit-search-cancel-button {
-  filter: invert(44%) grayscale(100%) brightness(80%);
-  cursor: pointer;
-}
-
-[data-theme="dark"] input[type="search"]::-webkit-search-cancel-button {
-  filter: grayscale(100%) brightness(200%);
-  cursor: pointer;
+body {
+  background-color: var(--bg-color);
 }
 
 .visualize {
   background-color: var(--visualize-bg-color);
-  background-image:
-    linear-gradient(to right, var(--visualize-bg-image) 0.1px, transparent 1px),
+  background-image: linear-gradient(
+      to right,
+      var(--visualize-bg-image) 0.1px,
+      transparent 1px
+    ),
     linear-gradient(to bottom, var(--visualize-bg-image) 0.1px, transparent 1px);
   background-size: 30px 30px;
 }

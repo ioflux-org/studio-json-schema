@@ -5,7 +5,12 @@ import {
   useRef,
   type ReactNode,
 } from "react";
-import { AppContext, type SchemaFormat, type SelectedNode } from "./AppContext";
+import {
+  AppContext,
+  type NavigationDirection,
+  type SchemaFormat,
+  type SelectedNode,
+} from "./AppContext";
 
 export const AppProvider = ({ children }: { children: ReactNode }) => {
   const containerRef = useRef<HTMLDivElement>(null);
@@ -39,29 +44,16 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
 
   const [selectedNode, setSelectedNode] = useState<SelectedNode | null>(null);
   const [searchString, setSearchString] = useState("");
-  const [graphFocusRequest, setGraphFocusRequest] = useState<{ nodeId: string; seq: number } | null>(null);
-  const graphFocusSeqRef = useRef(0);
-  const requestGraphFocus = useCallback((nodeId: string) => {
-    setGraphFocusRequest({ nodeId, seq: ++graphFocusSeqRef.current });
-  }, []);
 
-  const activateEditorMatchRef = useRef<(matchIndex: number) => void>(() => {});
-  const activateEditorMatch = useCallback((matchIndex: number) => {
-    activateEditorMatchRef.current(matchIndex);
-  }, []);
-  const registerActivateEditorMatch = useCallback((fn: (matchIndex: number) => void) => {
-    activateEditorMatchRef.current = fn;
-  }, []);
+  const navigateMatchRef = useRef<(dir: NavigationDirection) => void>();
 
-  const navigateGraphMatchRef = useRef<(direction: "next" | "prev") => void>(() => {});
-  const navigateGraphMatch = useCallback((direction: "next" | "prev") => {
-    navigateGraphMatchRef.current(direction);
-  }, []);
-  const registerNavigateGraphMatch = useCallback((fn: (direction: "next" | "prev") => void) => {
-    navigateGraphMatchRef.current = fn;
-  }, []);
+  const registerNavigateMatch = (fn: (dir: NavigationDirection) => void) => {
+    navigateMatchRef.current = fn;
+  };
 
-  const [matchedNodeIds, setMatchedNodeIds] = useState<string[]>([]);
+  const triggerNavigateMatch = (dir: NavigationDirection) => {
+    navigateMatchRef.current?.(dir);
+  };
 
   const toggleFullScreen = useCallback(() => {
     const el = containerRef.current;
@@ -107,14 +99,8 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
     setSelectedNode,
     searchString,
     setSearchString,
-    graphFocusRequest,
-    requestGraphFocus,
-    activateEditorMatch,
-    registerActivateEditorMatch,
-    navigateGraphMatch,
-    registerNavigateGraphMatch,
-    matchedNodeIds,
-    setMatchedNodeIds,
+    registerNavigateMatch,
+    triggerNavigateMatch,
   };
 
   return <AppContext.Provider value={value}>{children}</AppContext.Provider>;

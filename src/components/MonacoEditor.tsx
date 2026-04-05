@@ -1,4 +1,4 @@
-import { useContext, useState, useEffect, useRef, useCallback } from "react";
+import { useContext, useState, useEffect, useRef } from "react";
 
 import { parseTree, findNodeAtLocation } from "jsonc-parser";
 import {
@@ -89,21 +89,25 @@ const saveSchemaJSON = (key: string, schema: JSONSchema) => {
 };
 
 const MonacoEditor = () => {
-  const { theme, isFullScreen, containerRef, schemaFormat, changeSchemaFormat, selectedNode, registerActivateEditorMatch, matchedNodeIds } =
-    useContext(AppContext);
+  const {
+    theme,
+    isFullScreen,
+    containerRef,
+    schemaFormat,
+    changeSchemaFormat,
+    selectedNode,
+  } = useContext(AppContext);
 
   const editorRef = useRef<editor.IStandaloneCodeEditor | null>(null);
-  const monacoRef = useRef<any>(null);
   const editorPanelRef = useRef<ImperativePanelHandle>(null);
-  const searchMatchesRef = useRef<any[]>([]);
-  const searchMatchIndexRef = useRef(0);
-  const parsedTreeRef = useRef<{ versionId: number; tree: any } | null>(null);
-  const handleEditorDidMount: OnMount = (editor, monaco) => {
+
+  const handleEditorDidMount: OnMount = (editor) => {
     editorRef.current = editor;
-    monacoRef.current = monaco;
   };
 
-  const [compiledSchema, setCompiledSchema] = useState<CompiledSchema | null>(null);
+  const [compiledSchema, setCompiledSchema] = useState<CompiledSchema | null>(
+    null
+  );
 
   const initialSchemaJSON = loadSchemaJSON(SESSION_SCHEMA_KEY);
 
@@ -142,7 +146,7 @@ const MonacoEditor = () => {
   };
 
   useEffect(() => {
-    if (!editorRef.current || !monacoRef.current) return;
+    if (!editorRef.current) return;
     const model = editorRef.current.getModel();
     if (!model) return;
 
@@ -174,17 +178,14 @@ const MonacoEditor = () => {
     const node = findNodeAtLocation(tree, path);
 
     if (node) {
-      // Walk up to the parent property node so the highlight includes the key line
-      const highlightNode = node.parent?.type === "property" ? node.parent : node;
-      const startPos = model.getPositionAt(highlightNode.offset);
-      const endPos = model.getPositionAt(highlightNode.offset + highlightNode.length);
+      const startPos = model.getPositionAt(node.offset);
+      const endPos = model.getPositionAt(node.offset + node.length);
 
       editorRef.current.revealPositionInCenter(startPos);
       editorRef.current.setPosition(startPos);
-      editorRef.current.focus();
 
       const decoration = {
-        range: new monacoRef.current.Range(
+        range: new (window as any).monaco.Range(
           startPos.lineNumber,
           1,
           endPos.lineNumber,
@@ -204,99 +205,6 @@ const MonacoEditor = () => {
       model.deltaDecorations(oldDecorations, [decoration]);
     }
   }, [selectedNode?.id]);
-
-  const getNodeJsonRange = useCallback((nodeId: string) => {
-    if (schemaFormat === "yaml") return null;
-    const model = editorRef.current?.getModel();
-    if (!model || !monacoRef.current) return null;
-    const fragment = nodeId.split("#")[1] ?? "";
-    const path = fragment.split("/").filter((s) => s !== "").map((s) =>
-      /^\d+$/.test(s) ? parseInt(s, 10) : decodeURIComponent(s)
-    );
-    const versionId = model.getVersionId();
-    if (!parsedTreeRef.current || parsedTreeRef.current.versionId !== versionId) {
-      parsedTreeRef.current = { versionId, tree: parseTree(model.getValue()) };
-    }
-    const tree = parsedTreeRef.current.tree;
-    if (!tree) return null;
-    const node = findNodeAtLocation(tree, path);
-    if (!node) return null;
-    const highlightNode = node.parent?.type === "property" ? node.parent : node;
-    const startPos = model.getPositionAt(highlightNode.offset);
-    const endPos = model.getPositionAt(highlightNode.offset + highlightNode.length);
-    return { startPos, endPos };
-  }, [schemaFormat]);
-
-  useEffect(() => {
-    if (!editorRef.current || !monacoRef.current) return;
-    const model = editorRef.current.getModel();
-    if (!model) return;
-
-    const DECORATION = "monaco-highlight-line";
-    const clearDecorations = () => {
-      const old = model.getAllDecorations()
-        .filter((d: any) => d.options.className === DECORATION)
-        .map((d: any) => d.id);
-      model.deltaDecorations(old, []);
-    };
-
-    if (matchedNodeIds.length === 0) {
-      clearDecorations();
-      searchMatchesRef.current = [];
-      searchMatchIndexRef.current = 0;
-      return;
-    }
-
-    const decorations: any[] = [];
-    for (const nodeId of matchedNodeIds) {
-      const range = getNodeJsonRange(nodeId);
-      if (!range) continue;
-      decorations.push({
-        range: new monacoRef.current.Range(range.startPos.lineNumber, 1, range.endPos.lineNumber, 1),
-        options: { isWholeLine: true, className: DECORATION },
-      });
-    }
-
-    clearDecorations();
-    model.deltaDecorations([], decorations);
-    searchMatchesRef.current = matchedNodeIds.map((id) => ({ nodeId: id }));
-    searchMatchIndexRef.current = 0;
-
-    const first = getNodeJsonRange(matchedNodeIds[0]);
-    if (first) {
-      editorRef.current.revealPositionInCenter({ lineNumber: first.startPos.lineNumber, column: 1 });
-    }
-  }, [matchedNodeIds, getNodeJsonRange]);
-
-  const activateMatch = useCallback((matchIndex: number) => {
-    const matches = searchMatchesRef.current;
-    if (matches.length === 0) return;
-    const next = ((matchIndex % matches.length) + matches.length) % matches.length;
-    searchMatchIndexRef.current = next;
-
-    const nodeId = matches[next].nodeId as string;
-    const jsonRange = getNodeJsonRange(nodeId);
-    if (!jsonRange || !monacoRef.current) return;
-
-    const model = editorRef.current?.getModel();
-    if (!model) return;
-
-    const DECORATION = "monaco-highlight-line";
-    const oldIds = model.getAllDecorations()
-      .filter((d: any) => d.options.className === DECORATION)
-      .map((d: any) => d.id);
-    model.deltaDecorations(oldIds, []);
-    model.deltaDecorations([], [{
-      range: new monacoRef.current.Range(jsonRange.startPos.lineNumber, 1, jsonRange.endPos.lineNumber, 1),
-      options: { isWholeLine: true, className: DECORATION },
-    }]);
-    editorRef.current?.revealPositionInCenter(jsonRange.startPos);
-    editorRef.current?.setPosition(jsonRange.startPos);
-  }, [getNodeJsonRange]);
-
-  useEffect(() => {
-    registerActivateEditorMatch(activateMatch);
-  }, [activateMatch, registerActivateEditorMatch]);
 
   useEffect(() => {
     saveFormat(SESSION_FORMAT_KEY, schemaFormat);
@@ -378,13 +286,11 @@ const MonacoEditor = () => {
   return (
     <div
       ref={containerRef}
-      className={`flex-1 min-h-0 flex flex-col ${
+      className={`h-[92vh] flex flex-col ${
         isAnimating ? "panel-animating" : ""
       }`}
     >
-      {isFullScreen && (
-        <NavigationBar />
-      )}
+      {isFullScreen && <NavigationBar />}
       <PanelGroup direction="horizontal">
         <Panel
           className="flex flex-col"
@@ -395,7 +301,9 @@ const MonacoEditor = () => {
           <div className="flex items-center gap-2 px-2 py-1 bg-[var(--validation-bg-color)]">
             <select
               value={schemaFormat}
-              onChange={(e) => changeSchemaFormat(e.target.value as SchemaFormat)}
+              onChange={(e) =>
+                changeSchemaFormat(e.target.value as SchemaFormat)
+              }
               className="ml-auto flex-shrink-0 bg-[var(--bg-color)] text-[var(--text-color)] text-sm outline-none cursor-pointer border border-[var(--popup-border-color)] rounded-sm"
             >
               <option value="json">JSON</option>
@@ -424,7 +332,7 @@ const MonacoEditor = () => {
         <PanelResizeHandle className="w-[1px] bg-gray-400 relative">
           <div>
             <EditorToggleButton
-              className={"absolute top-2 left-2 z-10"}
+              className={"absolute top-2 left-2 z-1"}
               editorVisible={editorVisible}
               toggleEditorVisibility={toggleEditorVisibility}
             />

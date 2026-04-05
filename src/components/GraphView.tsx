@@ -34,6 +34,7 @@ import { sortAST } from "../utils/sortAST";
 import { resolveCollisions } from "../utils/resolveCollisions";
 import { MdNavigateBefore, MdNavigateNext } from "react-icons/md";
 import { CgClose } from "react-icons/cg";
+import { extractKeywords } from "../utils/searchNodeHelpers";
 
 const nodeTypes = { customNode: CustomNode };
 const dagreGraph = new dagre.graphlib.Graph().setDefaultEdgeLabel(() => ({}));
@@ -48,9 +49,9 @@ const GraphView = ({
   compiledSchema: CompiledSchema | null;
 }) => {
   const { setCenter, getZoom, fitView } = useReactFlow();
-  const { selectedNode, setSelectedNode, searchString, graphFocusRequest, activateEditorMatch, registerNavigateGraphMatch, setMatchedNodeIds } = useContext(AppContext);
+  const { selectedNode, setSelectedNode, searchString, registerNavigateMatch } =
+    useContext(AppContext);
   const containerRef = useRef<HTMLDivElement>(null);
-  const lastHandledGraphFocusSeqRef = useRef<number | null>(null);
 
   const [nodes, setNodes, onNodeChange] = useNodesState<GraphNode>([]);
   const [edges, setEdges, onEdgeChange] = useEdgesState<GraphEdge>([]);
@@ -77,6 +78,9 @@ const GraphView = ({
         const x = foundNode.position.x + NODE_WIDTH / 2;
         const y = foundNode.position.y + NODE_HEIGHT / 2;
 
+        setSelectedNode({
+          id: foundNode.id,
+        });
         setCenter(x, y, { zoom: Math.max(getZoom(), 1), duration: 500 });
 
         setNodes((nds) =>
@@ -86,17 +90,15 @@ const GraphView = ({
           }))
         );
 
-        activateEditorMatch(newIndex);
-
         return newIndex;
       });
     },
-    [matchedNodes, activateEditorMatch]
+    [matchedNodes, matchCount, setCenter, getZoom, setNodes]
   );
 
   useEffect(() => {
-    registerNavigateGraphMatch(navigateMatch);
-  }, [navigateMatch, registerNavigateGraphMatch]);
+    registerNavigateMatch(navigateMatch);
+  }, [navigateMatch, registerNavigateMatch]);
 
   const onNodeClick: NodeMouseHandler = useCallback((_event, node) => {
     setSelectedNode({
@@ -114,31 +116,6 @@ const GraphView = ({
       })
     );
   }, []);
-
-  // Sync graph focus when Enter is pressed in search
-  useEffect(() => {
-    if (!graphFocusRequest) return;
-    if (lastHandledGraphFocusSeqRef.current === graphFocusRequest.seq) return;
-
-    const graphNode = nodes.find((n) => n.id === graphFocusRequest.nodeId);
-    if (!graphNode || graphNode.data.nodeLabel === "root") return;
-
-    lastHandledGraphFocusSeqRef.current = graphFocusRequest.seq;
-
-    // Update matchedNodes so the nav buttons appear and navigateMatch works
-    setMatchedNodes((prev) => {
-      const alreadyIncluded = prev.some((n) => n.id === graphNode.id);
-      const updated = alreadyIncluded ? prev : [...prev, graphNode];
-      const idx = updated.findIndex((n) => n.id === graphNode.id);
-      setCurrentMatchIndex(idx);
-      return updated;
-    });
-
-    const x = graphNode.position.x + NODE_WIDTH / 2;
-    const y = graphNode.position.y + NODE_HEIGHT / 2;
-    setCenter(x, y, { zoom: Math.max(getZoom(), 1), duration: 500 });
-    setNodes((nds) => nds.map((n) => ({ ...n, selected: n.id === graphNode.id })));
-  }, [graphFocusRequest, nodes]);
 
   const generateNodesAndEdges = useCallback(
     (
@@ -301,8 +278,13 @@ const GraphView = ({
     const observer = new ResizeObserver(() => {
       clearTimeout(timeoutId);
       timeoutId = setTimeout(() => {
-          const currentZoom = getZoom();
-          fitView({ duration: 800, minZoom: currentZoom, maxZoom: currentZoom, padding: 0.05 });
+        const currentZoom = getZoom();
+        fitView({
+          duration: 800,
+          minZoom: currentZoom,
+          maxZoom: currentZoom,
+          padding: 0.05,
+        });
       }, 100);
     });
 
@@ -320,8 +302,8 @@ const GraphView = ({
     const timeout = setTimeout(() => {
       if (!trimmed || trimmed.length < 3) {
         setMatchedNodes([]);
-        setMatchedNodeIds([]);
         setCurrentMatchIndex(0);
+        setErrorMessage("");
         setNodes((nds) => nds.map((n) => ({ ...n, selected: false })));
         fitView({ duration: 800, padding: 0.05 });
         return;
@@ -333,19 +315,21 @@ const GraphView = ({
         searchWords.length === 0
           ? []
           : nodes.filter((node) => {
-              if (node.data.nodeLabel === "root") return false;
-              const nodeText = node.data.nodeLabel.toLowerCase();
-              return searchWords.every((word) => nodeText.includes(word));
+              const titleKeyWords = extractKeywords(node.data.nodeLabel);
+              return searchWords.every((word) => titleKeyWords.includes(word));
             });
 
       setMatchedNodes(foundNodes);
-      setMatchedNodeIds(foundNodes.map((n) => n.id));
 
       if (foundNodes.length > 0) {
         setCurrentMatchIndex(0);
         const firstNode = foundNodes[0];
         const x = firstNode.position.x + NODE_WIDTH / 2;
         const y = firstNode.position.y + NODE_HEIGHT / 2;
+
+        setSelectedNode({
+          id: firstNode.id,
+        });
 
         setCenter(x, y, { zoom: Math.max(getZoom(), 1), duration: 500 });
         setNodes((nds) => {
@@ -360,10 +344,7 @@ const GraphView = ({
 
         setErrorMessage("");
       } else {
-        setMatchedNodes([]);
-        setMatchedNodeIds([]);
-        setCurrentMatchIndex(0);
-        setNodes((nds) => nds.map((n) => ({ ...n, selected: false })));
+        setSelectedNode(null);
         fitView({ duration: 800, padding: 0.05 });
         setErrorMessage(`${trimmed} is not in schema`);
       }
@@ -371,24 +352,11 @@ const GraphView = ({
 
     return () => clearTimeout(timeout);
   }, [searchString]);
-
-  const handleKeyDown = useCallback(
-    (e: React.KeyboardEvent<HTMLDivElement>) => {
-      if (matchCount <= 1) return;
-
-      if (e.key === "Enter") {
-        e.preventDefault();
-        navigateMatch(e.shiftKey ? "prev" : "next");
-      }
-    },
-    [matchCount, navigateMatch]
-  );
-
   return (
     <div
       ref={containerRef}
       tabIndex={0}
-      onKeyDown={handleKeyDown}
+      // onKeyDown={handleKeyDown}
       className="relative w-full h-full"
     >
       <ReactFlow
@@ -424,7 +392,7 @@ const GraphView = ({
         <Controls />
       </ReactFlow>
 
-      {selectedNode && (
+      {selectedNode?.data && (
         <NodeDetailsPopup
           nodeId={selectedNode.id}
           data={selectedNode.data}
