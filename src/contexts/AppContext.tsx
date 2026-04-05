@@ -26,8 +26,8 @@ type AppContextType = {
   searchString: string;
   setSearchString: (search: string) => void;
 
-  registerNavigateMatch: (fn: (dir: NavigationDirection) => void) => {};
-  triggerNavigateMatch: (dir: NavigationDirection) => {};
+  registerNavigateMatch: (fn: (dir: NavigationDirection) => void) => void;
+  triggerNavigateMatch: (dir: NavigationDirection) => void;
 };
 
 export const AppContext = createContext<AppContextType>({} as AppContextType);

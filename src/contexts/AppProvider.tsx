@@ -45,7 +45,9 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
   const [selectedNode, setSelectedNode] = useState<SelectedNode | null>(null);
   const [searchString, setSearchString] = useState("");
 
-  const navigateMatchRef = useRef<(dir: NavigationDirection) => void>();
+  const navigateMatchRef = useRef<((dir: NavigationDirection) => void) | null>(
+    null
+  );
 
   const registerNavigateMatch = (fn: (dir: NavigationDirection) => void) => {
     navigateMatchRef.current = fn;

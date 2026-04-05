@@ -1,6 +1,13 @@
 import { BsGithub, BsMoonStars, BsBook, BsSun } from "react-icons/bs";
 import { RiSearchLine, RiCloseLine } from "react-icons/ri";
-import { useCallback, useContext, useEffect, useRef, useState } from "react";
+import {
+  type KeyboardEvent,
+  useCallback,
+  useContext,
+  useEffect,
+  useRef,
+  useState,
+} from "react";
 import { Tooltip } from "react-tooltip";
 import { AppContext } from "../contexts/AppContext";
 import FullscreenToggleButton from "./FullscreenToggleButton";
@@ -20,7 +27,7 @@ const NavigationBar = () => {
   const [mobileSearchOpen, setMobileSearchOpen] = useState(false);
 
   const handleKeyDown = useCallback(
-    (event: KeyboardEvent) => {
+    (event: KeyboardEvent<HTMLInputElement>) => {
       if (event.key === "Escape") {
         setSearchString("");
         setSelectedNode(null);
