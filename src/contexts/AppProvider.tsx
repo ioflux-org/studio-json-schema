@@ -14,10 +14,6 @@ import {
 
 const SESSION_FORMAT_KEY = "ioflux.schema.editor.format";
 
-const isValidSchemaFormat = (value: unknown): value is SchemaFormat => {
-  return value === "json" || value === "yaml";
-};
-
 export const AppProvider = ({ children }: { children: ReactNode }) => {
   const containerRef = useRef<HTMLDivElement>(null);
   const [isFullScreen, setIsFullScreen] = useState(false);
@@ -30,30 +26,9 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
       : "light";
   });
 
-  const [persistedFormatWarning, setPersistedFormatWarning] = useState<
-    string | null
-  >(() => {
-    const savedFormat = window.sessionStorage.getItem(SESSION_FORMAT_KEY);
-    if (savedFormat !== null && !isValidSchemaFormat(savedFormat)) {
-      return `Saved editor format "${savedFormat}" is invalid. Reset to JSON.`;
-    }
-    return null;
-  });
-
   const [schemaFormat, setSchemaFormat] = useState<SchemaFormat>(
-    (() => {
-      const savedFormat = window.sessionStorage.getItem(SESSION_FORMAT_KEY);
-      if (savedFormat === null) {
-        return "json";
-      }
-
-      if (isValidSchemaFormat(savedFormat)) {
-        return savedFormat;
-      }
-
-      window.sessionStorage.setItem(SESSION_FORMAT_KEY, "json");
-      return "json";
-    })()
+    (window.sessionStorage.getItem(SESSION_FORMAT_KEY) as SchemaFormat) ??
+      "json"
   );
 
   const toggleTheme = () => {
@@ -67,10 +42,6 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
   const changeSchemaFormat = (format: SchemaFormat) => {
     setSchemaFormat(format);
   };
-
-  const clearPersistedFormatWarning = useCallback(() => {
-    setPersistedFormatWarning(null);
-  }, []);
 
   const [selectedNode, setSelectedNode] = useState<SelectedNode | null>(null);
   const [searchString, setSearchString] = useState("");
@@ -127,8 +98,6 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
     toggleFullScreen,
     schemaFormat,
     changeSchemaFormat,
-    persistedFormatWarning,
-    clearPersistedFormatWarning,
     selectedNode,
     setSelectedNode,
     searchString,

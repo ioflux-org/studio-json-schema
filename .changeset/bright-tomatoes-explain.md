@@ -2,4 +2,4 @@
 "json-schema-studio": patch
 ---
 
-Fix YAML and JSON validation error formatting so parse errors are clearer and include line, column, and character position details.
+Make the validation section resizable so long error messages are easier to read without changing the app's layout.

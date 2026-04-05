@@ -16,3 +16,16 @@ body {
 .react-flow__panel.react-flow__attribution.bottom.right {
   display: none;
 }
+
+.validation-resize-handle {
+  -webkit-user-select: none;
+  user-select: none;
+}
+
+.validation-resize-grip {
+  width: 56px;
+  height: 4px;
+  border-radius: 9999px;
+  background: var(--popup-border-color);
+  opacity: 0.9;
+}

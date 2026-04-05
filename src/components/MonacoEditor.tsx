@@ -95,8 +95,6 @@ const MonacoEditor = () => {
     containerRef,
     schemaFormat,
     changeSchemaFormat,
-    persistedFormatWarning,
-    clearPersistedFormatWarning,
     selectedNode,
   } = useContext(AppContext);
 
@@ -300,50 +298,54 @@ const MonacoEditor = () => {
           ref={editorPanelRef}
           collapsible
         >
-          <div className="flex items-center gap-2 px-2 py-1 bg-[var(--validation-bg-color)]">
-            <select
-              value={schemaFormat}
-              onChange={(e) =>
-                changeSchemaFormat(e.target.value as SchemaFormat)
-              }
-              aria-label="Schema format"
-              title="Schema format"
-              className="ml-auto flex-shrink-0 bg-[var(--bg-color)] text-[var(--text-color)] text-sm outline-none cursor-pointer border border-[var(--popup-border-color)] rounded-sm"
+          <PanelGroup direction="vertical" className="h-full">
+            <Panel className="flex flex-col min-h-0" defaultSize={80}>
+              <div className="flex items-center gap-2 px-2 py-1 bg-[var(--validation-bg-color)]">
+                <select
+                  value={schemaFormat}
+                  onChange={(e) =>
+                    changeSchemaFormat(e.target.value as SchemaFormat)
+                  }
+                  aria-label="Schema format"
+                  title="Schema format"
+                  className="ml-auto flex-shrink-0 bg-[var(--bg-color)] text-[var(--text-color)] text-sm outline-none cursor-pointer border border-[var(--popup-border-color)] rounded-sm"
+                >
+                  <option value="json">JSON</option>
+                  <option value="yaml">YAML</option>
+                </select>
+              </div>
+              <Editor
+                height="100%"
+                width="100%"
+                language={schemaFormat}
+                value={schemaText}
+                theme={theme === "light" ? "vs-light" : "vs-dark"}
+                options={{
+                  minimap: { enabled: false },
+                  occurrencesHighlight: "off",
+                }}
+                onChange={(value) => setSchemaText(value ?? "")}
+                onMount={handleEditorDidMount}
+              />
+            </Panel>
+            <PanelResizeHandle className="validation-resize-handle h-2 flex items-center justify-center bg-[var(--popup-border-color)]/40 hover:bg-[var(--popup-border-color)] cursor-row-resize">
+              <div className="validation-resize-grip" />
+            </PanelResizeHandle>
+            <Panel
+              className="flex flex-col min-h-[72px] bg-[var(--validation-bg-color)]"
+              defaultSize={20}
+              minSize={10}
             >
-              <option value="json">JSON</option>
-              <option value="yaml">YAML</option>
-            </select>
-          </div>
-          {persistedFormatWarning && (
-            <div className="flex items-center justify-between gap-2 px-3 py-2 text-xs bg-amber-100 text-amber-900 border-y border-amber-300">
-              <span>{persistedFormatWarning}</span>
-              <button
-                type="button"
-                onClick={clearPersistedFormatWarning}
-                className="px-2 py-1 text-[11px] font-semibold border border-amber-500 rounded hover:bg-amber-200"
-              >
-                Dismiss
-              </button>
-            </div>
-          )}
-          <Editor
-            height="87%"
-            width="100%"
-            language={schemaFormat}
-            value={schemaText}
-            theme={theme === "light" ? "vs-light" : "vs-dark"}
-            options={{
-              minimap: { enabled: false },
-              occurrencesHighlight: "off",
-            }}
-            onChange={(value) => setSchemaText(value ?? "")}
-            onMount={handleEditorDidMount}
-          />
-          <div className="flex-1 p-2 bg-[var(--validation-bg-color)] text-sm overflow-y-auto">
-            <div className={VALIDATION_UI[schemaValidation.status].className}>
-              {schemaValidation.message}
-            </div>
-          </div>
+              <div className="px-2 py-1 text-xs font-semibold uppercase tracking-wide text-[var(--validation-heading-color)] border-b border-[var(--popup-border-color)]">
+                Validation
+              </div>
+              <div className="flex-1 p-2 text-sm overflow-y-auto">
+                <div className={VALIDATION_UI[schemaValidation.status].className}>
+                  {schemaValidation.message}
+                </div>
+              </div>
+            </Panel>
+          </PanelGroup>
         </Panel>
         <PanelResizeHandle className="w-[1px] bg-gray-400 relative">
           <div>
