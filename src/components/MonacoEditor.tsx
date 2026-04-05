@@ -95,6 +95,8 @@ const MonacoEditor = () => {
     containerRef,
     schemaFormat,
     changeSchemaFormat,
+    persistedFormatWarning,
+    clearPersistedFormatWarning,
     selectedNode,
   } = useContext(AppContext);
 
@@ -304,12 +306,26 @@ const MonacoEditor = () => {
               onChange={(e) =>
                 changeSchemaFormat(e.target.value as SchemaFormat)
               }
+              aria-label="Schema format"
+              title="Schema format"
               className="ml-auto flex-shrink-0 bg-[var(--bg-color)] text-[var(--text-color)] text-sm outline-none cursor-pointer border border-[var(--popup-border-color)] rounded-sm"
             >
               <option value="json">JSON</option>
               <option value="yaml">YAML</option>
             </select>
           </div>
+          {persistedFormatWarning && (
+            <div className="flex items-center justify-between gap-2 px-3 py-2 text-xs bg-amber-100 text-amber-900 border-y border-amber-300">
+              <span>{persistedFormatWarning}</span>
+              <button
+                type="button"
+                onClick={clearPersistedFormatWarning}
+                className="px-2 py-1 text-[11px] font-semibold border border-amber-500 rounded hover:bg-amber-200"
+              >
+                Dismiss
+              </button>
+            </div>
+          )}
           <Editor
             height="87%"
             width="100%"
