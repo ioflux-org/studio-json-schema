@@ -5,7 +5,12 @@ import {
   useRef,
   type ReactNode,
 } from "react";
-import { AppContext, type SchemaFormat, type SelectedNode } from "./AppContext";
+import {
+  AppContext,
+  type NavigationDirection,
+  type SchemaFormat,
+  type SelectedNode,
+} from "./AppContext";
 
 export const AppProvider = ({ children }: { children: ReactNode }) => {
   const containerRef = useRef<HTMLDivElement>(null);
@@ -38,6 +43,19 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
   };
 
   const [selectedNode, setSelectedNode] = useState<SelectedNode | null>(null);
+  const [searchString, setSearchString] = useState("");
+
+  const navigateMatchRef = useRef<((dir: NavigationDirection) => void) | null>(
+    null
+  );
+
+  const registerNavigateMatch = (fn: (dir: NavigationDirection) => void) => {
+    navigateMatchRef.current = fn;
+  };
+
+  const triggerNavigateMatch = (dir: NavigationDirection) => {
+    navigateMatchRef.current?.(dir);
+  };
 
   const toggleFullScreen = useCallback(() => {
     const el = containerRef.current;
@@ -81,6 +99,10 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
     changeSchemaFormat,
     selectedNode,
     setSelectedNode,
+    searchString,
+    setSearchString,
+    registerNavigateMatch,
+    triggerNavigateMatch,
   };
 
   return <AppContext.Provider value={value}>{children}</AppContext.Provider>;

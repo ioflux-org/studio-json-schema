@@ -49,7 +49,8 @@ const GraphView = ({
   compiledSchema: CompiledSchema | null;
 }) => {
   const { setCenter, getZoom, fitView } = useReactFlow();
-  const { selectedNode, setSelectedNode } = useContext(AppContext);
+  const { selectedNode, setSelectedNode, searchString, registerNavigateMatch } =
+    useContext(AppContext);
   const containerRef = useRef<HTMLDivElement>(null);
 
   const [nodes, setNodes, onNodeChange] = useNodesState<GraphNode>([]);
@@ -58,7 +59,6 @@ const GraphView = ({
   const [hoveredEdgeId, setHoveredEdgeId] = useState<string | null>(null);
   const [matchedNodes, setMatchedNodes] = useState<GraphNode[]>([]);
   const [currentMatchIndex, setCurrentMatchIndex] = useState(0);
-  const [searchString, setSearchString] = useState("");
   const [errorMessage, setErrorMessage] = useState("");
   const [showErrorPopup, setShowErrorPopup] = useState(true);
   const matchCount = matchedNodes.length;
@@ -78,6 +78,9 @@ const GraphView = ({
         const x = foundNode.position.x + NODE_WIDTH / 2;
         const y = foundNode.position.y + NODE_HEIGHT / 2;
 
+        setSelectedNode({
+          id: foundNode.id,
+        });
         setCenter(x, y, { zoom: Math.max(getZoom(), 1), duration: 500 });
 
         setNodes((nds) =>
@@ -90,12 +93,12 @@ const GraphView = ({
         return newIndex;
       });
     },
-    [matchedNodes]
+    [matchedNodes, matchCount, setCenter, getZoom, setNodes]
   );
 
-  const handleChange = useCallback((e: React.ChangeEvent<HTMLInputElement>) => {
-    setSearchString(e.target.value);
-  }, []);
+  useEffect(() => {
+    registerNavigateMatch(navigateMatch);
+  }, [navigateMatch, registerNavigateMatch]);
 
   const onNodeClick: NodeMouseHandler = useCallback((_event, node) => {
     setSelectedNode({
@@ -275,8 +278,13 @@ const GraphView = ({
     const observer = new ResizeObserver(() => {
       clearTimeout(timeoutId);
       timeoutId = setTimeout(() => {
-          const currentZoom = getZoom();
-          fitView({ duration: 800, minZoom: currentZoom, maxZoom: currentZoom, padding: 0.05 });
+        const currentZoom = getZoom();
+        fitView({
+          duration: 800,
+          minZoom: currentZoom,
+          maxZoom: currentZoom,
+          padding: 0.05,
+        });
       }, 100);
     });
 
@@ -292,7 +300,7 @@ const GraphView = ({
     const trimmed = searchString.trim();
 
     const timeout = setTimeout(() => {
-      if (!trimmed) {
+      if (!trimmed || trimmed.length < 3) {
         setMatchedNodes([]);
         setCurrentMatchIndex(0);
         setErrorMessage("");
@@ -307,16 +315,21 @@ const GraphView = ({
         searchWords.length === 0
           ? []
           : nodes.filter((node) => {
-              const labelWords = extractKeywords(node.data.nodeLabel);
-              return searchWords.every((word) => labelWords.includes(word));
+              const titleKeyWords = extractKeywords(node.data.nodeLabel);
+              return searchWords.every((word) => titleKeyWords.includes(word));
             });
 
       setMatchedNodes(foundNodes);
 
       if (foundNodes.length > 0) {
-        const firstNode = foundNodes[currentMatchIndex % foundNodes.length];
+        setCurrentMatchIndex(0);
+        const firstNode = foundNodes[0];
         const x = firstNode.position.x + NODE_WIDTH / 2;
         const y = firstNode.position.y + NODE_HEIGHT / 2;
+
+        setSelectedNode({
+          id: firstNode.id,
+        });
 
         setCenter(x, y, { zoom: Math.max(getZoom(), 1), duration: 500 });
         setNodes((nds) => {
@@ -331,33 +344,19 @@ const GraphView = ({
 
         setErrorMessage("");
       } else {
+        setSelectedNode(null);
+        fitView({ duration: 800, padding: 0.05 });
         setErrorMessage(`${trimmed} is not in schema`);
       }
     }, 300);
 
     return () => clearTimeout(timeout);
   }, [searchString]);
-
-  const handleKeyDown = useCallback(
-    (e: React.KeyboardEvent<HTMLDivElement>) => {
-      if (matchCount <= 1) return;
-
-      if (e.key === "ArrowRight" || e.key === "Enter") {
-        e.preventDefault();
-        navigateMatch("next");
-      } else if (e.key === "ArrowLeft") {
-        e.preventDefault();
-        navigateMatch("prev");
-      }
-    },
-    [matchCount, navigateMatch]
-  );
-
   return (
     <div
       ref={containerRef}
       tabIndex={0}
-      onKeyDown={handleKeyDown}
+      // onKeyDown={handleKeyDown}
       className="relative w-full h-full"
     >
       <ReactFlow
@@ -393,7 +392,7 @@ const GraphView = ({
         <Controls />
       </ReactFlow>
 
-      {selectedNode && (
+      {selectedNode?.data && (
         <NodeDetailsPopup
           nodeId={selectedNode.id}
           data={selectedNode.data}
@@ -416,58 +415,27 @@ const GraphView = ({
           </button>
         </div>
       )}
-      <div className="absolute bottom-[10px] left-[50px] flex items-center gap-2">
-        <div className="relative">
-          <input
-            type="text"
-            maxLength={30}
-            placeholder="search node"
-            className="outline-none text-[var(--text-color)] border-b-2 border-[var(--text-color)] text-center w-[150px] pr-5"
-            value={searchString}
-            onChange={handleChange}
-          />
-
-          {searchString && (
-            <button
-              onClick={() => {
-                setSearchString("");
-                setNodes((nds) => nds.map((n) => ({ ...n, selected: false })));
-                fitView({ duration: 800, padding: 0.05 });
-              }}
-              className="absolute right-0 top-1/2 -translate-y-1/2 text-[var(--text-color)] cursor-pointer hover:opacity-70"
-              title="Clear search"
-            >
-              <CgClose size={12} />
-            </button>
-          )}
+      {matchCount > 1 && (
+        <div className="absolute bottom-3 left-1/2 -translate-x-1/2 flex items-center gap-0.5 bg-[var(--node-bg-color)] px-1.5 py-0.5 rounded border border-[var(--popup-border-color)] opacity-80 shadow-sm">
+          <button
+            onClick={() => navigateMatch("prev")}
+            className="hover:bg-[var(--text-color)] hover:bg-opacity-20 rounded p-0.5 transition-colors"
+            title="Previous match"
+          >
+            <MdNavigateBefore size={14} className="text-[var(--text-color)]" />
+          </button>
+          <span className="text-[10px] text-[var(--text-color)] min-w-[32px] text-center">
+            {currentMatchIndex + 1}/{matchCount}
+          </span>
+          <button
+            onClick={() => navigateMatch("next")}
+            className="hover:bg-[var(--text-color)] hover:bg-opacity-20 rounded p-0.5 transition-colors"
+            title="Next match"
+          >
+            <MdNavigateNext size={14} className="text-[var(--text-color)]" />
+          </button>
         </div>
-        {matchCount > 1 && (
-          <div className="flex items-center gap-1 bg-[var(--node-bg-color)] px-2 py-1 rounded border border-[var(--text-color)] opacity-80">
-            <button
-              onClick={() => navigateMatch("prev")}
-              className="hover:bg-[var(--text-color)] hover:bg-opacity-20 rounded p-1 transition-colors"
-              title="Previous match"
-            >
-              <MdNavigateBefore
-                size={20}
-                className="text-[var(--text-color)]"
-              />
-            </button>
-
-            <span className="text-xs text-[var(--text-color)] min-w-[40px] text-center">
-              {currentMatchIndex + 1}/{matchCount}
-            </span>
-
-            <button
-              onClick={() => navigateMatch("next")}
-              className="hover:bg-[var(--text-color)] hover:bg-opacity-20 rounded p-1 transition-colors"
-              title="Next match"
-            >
-              <MdNavigateNext size={20} className="text-[var(--text-color)]" />
-            </button>
-          </div>
-        )}
-      </div>
+      )}
     </div>
   );
 };
