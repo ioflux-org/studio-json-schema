@@ -26,10 +26,10 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
       : "light";
   });
 
-  const [schemaFormat, setSchemaFormat] = useState<SchemaFormat>(
-    (window.sessionStorage.getItem(SESSION_FORMAT_KEY) as SchemaFormat) ??
-      "json"
-  );
+  const [schemaFormat, setSchemaFormat] = useState<SchemaFormat>(() => {
+    return (window.sessionStorage.getItem(SESSION_FORMAT_KEY) as SchemaFormat) ??
+      "json";
+  });
 
   const toggleTheme = () => {
     setTheme((prev) => {
