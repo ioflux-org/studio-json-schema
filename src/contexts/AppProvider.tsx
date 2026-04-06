@@ -15,6 +15,13 @@ import {
 export const AppProvider = ({ children }: { children: ReactNode }) => {
   const containerRef = useRef<HTMLDivElement>(null);
   const [isFullScreen, setIsFullScreen] = useState(false);
+  const persistedSchemaFormat = window.sessionStorage.getItem(
+    "ioflux.schema.editor.format"
+  );
+  const hasInvalidPersistedSchemaFormat =
+    !!persistedSchemaFormat &&
+    persistedSchemaFormat !== "json" &&
+    persistedSchemaFormat !== "yaml";
 
   const [theme, setTheme] = useState<"light" | "dark">(() => {
     const savedTheme = localStorage.getItem("theme");
@@ -24,10 +31,20 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
       : "light";
   });
 
-  const [schemaFormat, setSchemaFormat] = useState<SchemaFormat>(
-    (window.sessionStorage.getItem(
-      "ioflux.schema.editor.format"
-    ) as SchemaFormat) ?? "json"
+  const [schemaFormat, setSchemaFormat] = useState<SchemaFormat>(() => {
+    if (persistedSchemaFormat === "json" || persistedSchemaFormat === "yaml") {
+      return persistedSchemaFormat;
+    }
+
+    if (persistedSchemaFormat) {
+      window.sessionStorage.setItem("ioflux.schema.editor.format", "json");
+    }
+
+    return "json";
+  });
+
+  const [showFormatWarning, setShowFormatWarning] = useState(
+    hasInvalidPersistedSchemaFormat
   );
 
   const toggleTheme = () => {
@@ -40,6 +57,7 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
 
   const changeSchemaFormat = (format: SchemaFormat) => {
     setSchemaFormat(format);
+    window.sessionStorage.setItem("ioflux.schema.editor.format", format);
   };
 
   const [selectedNode, setSelectedNode] = useState<SelectedNode | null>(null);
@@ -89,6 +107,16 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
     document.documentElement.setAttribute("data-theme", theme);
   }, [theme]);
 
+  useEffect(() => {
+    if (!showFormatWarning) return;
+
+    const timer = window.setTimeout(() => {
+      setShowFormatWarning(false);
+    }, 5000);
+
+    return () => window.clearTimeout(timer);
+  }, [showFormatWarning]);
+
   const value = {
     containerRef,
     isFullScreen,
@@ -97,6 +125,7 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
     toggleFullScreen,
     schemaFormat,
     changeSchemaFormat,
+    showFormatWarning,
     selectedNode,
     setSelectedNode,
     searchString,

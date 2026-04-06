@@ -96,7 +96,9 @@ const MonacoEditor = () => {
     schemaFormat,
     changeSchemaFormat,
     selectedNode,
-  } = useContext(AppContext);
+    showFormatWarning,
+  } =
+    useContext(AppContext);
 
   const editorRef = useRef<editor.IStandaloneCodeEditor | null>(null);
   const editorPanelRef = useRef<ImperativePanelHandle>(null);
@@ -126,6 +128,23 @@ const MonacoEditor = () => {
 
   const [editorVisible, setEditorVisible] = useState(true);
   const [isAnimating, setIsAnimating] = useState(false);
+  const [showFormatWarningPopup, setShowFormatWarningPopup] = useState(false);
+
+  useEffect(() => {
+    if (showFormatWarning) {
+      setShowFormatWarningPopup(true);
+    }
+  }, [showFormatWarning]);
+
+  useEffect(() => {
+    if (!showFormatWarningPopup) return;
+
+    const timer = window.setTimeout(() => {
+      setShowFormatWarningPopup(false);
+    }, 5000);
+
+    return () => window.clearTimeout(timer);
+  }, [showFormatWarningPopup]);
 
   const toggleEditorVisibility = () => {
     if (!editorPanelRef.current) return;
@@ -291,6 +310,38 @@ const MonacoEditor = () => {
       }`}
     >
       {isFullScreen && <NavigationBar />}
+      {showFormatWarning && (
+        <div className="bg-yellow-100 border-b border-yellow-300 px-4 py-2 text-sm text-yellow-800">
+          ⚠️ Invalid editor format detected in session storage. Resetting to JSON.
+        </div>
+      )}
+      {showFormatWarningPopup && (
+        <div className="fixed inset-0 flex items-center justify-center bg-black bg-opacity-50 z-50">
+          <div className="bg-yellow-50 border-2 border-yellow-300 rounded-lg p-6 max-w-md shadow-lg">
+            <div className="flex items-start justify-between gap-4">
+              <div className="flex-1">
+                <h3 className="font-semibold text-yellow-900 mb-2">Format Reset</h3>
+                <p className="text-yellow-800 text-sm">
+                  Invalid editor format was detected in your session storage and has been automatically reset to JSON. Your schema content has been preserved.
+                </p>
+              </div>
+              <button
+                onClick={() => setShowFormatWarningPopup(false)}
+                className="flex-shrink-0 text-yellow-600 hover:text-yellow-800 font-bold text-xl leading-none w-6 h-6 flex items-center justify-center"
+                aria-label="Close warning"
+              >
+                ✕
+              </button>
+            </div>
+            <button
+              onClick={() => setShowFormatWarningPopup(false)}
+              className="mt-4 w-full bg-yellow-200 hover:bg-yellow-300 text-yellow-900 font-medium py-2 px-4 rounded transition-colors"
+            >
+              Dismiss
+            </button>
+          </div>
+        </div>
+      )}
       <PanelGroup direction="horizontal">
         <Panel
           className="flex flex-col"

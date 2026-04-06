@@ -19,6 +19,7 @@ type AppContextType = {
 
   schemaFormat: SchemaFormat;
   changeSchemaFormat: (format: SchemaFormat) => void;
+  showFormatWarning: boolean;
 
   selectedNode: SelectedNode | null;
   setSelectedNode: (selectedNode: SelectedNode | null) => void;
