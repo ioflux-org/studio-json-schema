@@ -133,11 +133,18 @@ const MonacoEditor = () => {
   useEffect(() => {
     if (showFormatWarning) {
       setShowFormatWarningPopup(true);
-      // Auto-dismiss popup after 5 seconds
-      const timer = setTimeout(() => setShowFormatWarningPopup(false), 5000);
-      return () => clearTimeout(timer);
     }
   }, [showFormatWarning]);
+
+  useEffect(() => {
+    if (!showFormatWarningPopup) return;
+
+    const timer = window.setTimeout(() => {
+      setShowFormatWarningPopup(false);
+    }, 5000);
+
+    return () => window.clearTimeout(timer);
+  }, [showFormatWarningPopup]);
 
   const toggleEditorVisibility = () => {
     if (!editorPanelRef.current) return;
