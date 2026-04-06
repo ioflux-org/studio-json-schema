@@ -404,11 +404,13 @@ const GraphView = ({
       )}
       {/*Error Message */}
       {errorMessage && showErrorPopup && createPortal(
-        <div className="fixed top-[120px] sm:top-[100px] left-1/2 -translate-x-1/2 flex gap-2 px-2 py-1 bg-red-500 text-white rounded-md shadow-lg z-[9999]">
+        <div role="alert" aria-live="assertive" aria-atomic="true" className="fixed top-[120px] sm:top-[100px] left-1/2 -translate-x-1/2 flex gap-2 px-2 py-1 bg-red-500 text-white rounded-md shadow-lg z-[9999]">
           <div className="text-sm font-medium tracking-wide font-roboto">
             {errorMessage}
           </div>
           <button
+            type="button"
+            aria-label="Close error"
             className="cursor-pointer"
             onClick={() => setShowErrorPopup(false)}
           >
