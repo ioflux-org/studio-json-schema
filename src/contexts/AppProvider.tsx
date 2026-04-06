@@ -12,6 +12,8 @@ import {
   type SelectedNode,
 } from "./AppContext";
 
+const SESSION_FORMAT_KEY = "ioflux.schema.editor.format";
+
 export const AppProvider = ({ children }: { children: ReactNode }) => {
   const containerRef = useRef<HTMLDivElement>(null);
   const [isFullScreen, setIsFullScreen] = useState(false);
@@ -24,11 +26,10 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
       : "light";
   });
 
-  const [schemaFormat, setSchemaFormat] = useState<SchemaFormat>(
-    (window.sessionStorage.getItem(
-      "ioflux.schema.editor.format"
-    ) as SchemaFormat) ?? "json"
-  );
+  const [schemaFormat, setSchemaFormat] = useState<SchemaFormat>(() => {
+    return (window.sessionStorage.getItem(SESSION_FORMAT_KEY) as SchemaFormat) ??
+      "json";
+  });
 
   const toggleTheme = () => {
     setTheme((prev) => {
