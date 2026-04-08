@@ -26,7 +26,6 @@ import NavigationBar from "./NavigationBar";
 import EditorToggleButton from "./EditorToggleButton";
 import { parseSchema } from "../utils/parseSchema";
 import YAML from "js-yaml";
-import { parseDocument } from "yaml";
 import type { JSONSchema } from "@apidevtools/json-schema-ref-parser";
 
 type ValidationStatus = {
@@ -165,109 +164,32 @@ const MonacoEditor = () => {
     const uriParts = selectedNode.id.split("#");
     const fragment = uriParts.length > 1 ? uriParts[1] : "";
 
-    const decodePointerSegment = (segment: string) =>
-      decodeURIComponent(segment).replace(/~1/g, "/").replace(/~0/g, "~");
-
-    const rawPath = fragment
+    const path = fragment
       .split("/")
       .filter((segment: string) => segment !== "")
-      .map((segment: string) => decodePointerSegment(segment));
+      .map((segment: string) => {
+        const decoded = decodeURIComponent(segment);
+        return /^\d+$/.test(decoded) ? parseInt(decoded, 10) : decoded;
+      });
 
-    const buildPathCandidates = (segments: string[]) => {
-      return segments.reduce<Array<Array<string | number>>>(
-        (candidates, segment) => {
-          if (!/^\d+$/.test(segment)) {
-            return candidates.map((candidate) => [...candidate, segment]);
-          }
+    const tree = parseTree(text);
+    if (!tree) return;
 
-          const numericSegment = parseInt(segment, 10);
-          return candidates.flatMap((candidate) => [
-            [...candidate, segment],
-            [...candidate, numericSegment],
-          ]);
-        },
-        [[]]
-      );
-    const getTypedPath = (segments: string[], parsedRoot: unknown) => {
-      const typedSegments: Array<string | number> = [];
-      let current: any = parsedRoot;
+    const node = findNodeAtLocation(tree, path);
 
-      for (const segment of segments) {
-        const isArrayIndex = Array.isArray(current) && /^\d+$/.test(segment);
-        const pathSegment: string | number = isArrayIndex
-          ? parseInt(segment, 10)
-          : segment;
-
-        typedSegments.push(pathSegment);
-        current = current?.[pathSegment as keyof typeof current];
-      }
-
-      return typedSegments;
-    };
-
-    let startPos, endPos;
-
-    try {
-      const pathCandidates = buildPathCandidates(rawPath);
-      const parsedRoot =
-        schemaFormat === "yaml" ? YAML.load(text) : JSON.parse(text);
-      const typedPath = getTypedPath(rawPath, parsedRoot);
-
-      if (schemaFormat === "yaml") {
-        const doc = parseDocument(text);
-        // If path is empty, we are at root, otherwise fetch the node.
-        const node = (rawPath.length === 0
-          ? doc.contents
-          : pathCandidates
-              .map((candidatePath) => doc.getIn(candidatePath, true))
-              .find(
-                (candidateNode) =>
-                  !!candidateNode &&
-                  typeof candidateNode === "object" &&
-                  "range" in candidateNode
-              )) as any;
-        const node = (typedPath.length === 0
-          ? doc.contents
-          : doc.getIn(typedPath, true)) as any;
-
-        if (!node || !node.range) return;
-
-        const [start, valueEnd, nodeEnd] = node.range;
-        startPos = model.getPositionAt(start);
-        endPos = model.getPositionAt(nodeEnd ?? valueEnd);
-      } else {
-        const tree = parseTree(text);
-        if (!tree) return;
-
-        const node = pathCandidates
-          .map((candidatePath) => findNodeAtLocation(tree, candidatePath))
-          .find((candidateNode) => !!candidateNode);
-        const node = findNodeAtLocation(tree, typedPath);
-        if (!node) return;
-
-        startPos = model.getPositionAt(node.offset);
-        endPos = model.getPositionAt(node.offset + node.length);
-      }
-    } catch {
-      return;
-    }
-
-    if (startPos && endPos) {
+    if (node) {
+      const startPos = model.getPositionAt(node.offset);
+      const endPos = model.getPositionAt(node.offset + node.length);
 
       editorRef.current.revealPositionInCenter(startPos);
       editorRef.current.setPosition(startPos);
-
-      const endLineNumber =
-        endPos.column === 1 && endPos.lineNumber > startPos.lineNumber
-          ? endPos.lineNumber - 1
-          : endPos.lineNumber;
 
       const decoration = {
         range: new (window as any).monaco.Range(
           startPos.lineNumber,
           1,
-          endLineNumber,
-          model.getLineMaxColumn(endLineNumber)
+          endPos.lineNumber,
+          1
         ),
         options: {
           isWholeLine: true,
@@ -282,7 +204,7 @@ const MonacoEditor = () => {
 
       model.deltaDecorations(oldDecorations, [decoration]);
     }
-  }, [selectedNode?.id, schemaFormat, schemaText]);
+  }, [selectedNode?.id]);
 
   useEffect(() => {
     saveFormat(SESSION_FORMAT_KEY, schemaFormat);
@@ -338,13 +260,13 @@ const MonacoEditor = () => {
         setSchemaValidation(
           !dialect && typeof parsedSchema !== "boolean"
             ? {
-              status: "warning",
-              message: VALIDATION_UI["warning"].message,
-            }
+                status: "warning",
+                message: VALIDATION_UI["warning"].message,
+              }
             : {
-              status: "success",
-              message: VALIDATION_UI["success"].message,
-            }
+                status: "success",
+                message: VALIDATION_UI["success"].message,
+              }
         );
 
         saveSchemaJSON(SESSION_SCHEMA_KEY, copy);
@@ -364,8 +286,9 @@ const MonacoEditor = () => {
   return (
     <div
       ref={containerRef}
-      className={`h-[92vh] flex flex-col ${isAnimating ? "panel-animating" : ""
-        }`}
+      className={`h-[92vh] flex flex-col ${
+        isAnimating ? "panel-animating" : ""
+      }`}
     >
       {isFullScreen && <NavigationBar />}
       <PanelGroup direction="horizontal">
