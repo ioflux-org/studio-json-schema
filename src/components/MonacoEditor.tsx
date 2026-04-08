@@ -165,39 +165,62 @@ const MonacoEditor = () => {
     const uriParts = selectedNode.id.split("#");
     const fragment = uriParts.length > 1 ? uriParts[1] : "";
 
-    const path = fragment
+    const decodePointerSegment = (segment: string) =>
+      decodeURIComponent(segment).replace(/~1/g, "/").replace(/~0/g, "~");
+
+    const rawPath = fragment
       .split("/")
       .filter((segment: string) => segment !== "")
-      .map((segment: string) => {
-        const decoded = decodeURIComponent(segment);
-        return /^\d+$/.test(decoded) ? parseInt(decoded, 10) : decoded;
-      });
+      .map((segment: string) => decodePointerSegment(segment));
+
+    const getTypedPath = (segments: string[], parsedRoot: unknown) => {
+      const typedSegments: Array<string | number> = [];
+      let current: any = parsedRoot;
+
+      for (const segment of segments) {
+        const isArrayIndex = Array.isArray(current) && /^\d+$/.test(segment);
+        const pathSegment: string | number = isArrayIndex
+          ? parseInt(segment, 10)
+          : segment;
+
+        typedSegments.push(pathSegment);
+        current = current?.[pathSegment as keyof typeof current];
+      }
+
+      return typedSegments;
+    };
 
     let startPos, endPos;
 
-    if (schemaFormat === "yaml") {
-      try {
+    try {
+      const parsedRoot =
+        schemaFormat === "yaml" ? YAML.load(text) : JSON.parse(text);
+      const typedPath = getTypedPath(rawPath, parsedRoot);
+
+      if (schemaFormat === "yaml") {
         const doc = parseDocument(text);
         // If path is empty, we are at root, otherwise fetch the node.
-        const node = (path.length === 0 ? doc.contents : doc.getIn(path, true)) as any;
-        
+        const node = (typedPath.length === 0
+          ? doc.contents
+          : doc.getIn(typedPath, true)) as any;
+
         if (!node || !node.range) return;
-        
+
         const [start, valueEnd, nodeEnd] = node.range;
         startPos = model.getPositionAt(start);
         endPos = model.getPositionAt(nodeEnd ?? valueEnd);
-      } catch (err) {
-        return;
+      } else {
+        const tree = parseTree(text);
+        if (!tree) return;
+
+        const node = findNodeAtLocation(tree, typedPath);
+        if (!node) return;
+
+        startPos = model.getPositionAt(node.offset);
+        endPos = model.getPositionAt(node.offset + node.length);
       }
-    } else {
-      const tree = parseTree(text);
-      if (!tree) return;
-
-      const node = findNodeAtLocation(tree, path);
-      if (!node) return;
-
-      startPos = model.getPositionAt(node.offset);
-      endPos = model.getPositionAt(node.offset + node.length);
+    } catch {
+      return;
     }
 
     if (startPos && endPos) {
@@ -225,7 +248,7 @@ const MonacoEditor = () => {
 
       model.deltaDecorations(oldDecorations, [decoration]);
     }
-  }, [selectedNode?.id]);
+  }, [selectedNode?.id, schemaFormat, schemaText]);
 
   useEffect(() => {
     saveFormat(SESSION_FORMAT_KEY, schemaFormat);
