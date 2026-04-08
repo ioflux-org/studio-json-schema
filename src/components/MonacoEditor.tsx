@@ -26,6 +26,7 @@ import NavigationBar from "./NavigationBar";
 import EditorToggleButton from "./EditorToggleButton";
 import { parseSchema } from "../utils/parseSchema";
 import YAML from "js-yaml";
+import { parseDocument } from "yaml";
 import type { JSONSchema } from "@apidevtools/json-schema-ref-parser";
 
 type ValidationStatus = {
@@ -172,16 +173,17 @@ const MonacoEditor = () => {
         return /^\d+$/.test(decoded) ? parseInt(decoded, 10) : decoded;
       });
 
-    const buildPathCandidates = (segments: string[]) =>
+    const buildPathCandidates = (segments: (string | number)[]) =>
       segments.reduce<Array<Array<string | number>>>(
         (candidates, segment) => {
-          if (!/^\d+$/.test(segment)) {
+          const segmentStr = String(segment);
+          if (!/^\d+$/.test(segmentStr)) {
             return candidates.map((candidate) => [...candidate, segment]);
           }
 
-          const numericSegment = parseInt(segment, 10);
+          const numericSegment = parseInt(segmentStr, 10);
           return candidates.flatMap((candidate) => [
-            [...candidate, segment],
+            [...candidate, segmentStr],
             [...candidate, numericSegment],
           ]);
         },
@@ -191,11 +193,11 @@ const MonacoEditor = () => {
     let startPos, endPos;
 
     try {
-      const pathCandidates = buildPathCandidates(rawPath);
+      const pathCandidates = buildPathCandidates(path);
 
       if (schemaFormat === "yaml") {
         const doc = parseDocument(text);
-        const node = (rawPath.length === 0
+        const node = (path.length === 0
           ? doc.contents
           : pathCandidates
               .map((candidatePath) => doc.getIn(candidatePath, true))
@@ -232,11 +234,18 @@ const MonacoEditor = () => {
       editorRef.current.revealPositionInCenter(startPos);
       editorRef.current.setPosition(startPos);
 
+      let highlightEndLine = endPos.lineNumber;
+      if (endPos.column === 1 && endPos.lineNumber > startPos.lineNumber) {
+        highlightEndLine = endPos.lineNumber - 1;
+      }
+
+      let highlightStartLine = Math.max(1, startPos.lineNumber - 1);
+
       const decoration = {
         range: new (window as any).monaco.Range(
-          startPos.lineNumber,
+          highlightStartLine,
           1,
-          endPos.lineNumber,
+          highlightEndLine,
           1
         ),
         options: {
@@ -252,7 +261,7 @@ const MonacoEditor = () => {
 
       model.deltaDecorations(oldDecorations, [decoration]);
     }
-  }, [selectedNode?.id]);
+  }, [selectedNode?.id, schemaFormat, schemaText]);
 
   useEffect(() => {
     saveFormat(SESSION_FORMAT_KEY, schemaFormat);
