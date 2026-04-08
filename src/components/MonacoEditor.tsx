@@ -173,6 +173,21 @@ const MonacoEditor = () => {
       .filter((segment: string) => segment !== "")
       .map((segment: string) => decodePointerSegment(segment));
 
+    const buildPathCandidates = (segments: string[]) => {
+      return segments.reduce<Array<Array<string | number>>>(
+        (candidates, segment) => {
+          if (!/^\d+$/.test(segment)) {
+            return candidates.map((candidate) => [...candidate, segment]);
+          }
+
+          const numericSegment = parseInt(segment, 10);
+          return candidates.flatMap((candidate) => [
+            [...candidate, segment],
+            [...candidate, numericSegment],
+          ]);
+        },
+        [[]]
+      );
     const getTypedPath = (segments: string[], parsedRoot: unknown) => {
       const typedSegments: Array<string | number> = [];
       let current: any = parsedRoot;
@@ -193,6 +208,7 @@ const MonacoEditor = () => {
     let startPos, endPos;
 
     try {
+      const pathCandidates = buildPathCandidates(rawPath);
       const parsedRoot =
         schemaFormat === "yaml" ? YAML.load(text) : JSON.parse(text);
       const typedPath = getTypedPath(rawPath, parsedRoot);
@@ -200,6 +216,16 @@ const MonacoEditor = () => {
       if (schemaFormat === "yaml") {
         const doc = parseDocument(text);
         // If path is empty, we are at root, otherwise fetch the node.
+        const node = (rawPath.length === 0
+          ? doc.contents
+          : pathCandidates
+              .map((candidatePath) => doc.getIn(candidatePath, true))
+              .find(
+                (candidateNode) =>
+                  !!candidateNode &&
+                  typeof candidateNode === "object" &&
+                  "range" in candidateNode
+              )) as any;
         const node = (typedPath.length === 0
           ? doc.contents
           : doc.getIn(typedPath, true)) as any;
@@ -213,6 +239,9 @@ const MonacoEditor = () => {
         const tree = parseTree(text);
         if (!tree) return;
 
+        const node = pathCandidates
+          .map((candidatePath) => findNodeAtLocation(tree, candidatePath))
+          .find((candidateNode) => !!candidateNode);
         const node = findNodeAtLocation(tree, typedPath);
         if (!node) return;
 
@@ -228,12 +257,17 @@ const MonacoEditor = () => {
       editorRef.current.revealPositionInCenter(startPos);
       editorRef.current.setPosition(startPos);
 
+      const endLineNumber =
+        endPos.column === 1 && endPos.lineNumber > startPos.lineNumber
+          ? endPos.lineNumber - 1
+          : endPos.lineNumber;
+
       const decoration = {
         range: new (window as any).monaco.Range(
           startPos.lineNumber,
           1,
-          endPos.lineNumber,
-          1
+          endLineNumber,
+          model.getLineMaxColumn(endLineNumber)
         ),
         options: {
           isWholeLine: true,
