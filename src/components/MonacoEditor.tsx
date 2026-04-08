@@ -188,12 +188,30 @@ const MonacoEditor = () => {
         },
         [[]]
       );
+    const getTypedPath = (segments: string[], parsedRoot: unknown) => {
+      const typedSegments: Array<string | number> = [];
+      let current: any = parsedRoot;
+
+      for (const segment of segments) {
+        const isArrayIndex = Array.isArray(current) && /^\d+$/.test(segment);
+        const pathSegment: string | number = isArrayIndex
+          ? parseInt(segment, 10)
+          : segment;
+
+        typedSegments.push(pathSegment);
+        current = current?.[pathSegment as keyof typeof current];
+      }
+
+      return typedSegments;
     };
 
     let startPos, endPos;
 
     try {
       const pathCandidates = buildPathCandidates(rawPath);
+      const parsedRoot =
+        schemaFormat === "yaml" ? YAML.load(text) : JSON.parse(text);
+      const typedPath = getTypedPath(rawPath, parsedRoot);
 
       if (schemaFormat === "yaml") {
         const doc = parseDocument(text);
@@ -208,6 +226,9 @@ const MonacoEditor = () => {
                   typeof candidateNode === "object" &&
                   "range" in candidateNode
               )) as any;
+        const node = (typedPath.length === 0
+          ? doc.contents
+          : doc.getIn(typedPath, true)) as any;
 
         if (!node || !node.range) return;
 
@@ -221,6 +242,7 @@ const MonacoEditor = () => {
         const node = pathCandidates
           .map((candidatePath) => findNodeAtLocation(tree, candidatePath))
           .find((candidateNode) => !!candidateNode);
+        const node = findNodeAtLocation(tree, typedPath);
         if (!node) return;
 
         startPos = model.getPositionAt(node.offset);
