@@ -1,5 +1,11 @@
 # json-schema-studio
 
+## 0.8.0
+
+### Minor Changes
+
+- a173afb: Add unified search bar that highlights matching graph nodes and corresponding editor code
+
 ## 0.7.0
 
 ### Minor Changes
