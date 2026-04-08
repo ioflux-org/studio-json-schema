@@ -172,14 +172,62 @@ const MonacoEditor = () => {
         return /^\d+$/.test(decoded) ? parseInt(decoded, 10) : decoded;
       });
 
-    const tree = parseTree(text);
-    if (!tree) return;
+    const buildPathCandidates = (segments: string[]) =>
+      segments.reduce<Array<Array<string | number>>>(
+        (candidates, segment) => {
+          if (!/^\d+$/.test(segment)) {
+            return candidates.map((candidate) => [...candidate, segment]);
+          }
 
-    const node = findNodeAtLocation(tree, path);
+          const numericSegment = parseInt(segment, 10);
+          return candidates.flatMap((candidate) => [
+            [...candidate, segment],
+            [...candidate, numericSegment],
+          ]);
+        },
+        [[]]
+      );
 
-    if (node) {
-      const startPos = model.getPositionAt(node.offset);
-      const endPos = model.getPositionAt(node.offset + node.length);
+    let startPos, endPos;
+
+    try {
+      const pathCandidates = buildPathCandidates(rawPath);
+
+      if (schemaFormat === "yaml") {
+        const doc = parseDocument(text);
+        const node = (rawPath.length === 0
+          ? doc.contents
+          : pathCandidates
+              .map((candidatePath) => doc.getIn(candidatePath, true))
+              .find(
+                (candidateNode) =>
+                  !!candidateNode &&
+                  typeof candidateNode === "object" &&
+                  "range" in candidateNode
+              )) as any;
+
+        if (!node || !node.range) return;
+
+        const [start, valueEnd, nodeEnd] = node.range;
+        startPos = model.getPositionAt(start);
+        endPos = model.getPositionAt(nodeEnd ?? valueEnd);
+      } else {
+        const tree = parseTree(text);
+        if (!tree) return;
+
+        const node = pathCandidates
+          .map((candidatePath) => findNodeAtLocation(tree, candidatePath))
+          .find((candidateNode) => !!candidateNode);
+        if (!node) return;
+
+        startPos = model.getPositionAt(node.offset);
+        endPos = model.getPositionAt(node.offset + node.length);
+      }
+    } catch {
+      return;
+    }
+
+    if (startPos && endPos) {
 
       editorRef.current.revealPositionInCenter(startPos);
       editorRef.current.setPosition(startPos);
