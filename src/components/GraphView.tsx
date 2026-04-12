@@ -37,7 +37,6 @@ import { CgClose } from "react-icons/cg";
 import { extractKeywords } from "../utils/searchNodeHelpers";
 
 const nodeTypes = { customNode: CustomNode };
-const dagreGraph = new dagre.graphlib.Graph().setDefaultEdgeLabel(() => ({}));
 
 const NODE_WIDTH = 172;
 const NODE_HEIGHT = 36;
@@ -144,6 +143,9 @@ const GraphView = ({
   const getLayoutedElements = useCallback(
     (nodes: GraphNode[], edges: GraphEdge[], direction = "LR") => {
       const isHorizontal = direction === "LR";
+      // Create a fresh Dagre graph instance for this layout pass to avoid stale state
+      // from previous schema compilations. See issue #199.
+      const dagreGraph = new dagre.graphlib.Graph().setDefaultEdgeLabel(() => ({}));
       dagreGraph.setGraph({ rankdir: direction });
 
       nodes.forEach((node) => {
