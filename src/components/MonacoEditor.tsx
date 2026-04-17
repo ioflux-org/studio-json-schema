@@ -58,15 +58,15 @@ const SUPPORTED_DIALECTS = ["https://json-schema.org/draft/2020-12/schema"];
 const getValidationUI = (theme: "light" | "dark") => ({
   success: {
     message: "✓ Valid JSON Schema",
-    className: "text-green-400 font-semibold",
+    className: "text-green-400 font-semibold break-words",
   },
   warning: {
     message: `⚠ Schema dialect not provided. Using default dialect: ${DEFAULT_SCHEMA_DIALECT}`,
-    className: theme === "dark" ? "text-yellow-400" : "text-amber-800",
+    className: theme === "dark" ? "text-yellow-400 break-words" : "text-amber-800 break-words",
   },
   error: {
     message: "✗ ",
-    className: "text-red-400",
+    className: theme === "dark" ? "text-red-300 font-semibold break-words" : "text-red-600 font-semibold break-words",
   },
 });
 
@@ -323,8 +323,8 @@ const MonacoEditor = () => {
             onChange={(value) => setSchemaText(value ?? "")}
             onMount={handleEditorDidMount}
           />
-          <div className="flex-1 p-2 bg-[var(--validation-bg-color)] text-sm overflow-y-auto">
-            <div className={VALIDATION_UI[schemaValidation.status].className}>
+          <div className="flex-1 p-3 bg-[var(--validation-bg-color)] text-xs overflow-y-auto border-t border-gray-400/30">
+            <div className={`${VALIDATION_UI[schemaValidation.status].className} leading-relaxed whitespace-pre-wrap`}>
               {schemaValidation.message}
             </div>
           </div>
