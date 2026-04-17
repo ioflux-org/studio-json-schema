@@ -58,7 +58,7 @@ const SUPPORTED_DIALECTS = ["https://json-schema.org/draft/2020-12/schema"];
 const getValidationUI = (theme: "light" | "dark") => ({
   success: {
     message: "✓ Valid JSON Schema",
-    className: "text-green-400 font-semibold break-words",
+    className: "text-green-400 font-semibold",
   },
   warning: {
     message: `⚠ Schema dialect not provided. Using default dialect: ${DEFAULT_SCHEMA_DIALECT}`,
@@ -66,7 +66,7 @@ const getValidationUI = (theme: "light" | "dark") => ({
   },
   error: {
     message: "✗ ",
-    className: theme === "dark" ? "text-red-300 font-semibold break-words" : "text-red-600 font-semibold break-words",
+    className: theme === "dark" ? "text-red-400 break-words" : "text-red-700 break-words",
   },
 });
 
@@ -281,7 +281,7 @@ const MonacoEditor = () => {
     }, 300);
 
     return () => clearTimeout(timeout);
-  }, [schemaText, schemaFormat, VALIDATION_UI]);
+  }, [schemaText, schemaFormat]);
 
   return (
     <div
@@ -311,26 +311,26 @@ const MonacoEditor = () => {
             </select>
           </div>
           
-          <PanelGroup direction="vertical" className="flex-1">
-            <Panel defaultSize={75} minSize={30}>
-              <Editor
-                height="100%"
-                width="100%"
-                language={schemaFormat}
-                value={schemaText}
-                theme={theme === "light" ? "vs-light" : "vs-dark"}
-                options={{
-                  minimap: { enabled: false },
-                  occurrencesHighlight: "off",
-                }}
-                onChange={(value) => setSchemaText(value ?? "")}
-                onMount={handleEditorDidMount}
-              />
-            </Panel>
-            
+          <div className="flex-1">
+            <Editor
+              height="100%"
+              width="100%"
+              language={schemaFormat}
+              value={schemaText}
+              theme={theme === "light" ? "vs-light" : "vs-dark"}
+              options={{
+                minimap: { enabled: false },
+                occurrencesHighlight: "off",
+              }}
+              onChange={(value) => setSchemaText(value ?? "")}
+              onMount={handleEditorDidMount}
+            />
+          </div>
+          
+          <PanelGroup direction="vertical" className="h-48">
             <PanelResizeHandle className="h-[1px] bg-gray-400/50 hover:bg-blue-500/70 transition-colors cursor-row-resize" />
             
-            <Panel defaultSize={25} minSize={10} maxSize={50} className="flex flex-col bg-[var(--validation-bg-color)] group">
+            <Panel className="flex flex-col bg-[var(--validation-bg-color)] group flex-1">
               <div className="flex-1 p-3 overflow-y-auto scrollbar-thin scrollbar-thumb-gray-500 scrollbar-track-transparent hover:scrollbar-thumb-gray-400">
                 <div className={`${VALIDATION_UI[schemaValidation.status].className} leading-relaxed whitespace-pre-wrap text-xs`}>
                   {schemaValidation.message}
@@ -338,7 +338,7 @@ const MonacoEditor = () => {
               </div>
             </Panel>
           </PanelGroup>
-        </Panel>
+          </Panel>
         <PanelResizeHandle className="w-[1px] bg-gray-400 relative">
           <div>
             <EditorToggleButton
