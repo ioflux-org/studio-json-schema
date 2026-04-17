@@ -311,7 +311,7 @@ const MonacoEditor = () => {
             </select>
           </div>
           <Editor
-            height="87%"
+            height="calc(100% - 120px)"
             width="100%"
             language={schemaFormat}
             value={schemaText}
@@ -323,10 +323,13 @@ const MonacoEditor = () => {
             onChange={(value) => setSchemaText(value ?? "")}
             onMount={handleEditorDidMount}
           />
-          <div className="flex-1 p-3 bg-[var(--validation-bg-color)] text-xs overflow-y-auto border-t border-gray-400/30">
-            <div className={`${VALIDATION_UI[schemaValidation.status].className} leading-relaxed whitespace-pre-wrap`}>
-              {schemaValidation.message}
+          <div className="relative flex-1 min-h-[60px] max-h-[200px] flex flex-col bg-[var(--validation-bg-color)] border-t border-gray-400/30 group hover:border-gray-400/50 transition-colors">
+            <div className="flex-1 p-3 overflow-y-auto scrollbar-thin scrollbar-thumb-gray-500 scrollbar-track-transparent hover:scrollbar-thumb-gray-400">
+              <div className={`${VALIDATION_UI[schemaValidation.status].className} leading-relaxed whitespace-pre-wrap text-xs`}>
+                {schemaValidation.message}
+              </div>
             </div>
+            <div className="h-1 bg-gray-400/20 hover:bg-blue-500/50 cursor-row-resize transition-colors opacity-0 group-hover:opacity-100" title="Drag to resize validation panel" />
           </div>
         </Panel>
         <PanelResizeHandle className="w-[1px] bg-gray-400 relative">
