@@ -253,7 +253,7 @@ const MonacoEditor = () => {
         };
 
         const browser = createBrowser(schemaId, schemaDocument);
-        // @ts-expect-error
+        // @ts-expect-error browser type not fully compatible with getSchema signature
         const schema = await getSchema(schemaDocument.baseUri, browser);
 
         setCompiledSchema(await compile(schema));
@@ -281,7 +281,7 @@ const MonacoEditor = () => {
     }, 300);
 
     return () => clearTimeout(timeout);
-  }, [schemaText, schemaFormat]);
+  }, [schemaText, schemaFormat, VALIDATION_UI]);
 
   return (
     <div
