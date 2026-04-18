@@ -107,7 +107,7 @@ jobs:
         with:
           pr-number: ${{ steps.pr.outputs.pr_number }}
           message: |
-            ### ✅ Preview Deployed!
+            ### Preview Deployed!
 
             | Item | Status |
             | :--- | :--- |
