@@ -312,7 +312,7 @@ const MonacoEditor = () => {
           </div>
           
           <PanelGroup direction="vertical" className="flex-1">
-            <Panel defaultSize={75} minSize={30}>
+            <Panel defaultSize={90} minSize={50}>
               <Editor
                 height="100%"
                 width="100%"
@@ -330,7 +330,7 @@ const MonacoEditor = () => {
             
             <PanelResizeHandle className="h-[1px] bg-gray-400/50 hover:bg-blue-500/70 transition-colors cursor-row-resize" />
             
-            <Panel defaultSize={25} minSize={10} maxSize={50} className="flex flex-col bg-[var(--validation-bg-color)] group">
+            <Panel defaultSize={10} minSize={10} maxSize={50} className="flex flex-col bg-[var(--validation-bg-color)] group">
               <div className="flex-1 p-3 overflow-y-auto scrollbar-thin scrollbar-thumb-gray-500 scrollbar-track-transparent hover:scrollbar-thumb-gray-400">
                 <div className={`${VALIDATION_UI[schemaValidation.status].className} leading-relaxed whitespace-pre-wrap text-xs`}>
                   {schemaValidation.message}
