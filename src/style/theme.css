@@ -36,9 +36,6 @@
   --popup-header-text-color: #374151;
   --popup-close-btn-hover-color: #717479;
   --popup-backdrop-color: rgba(255, 255, 255, 0.1);
-
-  /* Resize Handle */
-  --resize-handle-color: #9ca3af80;
 }
 
 [data-theme="dark"] {
@@ -80,9 +77,6 @@
   --popup-header-text-color: #e0e0e0;
   --popup-close-btn-hover-color: #777575;
   --popup-backdrop-color: rgba(0, 0, 0, 0.5);
-
-  /* Resize Handle */
-  --resize-handle-color: #9ca3af80;
 }
 
 .monaco-highlight-line {

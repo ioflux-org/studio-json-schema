@@ -37,6 +37,7 @@ import { CgClose } from "react-icons/cg";
 import { extractKeywords } from "../utils/searchNodeHelpers";
 
 const nodeTypes = { customNode: CustomNode };
+const dagreGraph = new dagre.graphlib.Graph().setDefaultEdgeLabel(() => ({}));
 
 const NODE_WIDTH = 172;
 const NODE_HEIGHT = 36;
@@ -142,12 +143,6 @@ const GraphView = ({
 
   const getLayoutedElements = useCallback(
     (nodes: GraphNode[], edges: GraphEdge[], direction = "LR") => {
-      // Create a fresh Dagre graph instance for this layout calculation
-      // Prevents stale nodes from previous schemas corrupting the layout
-      const dagreGraph = new dagre.graphlib.Graph().setDefaultEdgeLabel(
-        () => ({})
-      );
-
       const isHorizontal = direction === "LR";
       dagreGraph.setGraph({ rankdir: direction });
 
