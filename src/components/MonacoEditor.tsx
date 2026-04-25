@@ -62,11 +62,17 @@ const getValidationUI = (theme: "light" | "dark") => ({
   },
   warning: {
     message: `⚠ Schema dialect not provided. Using default dialect: ${DEFAULT_SCHEMA_DIALECT}`,
-    className: theme === "dark" ? "text-yellow-400" : "text-amber-800",
+    className:
+      theme === "dark"
+        ? "text-yellow-400 break-words"
+        : "text-amber-800 break-words",
   },
   error: {
     message: "✗ ",
-    className: "text-red-400",
+    className:
+      theme === "dark"
+        ? "text-red-400 break-words"
+        : "text-red-700 break-words",
   },
 });
 
