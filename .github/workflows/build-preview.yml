@@ -35,6 +35,9 @@ jobs:
       - name: Save PR number
         run: echo "${{ github.event.pull_request.number }}" > pr_number.txt
 
+      - name: Save PR head SHA
+        run: echo "${{ github.event.pull_request.head.sha }}" > pr_head_sha.txt
+
       - name: Upload build artifact
         uses: actions/upload-artifact@v4
         with:
@@ -42,3 +45,4 @@ jobs:
           path: |
             dist
             pr_number.txt
+            pr_head_sha.txt

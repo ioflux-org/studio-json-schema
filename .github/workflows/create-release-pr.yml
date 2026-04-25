@@ -1,4 +1,4 @@
-name: Versioning
+name: Create Release PR
 
 on:
   push:
@@ -35,6 +35,6 @@ jobs:
         uses: changesets/action@v1
         with:
           commit: "chore: version bump"
-          title: "chore: version bump"
+          title: "Release: New changes from recent PRs"
         env:
           GITHUB_TOKEN: ${{ secrets.MY_RELEASE_PAT }}
