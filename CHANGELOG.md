@@ -1,5 +1,12 @@
 # json-schema-studio
 
+## 0.8.0
+
+### Minor Changes
+
+- 6c83e7e: feat(ci): link deploy-preview workflow status to corresponding PR
+- a173afb: Add unified search bar that highlights matching graph nodes and corresponding editor code
+
 ## 0.7.0
 
 ### Minor Changes
