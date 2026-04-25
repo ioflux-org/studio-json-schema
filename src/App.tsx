@@ -8,9 +8,11 @@ import "./App.css";
 function App() {
   return (
     <AppProvider>
-      <NavigationBar />
-      <MonacoEditor />
-      {/* <BottomBar /> */}
+      <div className="flex flex-col overflow-hidden" style={{ height: "100dvh" }}>
+        <NavigationBar />
+        <MonacoEditor />
+        {/* <BottomBar /> */}
+      </div>
     </AppProvider>
   );
 }
