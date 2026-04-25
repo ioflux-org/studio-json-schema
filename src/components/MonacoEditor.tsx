@@ -62,11 +62,17 @@ const getValidationUI = (theme: "light" | "dark") => ({
   },
   warning: {
     message: `⚠ Schema dialect not provided. Using default dialect: ${DEFAULT_SCHEMA_DIALECT}`,
-    className: theme === "dark" ? "text-yellow-400" : "text-amber-800",
+    className:
+      theme === "dark"
+        ? "text-yellow-400 break-words"
+        : "text-amber-800 break-words",
   },
   error: {
     message: "✗ ",
-    className: "text-red-400",
+    className:
+      theme === "dark"
+        ? "text-red-400 break-words"
+        : "text-red-700 break-words",
   },
 });
 
@@ -89,8 +95,14 @@ const saveSchemaJSON = (key: string, schema: JSONSchema) => {
 };
 
 const MonacoEditor = () => {
-  const { theme, isFullScreen, containerRef, schemaFormat, changeSchemaFormat, selectedNode } =
-    useContext(AppContext);
+  const {
+    theme,
+    isFullScreen,
+    containerRef,
+    schemaFormat,
+    changeSchemaFormat,
+    selectedNode,
+  } = useContext(AppContext);
 
   const editorRef = useRef<editor.IStandaloneCodeEditor | null>(null);
   const editorPanelRef = useRef<ImperativePanelHandle>(null);
@@ -122,10 +134,13 @@ const MonacoEditor = () => {
   const [isAnimating, setIsAnimating] = useState(false);
 
   const MOBILE_BREAKPOINT = 768;
-  const [isMobile, setIsMobile] = useState(() => window.innerWidth < MOBILE_BREAKPOINT);
+  const [isMobile, setIsMobile] = useState(
+    () => window.innerWidth < MOBILE_BREAKPOINT
+  );
 
   useEffect(() => {
-    const handleResize = () => setIsMobile(window.innerWidth < MOBILE_BREAKPOINT);
+    const handleResize = () =>
+      setIsMobile(window.innerWidth < MOBILE_BREAKPOINT);
     window.addEventListener("resize", handleResize);
     return () => window.removeEventListener("resize", handleResize);
   }, []);
@@ -145,8 +160,13 @@ const MonacoEditor = () => {
       const isKeyboardOpen = keyboardHeight > 100;
       if (isKeyboardOpen) {
         const totalHeight = window.innerHeight;
-        const visiblePercent = Math.round((viewport.height / totalHeight) * 100);
-        const editorPercent = Math.max(40, Math.min(Math.round(visiblePercent * 0.55), 70));
+        const visiblePercent = Math.round(
+          (viewport.height / totalHeight) * 100
+        );
+        const editorPercent = Math.max(
+          40,
+          Math.min(Math.round(visiblePercent * 0.55), 70)
+        );
         editorPanelRef.current?.resize(editorPercent);
         if (!editorVisible) {
           setEditorVisible(true);
@@ -375,11 +395,19 @@ const MonacoEditor = () => {
   );
 
   const resizeHandle = (
-    <PanelResizeHandle className={`${isMobile ? "h-[1px]" : "w-[1px]"} ${isMobile && !editorVisible ? "bg-transparent" : "bg-gray-400"} relative`}>
+    <PanelResizeHandle
+      className={`${isMobile ? "h-[1px]" : "w-[1px]"} ${
+        isMobile && !editorVisible ? "bg-transparent" : "bg-gray-400"
+      } relative`}
+    >
       {(!isMobile || editorVisible) && (
         <div>
           <EditorToggleButton
-            className={isMobile ? "absolute left-1/2 -translate-x-1/2 -translate-y-1/2 z-10" : "absolute top-2 left-2 z-10"}
+            className={
+              isMobile
+                ? "absolute left-1/2 -translate-x-1/2 -translate-y-1/2 z-10"
+                : "absolute top-2 left-2 z-10"
+            }
             editorVisible={editorVisible}
             toggleEditorVisibility={toggleEditorVisibility}
             isMobile={isMobile}
@@ -396,10 +424,11 @@ const MonacoEditor = () => {
         isAnimating ? "panel-animating" : ""
       }`}
     >
-      {isFullScreen && (
-        <NavigationBar />
-      )}
-      <PanelGroup className="flex-1" direction={isMobile ? "vertical" : "horizontal"}>
+      {isFullScreen && <NavigationBar />}
+      <PanelGroup
+        className="flex-1"
+        direction={isMobile ? "vertical" : "horizontal"}
+      >
         {isMobile ? (
           <>
             {visualizationPanel}
@@ -416,7 +445,7 @@ const MonacoEditor = () => {
       </PanelGroup>
       {isMobile && !editorVisible && (
         <div
-          className="absolute bottom-0 inset-x-0 flex justify-center z-10 pointer-events-none"
+          className="absolute bottom-0 inset-x-0 flex justify-center pointer-events-none"
           style={{ paddingBottom: "max(0.75rem, env(safe-area-inset-bottom))" }}
         >
           <EditorToggleButton
