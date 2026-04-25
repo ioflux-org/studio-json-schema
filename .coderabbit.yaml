@@ -1,0 +1,34 @@
+reviews:
+  profile: chill
+  poem: false
+  path_instructions:
+    - path: "**/*.{ts,tsx,js,jsx}"
+      instructions: |
+        - If a file diff only consists of spacing, indentation, or formatting changes
+          without any logical code changes, request the author to revert those changes.
+        - Point out that formatting should strictly follow the project's Prettier/ESLint configuration.
+    - path: "**/*.ts"
+      instructions: |
+        - Flag any `any` types. Force strict TypeScript typing.
+  finishing_touches:
+    simplify:
+      enabled: true
+    unit_tests:
+      enabled: false
+  code_generation:
+    unit_tests:
+      enabled: false
+
+  pre_merge_checks:
+    title:
+      mode: warning
+      requirements: 'Must follow semantic commit structure (e.g., feat:, fix:, docs:, chore:)'
+
+  tools:
+    phpstan:
+      enabled: false
+    rubocop:
+      enabled: false
+    swiftlint:
+      enabled: false
+

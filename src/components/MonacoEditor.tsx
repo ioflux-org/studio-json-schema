@@ -63,11 +63,17 @@ const getValidationUI = (theme: "light" | "dark") => ({
   },
   warning: {
     message: `⚠ Schema dialect not provided. Using default dialect: ${DEFAULT_SCHEMA_DIALECT}`,
-    className: theme === "dark" ? "text-yellow-400" : "text-amber-800",
+    className:
+      theme === "dark"
+        ? "text-yellow-400 break-words"
+        : "text-amber-800 break-words",
   },
   error: {
     message: "✗ ",
-    className: "text-red-400",
+    className:
+      theme === "dark"
+        ? "text-red-400 break-words"
+        : "text-red-700 break-words",
   },
 });
 
@@ -310,7 +316,7 @@ const MonacoEditor = () => {
         };
 
         const browser = createBrowser(schemaId, schemaDocument);
-        // @ts-expect-error
+        // @ts-expect-error browser type not fully compatible with getSchema signature
         const schema = await getSchema(schemaDocument.baseUri, browser);
 
         setCompiledSchema(await compile(schema));
@@ -367,26 +373,45 @@ const MonacoEditor = () => {
               <option value="yaml">YAML</option>
             </select>
           </div>
-          <Editor
-            height="87%"
-            width="100%"
-            language={schemaFormat}
-            value={schemaText}
-            theme={theme === "light" ? "vs-light" : "vs-dark"}
-            options={{
-              minimap: { enabled: false },
-              occurrencesHighlight: "off",
-            }}
-            onChange={(value) => setSchemaText(value ?? "")}
-            onMount={handleEditorDidMount}
-          />
-          <div className="flex-1 p-2 bg-[var(--validation-bg-color)] text-sm overflow-y-auto">
-            <div className={VALIDATION_UI[schemaValidation.status].className}>
-              {schemaValidation.message}
-            </div>
-          </div>
+
+          <PanelGroup direction="vertical">
+            <Panel defaultSize={90} minSize={50}>
+              <Editor
+                height="100%"
+                width="100%"
+                language={schemaFormat}
+                value={schemaText}
+                theme={theme === "light" ? "vs-light" : "vs-dark"}
+                options={{
+                  minimap: { enabled: false },
+                  occurrencesHighlight: "off",
+                }}
+                onChange={(value) => setSchemaText(value ?? "")}
+                onMount={handleEditorDidMount}
+              />
+            </Panel>
+
+            <PanelResizeHandle className="h-[1px] bg-[var(--resize-handle-color)]" />
+
+            <Panel
+              defaultSize={10}
+              minSize={10}
+              maxSize={50}
+              className="bg-[var(--validation-bg-color)]"
+            >
+              <div className="flex-1 p-3 overflow-y-auto scrollbar-thin scrollbar-thumb-gray-500 scrollbar-track-transparent hover:scrollbar-thumb-gray-400">
+                <div
+                  className={`${
+                    VALIDATION_UI[schemaValidation.status].className
+                  } leading-relaxed whitespace-pre-wrap text-xs`}
+                >
+                  {schemaValidation.message}
+                </div>
+              </div>
+            </Panel>
+          </PanelGroup>
         </Panel>
-        <PanelResizeHandle className="w-[1px] bg-gray-400 relative">
+        <PanelResizeHandle className="w-[1px] bg-[var(--resize-handle-color)] relative">
           <div>
             <EditorToggleButton
               className={"absolute top-2 left-2 z-1"}
