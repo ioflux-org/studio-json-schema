@@ -62,11 +62,17 @@ const getValidationUI = (theme: "light" | "dark") => ({
   },
   warning: {
     message: `⚠ Schema dialect not provided. Using default dialect: ${DEFAULT_SCHEMA_DIALECT}`,
-    className: theme === "dark" ? "text-yellow-400 break-words" : "text-amber-800 break-words",
+    className:
+      theme === "dark"
+        ? "text-yellow-400 break-words"
+        : "text-amber-800 break-words",
   },
   error: {
     message: "✗ ",
-    className: theme === "dark" ? "text-red-400 break-words" : "text-red-700 break-words",
+    className:
+      theme === "dark"
+        ? "text-red-400 break-words"
+        : "text-red-700 break-words",
   },
 });
 
@@ -310,8 +316,8 @@ const MonacoEditor = () => {
               <option value="yaml">YAML</option>
             </select>
           </div>
-          
-          <PanelGroup direction="vertical" className="flex-1">
+
+          <PanelGroup direction="vertical">
             <Panel defaultSize={90} minSize={50}>
               <Editor
                 height="100%"
@@ -327,19 +333,28 @@ const MonacoEditor = () => {
                 onMount={handleEditorDidMount}
               />
             </Panel>
-            
-            <PanelResizeHandle className="h-[1px] bg-gray-400/50 hover:bg-blue-500/70 transition-colors cursor-row-resize" />
-            
-            <Panel defaultSize={10} minSize={10} maxSize={50} className="flex flex-col bg-[var(--validation-bg-color)] group">
+
+            <PanelResizeHandle className="h-[1px] bg-[var(--resize-handle-color)]" />
+
+            <Panel
+              defaultSize={10}
+              minSize={10}
+              maxSize={50}
+              className="bg-[var(--validation-bg-color)]"
+            >
               <div className="flex-1 p-3 overflow-y-auto scrollbar-thin scrollbar-thumb-gray-500 scrollbar-track-transparent hover:scrollbar-thumb-gray-400">
-                <div className={`${VALIDATION_UI[schemaValidation.status].className} leading-relaxed whitespace-pre-wrap text-xs`}>
+                <div
+                  className={`${
+                    VALIDATION_UI[schemaValidation.status].className
+                  } leading-relaxed whitespace-pre-wrap text-xs`}
+                >
                   {schemaValidation.message}
                 </div>
               </div>
             </Panel>
           </PanelGroup>
-          </Panel>
-        <PanelResizeHandle className="w-[1px] bg-gray-400 relative">
+        </Panel>
+        <PanelResizeHandle className="w-[1px] bg-[var(--resize-handle-color)] relative">
           <div>
             <EditorToggleButton
               className={"absolute top-2 left-2 z-1"}
