@@ -1,4 +1,5 @@
 import { useContext, useState, useEffect, useRef } from "react";
+import { LuCircleAlert } from "react-icons/lu";
 
 import { parseTree, findNodeAtLocation } from "jsonc-parser";
 import {
@@ -24,6 +25,7 @@ import { AppContext, type SchemaFormat } from "../contexts/AppContext";
 import SchemaVisualization from "./SchemaVisualization";
 import NavigationBar from "./NavigationBar";
 import EditorToggleButton from "./EditorToggleButton";
+import ErrorPopup from "./ErrorPopup";
 import { parseSchema } from "../utils/parseSchema";
 import YAML from "js-yaml";
 import type { JSONSchema } from "@apidevtools/json-schema-ref-parser";
@@ -68,7 +70,7 @@ const getValidationUI = (theme: "light" | "dark") => ({
         : "text-amber-800 break-words",
   },
   error: {
-    message: "✗ ",
+    message: "✗ Invalid JSON Schema",
     className:
       theme === "dark"
         ? "text-red-400 break-words"
@@ -132,6 +134,8 @@ const MonacoEditor = () => {
 
   const [editorVisible, setEditorVisible] = useState(true);
   const [isAnimating, setIsAnimating] = useState(false);
+  const [showErrorPopup, setShowErrorPopup] = useState(false);
+  const [errorDetail, setErrorDetail] = useState("");
 
   const MOBILE_BREAKPOINT = 768;
   const [isMobile, setIsMobile] = useState(
@@ -308,10 +312,12 @@ const MonacoEditor = () => {
         const browser = createBrowser(schemaId, schemaDocument);
       // The Hyperjump `getSchema` expects a full browser instance, but we only need the _cache
       // property for local-only resolution. This cast is safe because our usage only triggers cache lookup.
-      // @ts-expect-error
+      // @ts-expect-error: passing mocked browser object
       const schema = await getSchema(schemaDocument.baseUri, browser);
 
         setCompiledSchema(await compile(schema));
+        setErrorDetail("");
+        setShowErrorPopup(false);
         setSchemaValidation(
           !dialect && typeof parsedSchema !== "boolean"
             ? {
@@ -328,9 +334,12 @@ const MonacoEditor = () => {
       } catch (err) {
         const message = err instanceof Error ? err.message : String(err);
 
+        setCompiledSchema(null);
+        setErrorDetail(message);
+        setShowErrorPopup(true);
         setSchemaValidation({
           status: "error",
-          message: VALIDATION_UI["error"].message + message,
+          message: VALIDATION_UI["error"].message,
         });
       }
     }, 300);
@@ -378,11 +387,22 @@ const MonacoEditor = () => {
         role="status"
         aria-live="polite"
         aria-label={`Schema validation: ${schemaValidation.message}`}
-        className="shrink-0 px-2 py-1.5 bg-[var(--validation-bg-color)] text-sm"
+        className="shrink-0"
       >
-        <span className={VALIDATION_UI[schemaValidation.status].className}>
-          {schemaValidation.message}
-        </span>
+        <div className="flex items-center justify-between px-2 py-1.5 bg-[var(--validation-bg-color)] text-sm">
+          <div className={VALIDATION_UI[schemaValidation.status].className}>
+            {schemaValidation.message}
+          </div>
+          {schemaValidation.status === "error" && (
+            <button
+              onClick={() => setShowErrorPopup(true)}
+              className="text-red-400 hover:text-red-300 cursor-pointer"
+              aria-label="Show error details"
+            >
+              <LuCircleAlert size={16} />
+            </button>
+          )}
+        </div>
       </div>
     </Panel>
   );
@@ -393,6 +413,14 @@ const MonacoEditor = () => {
       className="flex flex-col relative bg-[var(--visualize-bg-color)]"
     >
       <SchemaVisualization compiledSchema={compiledSchema} />
+      {showErrorPopup && errorDetail && (
+        <div className="absolute top-2 left-12 z-10 animate-[fadeIn_200ms_ease-out]">
+          <ErrorPopup
+            message={errorDetail}
+            onClose={() => setShowErrorPopup(false)}
+          />
+        </div>
+      )}
     </Panel>
   );
 

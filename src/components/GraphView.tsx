@@ -222,7 +222,12 @@ const GraphView = ({
   useEffect(() => {
     try {
       const result = generateNodesAndEdges(compiledSchema);
-      if (!result) return;
+      if (!result) {
+        setNodes([]);
+        setEdges([]);
+        setErrorMessage("");
+        return;
+      }
 
       const { nodes: rawNodes, edges: rawEdges } = result;
       const { nodes: layoutedNodes, edges: layoutedEdges } =
@@ -235,6 +240,8 @@ const GraphView = ({
       setCollisionResolved(false);
     } catch (err) {
       console.error("Error generating visualization graph: ", err);
+      setNodes([]);
+      setEdges([]);
     }
   }, [
     compiledSchema,
@@ -263,17 +270,7 @@ const GraphView = ({
     setCollisionResolved(true);
   }, [nodes, collisionResolved, allNodesMeasured, setNodes]);
 
-  useEffect(() => {
-    if (errorMessage) {
-      setShowErrorPopup(true);
-      const timer = setTimeout(() => {
-        setShowErrorPopup(false);
-      }, 3000);
-      return () => clearTimeout(timer);
-    } else {
-      setShowErrorPopup(false);
-    }
-  }, [errorMessage]);
+
 
   useEffect(() => {
     if (!containerRef.current) return;
@@ -352,6 +349,7 @@ const GraphView = ({
         setSelectedNode(null);
         fitView({ duration: 800, padding: 0.05 });
         setErrorMessage(`${trimmed} is not in schema`);
+        setShowErrorPopup(true);
       }
     }, 300);
 
@@ -406,7 +404,6 @@ const GraphView = ({
           }}
         />
       )}
-      {/*Error Message */}
       {errorMessage && showErrorPopup && (
         <div className="absolute bottom-[50px] left-[100px] flex gap-2 px-2 py-1 bg-red-500 text-white rounded-md shadow-lg">
           <div className="text-sm font-medium tracking-wide font-roboto">
