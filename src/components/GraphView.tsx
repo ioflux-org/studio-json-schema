@@ -399,7 +399,7 @@ const GraphView = ({
     <div
       ref={containerRef}
       tabIndex={0}
-      // onKeyDown={handleKeyDown}
+      onKeyDown={handleKeyDown}
       className="relative w-full h-full"
     >
       <ReactFlow
