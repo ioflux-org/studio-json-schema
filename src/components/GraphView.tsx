@@ -404,7 +404,7 @@ const GraphView = ({
         />
       )}
       {errorMessage && showErrorPopup && (
-        <div className="absolute bottom-[50px] left-[100px] flex gap-2 px-2 py-1 bg-red-500 text-white rounded-md shadow-lg">
+        <div className="absolute top-4 right-4 z-50 flex gap-2 px-2 py-1 bg-red-500 text-white rounded-md shadow-lg">
           <div className="text-sm font-medium tracking-wide font-roboto">
             {errorMessage}
           </div>
