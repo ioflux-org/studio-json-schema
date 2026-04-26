@@ -305,13 +305,8 @@ const GraphView = ({
     const trimmed = searchString.trim();
 
     const timeout = setTimeout(() => {
-<<<<<<< HEAD
-      if (!trimmed || trimmed.length < 3) {
-        setMatchedNodes([]);
-=======
       if (!trimmed) {
         setMatchedNodes((prev) => (prev.length > 0 ? [] : prev));
->>>>>>> 96819e6 (fix: ui flickering resolution)
         setCurrentMatchIndex(0);
         setErrorMessage("");
         
