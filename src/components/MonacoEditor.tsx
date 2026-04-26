@@ -1,5 +1,6 @@
 import { useContext, useState, useEffect, useRef } from "react";
 import { LuCircleAlert } from "react-icons/lu";
+import { Tooltip } from "react-tooltip";
 
 import { parseTree, findNodeAtLocation } from "jsonc-parser";
 import {
@@ -312,7 +313,7 @@ const MonacoEditor = () => {
         const browser = createBrowser(schemaId, schemaDocument);
       // The Hyperjump `getSchema` expects a full browser instance, but we only need the _cache
       // property for local-only resolution. This cast is safe because our usage only triggers cache lookup.
-      // @ts-expect-error: passing mocked browser object
+      // @ts-expect-error
       const schema = await getSchema(schemaDocument.baseUri, browser);
 
         setCompiledSchema(await compile(schema));
@@ -394,13 +395,14 @@ const MonacoEditor = () => {
             {schemaValidation.message}
           </div>
           {schemaValidation.status === "error" && (
-            <button
-              onClick={() => setShowErrorPopup(true)}
-              className="text-red-400 hover:text-red-300 cursor-pointer"
-              aria-label="Show error details"
-            >
-              <LuCircleAlert size={16} />
-            </button>
+              <button
+                onClick={() => setShowErrorPopup(true)}
+                className="text-red-400 hover:text-red-300 cursor-pointer"
+                aria-label="Show error details"
+                data-tooltip-id="error-details-tooltip"
+              >
+                <LuCircleAlert size={16} />
+              </button>
           )}
         </div>
       </div>
@@ -485,6 +487,14 @@ const MonacoEditor = () => {
             isMobile={true}
           />
         </div>
+      )}
+      {!showErrorPopup && (
+        <Tooltip
+          id="error-details-tooltip"
+          content="Show error details"
+          place="top"
+          style={{ fontSize: "12px", zIndex: 100 }}
+        />
       )}
     </div>
   );

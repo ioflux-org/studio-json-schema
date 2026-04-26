@@ -271,7 +271,6 @@ const GraphView = ({
   }, [nodes, collisionResolved, allNodesMeasured, setNodes]);
 
 
-
   useEffect(() => {
     if (!containerRef.current) return;
 
