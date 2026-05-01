@@ -363,8 +363,10 @@ const MonacoEditor = () => {
         };
 
         const browser = createBrowser(schemaId, schemaDocument);
-        // @ts-expect-error
-        const schema = await getSchema(schemaDocument.baseUri, browser);
+      // The Hyperjump `getSchema` expects a full browser instance, but we only need the _cache
+      // property for local-only resolution. This cast is safe because our usage only triggers cache lookup.
+      // @ts-expect-error
+      const schema = await getSchema(schemaDocument.baseUri, browser);
 
         setCompiledSchema(await compile(schema));
         setSchemaValidation(
