@@ -12,7 +12,7 @@
     "preview": "vite preview"
   },
   "dependencies": {
-    "@apidevtools/json-schema-ref-parser": "^14.1.1",
+    "@apidevtools/json-schema-ref-parser": "^15.3.5",
     "@changesets/cli": "^2.30.0",
     "@dagrejs/dagre": "^1.1.5",
     "@hyperjump/json-schema": "^1.17.5",
