@@ -1,5 +1,11 @@
 # json-schema-studio
 
+## 0.8.1
+
+### Patch Changes
+
+- 37d06bb: Fix the yaml selected node higlighter in the monaco editor
+
 ## 0.8.0
 
 ### Minor Changes
