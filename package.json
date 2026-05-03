@@ -12,7 +12,7 @@
     "preview": "vite preview"
   },
   "dependencies": {
-    "@dagrejs/dagre": "^1.1.5",
+    "@dagrejs/dagre": "^3.0.0",
     "@hyperjump/json-schema": "^1.17.5",
     "@monaco-editor/react": "^4.7.0",
     "@tailwindcss/vite": "^4.1.10",
