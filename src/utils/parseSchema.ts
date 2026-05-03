@@ -1,7 +1,7 @@
 import YAML from "js-yaml";
 import type { Json } from "@hyperjump/json-pointer";
 
-type JSONSchema = Json & {
+export type JSONSchema = Json & {
     $schema: string;
     $id: string
 }

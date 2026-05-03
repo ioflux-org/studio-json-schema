@@ -24,9 +24,8 @@ import { AppContext, type SchemaFormat } from "../contexts/AppContext";
 import SchemaVisualization from "./SchemaVisualization";
 import NavigationBar from "./NavigationBar";
 import EditorToggleButton from "./EditorToggleButton";
-import { parseSchema } from "../utils/parseSchema";
+import { parseSchema, type JSONSchema } from "../utils/parseSchema";
 import YAML from "js-yaml";
-import type { JSONSchema } from "@apidevtools/json-schema-ref-parser";
 
 type ValidationStatus = {
   status: "success" | "warning" | "error";
