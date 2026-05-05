@@ -128,60 +128,69 @@ _This diagram shows the structure of the "Example JSON Schema" above._
 
 ## Understanding the Visualization
 
-> [!NOTE]
-> The visualization is presented as a graph where **nodes** represent JSON Schemas or subschemas, and **edges** represent the relationships between them.
+The visualization represents a JSON Schema as a graph, making it easier to understand complex structures.
+
+- **Nodes** represent schemas or subschemas  
+- **Edges** represent relationships between them  
+
+This helps you quickly explore nested structures, references, and schema relationships without manually reading large JSON files.
+
+---
 
 ### Node colors & schema types
 
-- Each schema/subschema that is rendered as a node is assigned a distinct color based on its `type`.
-- If a schema/subschema explicitly defines a `type`, the node's color directly reflects that type.
-- For schemas/subschemas without an explicit `type` keyword, the tool infers the type from related keywords. The node color is then assigned based on this inference.
-  - In most cases, inference is correct.
-  - If multiple instance types are defined (e.g., `type: ["string", "number"]`), there is currently no dedicated color. In such cases, the node color is determined based on **type inference**, following this priority order: `object > array > string > number`.
-  - If inference fails entirely, a **soft gray** color is applied to the corresponding node as a fallback.
-- Refer to the image below for node color references:  
-  <img src="./public/node-colors.svg" alt="JSON Schema Studio logo">
+- Each node is assigned a color based on its type (object, array, string, etc.)
+- If a type is explicitly defined, the color reflects that type
+- If no type is specified, the system infers it from related keywords
+
+**Type inference priority:**
+object > array > string > number
+
+- If inference fails, a **soft gray** color is used
+
+---
 
 ### Keywords
 
-- Keywords displayed inside a node represent how that schema defines the instance.
-- If a keyword's value is itself a subschema, a new node is created.
+- Keywords inside a node describe how the schema defines data
+- If a keyword contains another schema, a new node is created
+
+---
 
 ### Edges
 
-- Each child node is connected to its parent via a directed edge.
-- Edges originate from the left side of the parent node, vertically aligned with the specific schema keyword they represent (for example: `properties`, `items`, `allOf`, etc.).
-- On hover, the corresponding edge is highlighted and an animated flow is rendered:
-  - the animation starts from the edge's source handle (keyword-aligned origin)
-    and runs toward the connected child node, visually indicating direction.
-- On click, the highlighted state is persisted:
-  - the animation remains active even after hover ends.
-- Multiple edges can be selected and highlighted simultaneously.
+- Edges connect parent and child nodes
+- They originate from the left side of the parent node
+- Each edge corresponds to a schema keyword (e.g., `properties`, `items`, `allOf`)
 
-⚠️ There is a known issue with precise source-handle positioning (the exact point from which an edge originates) (see _Current Limitations / Known Issues_).
+**Interaction:**
+- Hover → highlights the edge and shows direction
+- Click → keeps the edge highlighted
+- Multiple edges can be selected at the same time
+
+---
 
 ### Reusable schemas (`$defs`)
 
-- If a schema contains `$defs`, a special "definitions" container node is created.
+- `$defs` are grouped into a special "definitions" node
 - This node:
-  - Does not represent a schema itself
-  - Groups all reusable subschemas
-  - Connects to the parent schema from the bottom
-- This design intentionally separates regular subschemas from **reusable definitions**.
+  - Groups reusable schemas
+  - Connects to the parent schema
+  - Does not represent an actual schema itself
+
+---
 
 ### Boolean schemas
 
-- Boolean schemas are visually distinct:
-  - `true` --> green node
-  - `false` --> red node
-- Unlike _object schema_ nodes, _boolean schema_ colors are applied to the **entire node**, not just the title.
-- Boolean nodes have more rounded borders to clearly differentiate them.
+- `true` → green node  
+- `false` → red node  
+- These nodes use rounded borders for easy identification
 
-Design improvements are welcome :)
+---
 
 ### Controls
 
-- Zoom, fit-view, and other graph controls are available in the bottom-left corner of the visualization.
+- Zoom and fit-view controls are available in the bottom-left corner of the visualization
 
 ---
 
