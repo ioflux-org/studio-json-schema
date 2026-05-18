@@ -44,13 +44,19 @@ export const resolveCollisions: CollisionAlgorithm = (
 ) => {
     const boxes = getBoxesFromNodes(nodes, margin);
 
-    for (let iter = 0; iter <= maxIterations; iter++) {
-        let moved = false;
+    const depthBuckets = new Map<number, Box[]>();
+    for (const box of boxes) {
+        const depth = box.node.depth;
+        if (!depthBuckets.has(depth)) depthBuckets.set(depth, []);
+        depthBuckets.get(depth)!.push(box);
+    }
 
-        for (let i = 0; i < boxes.length; i++) {
-            for (let j = i + 1; j < boxes.length; j++) {
-                const A = boxes[i];
-                const B = boxes[j];
+    function resolveBoxPairs(listA: Box[], listB: Box[], sameColumn: boolean): boolean {
+        let moved = false;
+        for (let i = 0; i < listA.length; i++) {
+            for (let j = sameColumn ? i + 1 : 0; j < listB.length; j++) {
+                const A = listA[i];
+                const B = listB[j];
 
                 // Calculate center positions
                 const centerAX = A.x + A.width * 0.5;
@@ -69,14 +75,51 @@ export const resolveCollisions: CollisionAlgorithm = (
                 // Check if there's significant vertical overlap
                 if (px > overlapThreshold && py > overlapThreshold) {
                     moved = A.moved = B.moved = true;
-
-                    // Vertical-only resolution
-                    const direction = dy >= 0 ? 1 : -1;
                     const moveAmount = py * 0.5;
-
-                    A.y += moveAmount * direction;
-                    B.y -= moveAmount * direction;
+                    if (dy <= 0) {
+                        // A is above B
+                        A.y -= moveAmount;
+                        B.y += moveAmount;
+                    } else {
+                        // A is below B
+                        A.y += moveAmount;
+                        B.y -= moveAmount;
+                    }
                 }
+            }
+        }
+        return moved;
+    }
+
+    const sortedDepths = Array.from(depthBuckets.keys()).sort((a, b) => a - b);
+
+    const bucketXRange = new Map<number, { minX: number; maxX: number }>();
+    for (const depth of sortedDepths) {
+        const bucketBoxes = depthBuckets.get(depth)!;
+        const minX = Math.min(...bucketBoxes.map((b) => b.x));
+        const maxX = Math.max(...bucketBoxes.map((b) => b.x + b.width));
+        bucketXRange.set(depth, { minX, maxX });
+    }
+
+    for (let iter = 0; iter < maxIterations; iter++) {
+        let moved = false;
+
+        for (let i = 0; i < sortedDepths.length; i++) {
+            const depthA = sortedDepths[i];
+            const bucketA = depthBuckets.get(depthA)!;
+            bucketA.sort((a, b) => a.y - b.y);
+
+            if (resolveBoxPairs(bucketA, bucketA, true)) moved = true;
+            for (let j = i + 1; j < sortedDepths.length; j++) {
+                const depthB = sortedDepths[j];
+                const rangeA = bucketXRange.get(depthA)!;
+                const rangeB = bucketXRange.get(depthB)!;
+
+                if (rangeA.maxX <= rangeB.minX || rangeB.maxX <= rangeA.minX) break;
+
+                const bucketB = depthBuckets.get(depthB)!;
+                bucketB.sort((a, b) => a.y - b.y);
+                if (resolveBoxPairs(bucketA, bucketB, false)) moved = true;
             }
         }
 
