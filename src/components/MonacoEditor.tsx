@@ -18,7 +18,6 @@ import {
 
 import Editor, { type OnMount } from "@monaco-editor/react";
 import type { editor } from "monaco-editor";
-import defaultSchema from "../data/defaultJSONSchema.json";
 import { AppContext, type SchemaFormat } from "../contexts/AppContext";
 import SchemaVisualization from "./SchemaVisualization";
 import NavigationBar from "./NavigationBar";
@@ -28,7 +27,6 @@ import {
   getHighlightedNodeRangeFromPath,
   type JSONSchema,
 } from "../utils/parseSchema";
-import YAML from "js-yaml";
 
 type ValidationStatus = {
   status: "success" | "warning" | "error";
