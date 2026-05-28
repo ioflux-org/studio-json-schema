@@ -10,6 +10,8 @@ import { AppContext } from "../contexts/AppContext";
 import type { CompiledSchema } from "@hyperjump/json-schema/experimental";
 import "@xyflow/react/dist/style.css";
 import dagre from "@dagrejs/dagre";
+import { toPng } from "html-to-image";
+import { BsDownload } from "react-icons/bs";
 import {
   ReactFlow,
   Background,
@@ -19,6 +21,9 @@ import {
   Position,
   BackgroundVariant,
   useReactFlow,
+  Panel,
+  getNodesBounds,
+  getViewportForBounds,
   type NodeMouseHandler,
 } from "@xyflow/react";
 
@@ -47,8 +52,8 @@ const GraphView = ({
 }: {
   compiledSchema: CompiledSchema | null;
 }) => {
-  const { setCenter, getZoom, fitView } = useReactFlow();
-  const { selectedNode, setSelectedNode, searchString, registerNavigateMatch } =
+  const { setCenter, getZoom, fitView, getNodes } = useReactFlow();
+  const { theme, selectedNode, setSelectedNode, searchString, registerNavigateMatch } =
     useContext(AppContext);
   const containerRef = useRef<HTMLDivElement>(null);
 
@@ -357,6 +362,44 @@ const GraphView = ({
 
     return () => clearTimeout(timeout);
   }, [searchString]);
+
+  const onDownload = useCallback(() => {
+    const nodesBounds = getNodesBounds(getNodes());
+    const imageWidth = nodesBounds.width + 100;
+    const imageHeight = nodesBounds.height + 100;
+
+    const viewport = getViewportForBounds(
+      nodesBounds,
+      imageWidth,
+      imageHeight,
+      0.5,
+      2,
+      0.1
+    );
+
+    const viewportNode = document.querySelector(
+      ".react-flow__viewport"
+    ) as HTMLElement;
+
+    if (viewportNode) {
+      toPng(viewportNode, {
+        backgroundColor: theme === "dark" ? "#1e1e1e" : "#ffffff",
+        width: imageWidth,
+        height: imageHeight,
+        style: {
+          width: `${imageWidth}px`,
+          height: `${imageHeight}px`,
+          transform: `translate(${viewport.x}px, ${viewport.y}px) scale(${viewport.zoom})`,
+        },
+      }).then((dataUrl) => {
+        const a = document.createElement("a");
+        a.setAttribute("download", "schema-graph.png");
+        a.setAttribute("href", dataUrl);
+        a.click();
+      });
+    }
+  }, [getNodes, theme]);
+
   return (
     <div
       ref={containerRef}
@@ -395,6 +438,16 @@ const GraphView = ({
           color="var(--reactflow-bg-sub-pattern-color)"
         />
         <Controls />
+        <Panel position="top-right">
+          <button
+            className="flex items-center gap-2 bg-[var(--popup-header-bg-color)] border border-[var(--popup-border-color)] text-[var(--navigation-text-color)] px-3 py-1.5 rounded shadow hover:opacity-80 transition-opacity cursor-pointer"
+            onClick={onDownload}
+            aria-label="Download Image"
+          >
+            <BsDownload />
+            <span className="text-sm font-medium">Export Image</span>
+          </button>
+        </Panel>
       </ReactFlow>
 
       {selectedNode?.data && (
