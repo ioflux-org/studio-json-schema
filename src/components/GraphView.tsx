@@ -11,7 +11,6 @@ import type { CompiledSchema } from "@hyperjump/json-schema/experimental";
 import "@xyflow/react/dist/style.css";
 import dagre from "@dagrejs/dagre";
 import { toPng } from "html-to-image";
-import { BsDownload } from "react-icons/bs";
 import {
   ReactFlow,
   Background,
@@ -21,7 +20,6 @@ import {
   Position,
   BackgroundVariant,
   useReactFlow,
-  Panel,
   getNodesBounds,
   getViewportForBounds,
   type NodeMouseHandler,
@@ -53,7 +51,7 @@ const GraphView = ({
   compiledSchema: CompiledSchema | null;
 }) => {
   const { setCenter, getZoom, fitView, getNodes } = useReactFlow();
-  const { theme, selectedNode, setSelectedNode, searchString, registerNavigateMatch } =
+  const { theme, selectedNode, setSelectedNode, searchString, registerNavigateMatch, registerExportGraph } =
     useContext(AppContext);
   const containerRef = useRef<HTMLDivElement>(null);
 
@@ -325,9 +323,9 @@ const GraphView = ({
         searchWords.length === 0
           ? []
           : nodes.filter((node) => {
-              const titleKeyWords = extractKeywords(node.data.nodeLabel);
-              return searchWords.every((word) => titleKeyWords.includes(word));
-            });
+            const titleKeyWords = extractKeywords(node.data.nodeLabel);
+            return searchWords.every((word) => titleKeyWords.includes(word));
+          });
 
       setMatchedNodes(foundNodes);
 
@@ -400,6 +398,10 @@ const GraphView = ({
     }
   }, [getNodes, theme]);
 
+  useEffect(() => {
+    registerExportGraph(onDownload);
+  }, [onDownload, registerExportGraph]);
+
   return (
     <div
       ref={containerRef}
@@ -438,16 +440,6 @@ const GraphView = ({
           color="var(--reactflow-bg-sub-pattern-color)"
         />
         <Controls />
-        <Panel position="top-right">
-          <button
-            className="flex items-center gap-2 bg-[var(--popup-header-bg-color)] border border-[var(--popup-border-color)] text-[var(--navigation-text-color)] px-3 py-1.5 rounded shadow hover:opacity-80 transition-opacity cursor-pointer"
-            onClick={onDownload}
-            aria-label="Download Image"
-          >
-            <BsDownload />
-            <span className="text-sm font-medium">Export Image</span>
-          </button>
-        </Panel>
       </ReactFlow>
 
       {selectedNode?.data && (

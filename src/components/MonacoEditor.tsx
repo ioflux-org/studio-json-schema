@@ -1,4 +1,5 @@
 import { useContext, useState, useEffect, useRef } from "react";
+import { BsDownload } from "react-icons/bs";
 
 import {
   Panel,
@@ -104,6 +105,7 @@ const MonacoEditor = () => {
     schemaFormat,
     changeSchemaFormat,
     selectedNode,
+    triggerExportGraph,
   } = useContext(AppContext);
 
   const editorRef = useRef<editor.IStandaloneCodeEditor | null>(null);
@@ -361,6 +363,15 @@ const MonacoEditor = () => {
           <option value="json">JSON</option>
           <option value="yaml">YAML</option>
         </select>
+        <button
+          onClick={triggerExportGraph}
+          className="flex items-center gap-1.5 bg-[var(--bg-color)] border border-[var(--popup-border-color)] text-[var(--text-color)] text-sm px-2 py-0.5 rounded-sm hover:opacity-75 transition-opacity cursor-pointer"
+          aria-label="Export graph as image"
+          title="Export graph as image"
+        >
+          <BsDownload size={12} />
+          <span>Export</span>
+        </button>
       </div>
       <div className="flex-1 min-h-0">
         <Editor
