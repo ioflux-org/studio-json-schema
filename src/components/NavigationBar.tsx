@@ -11,16 +11,14 @@ import {
 import { Tooltip } from "react-tooltip";
 import { AppContext } from "../contexts/AppContext";
 import FullscreenToggleButton from "./FullscreenToggleButton";
-import type { SchemaFormat } from "../contexts/AppContext";
 
 const NavigationBar = () => {
   const {
     theme,
     toggleTheme,
     isFullScreen,
-    schemaFormat,
-    changeSchemaFormat,
     setSchemaText,
+    changeSchemaFormat,
     searchString,
     setSearchString,
     setSelectedNode,
@@ -205,18 +203,6 @@ const NavigationBar = () => {
             content="Upload JSON/YAML (or drag & drop)"
             style={{ fontSize: "10px" }}
           />
-        </li>
-
-        <li className="flex items-center">
-          <select
-            onChange={(e) => changeSchemaFormat(e.target.value as SchemaFormat)}
-            className="text-sm border rounded-sm bg-[var(--bg-color)] text-[var(--dropdown-text-color)] border-[var(--navigation-text-color)] cursor-pointer"
-            value={schemaFormat}
-            aria-label="Schema format"
-          >
-            <option value="json">JSON</option>
-            <option value="yaml">YAML</option>
-          </select>
         </li>
 
         <li className="flex items-center">
