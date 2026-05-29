@@ -1,4 +1,6 @@
 import { useContext, useState, useEffect, useRef } from "react";
+import { BsUpload } from "react-icons/bs";
+import { Tooltip } from "react-tooltip";
 
 import {
   Panel,
@@ -102,6 +104,68 @@ const MonacoEditor = () => {
   const [compiledSchema, setCompiledSchema] = useState<CompiledSchema | null>(
     null
   );
+
+  const fileInputRef = useRef<HTMLInputElement>(null);
+  const editorContainerRef = useRef<HTMLDivElement>(null);
+
+  const loadFile = (file: File) => {
+    const reader = new FileReader();
+    reader.onload = (e) => {
+      const content = e.target?.result as string;
+      if (!content) return;
+      if (file.name.endsWith(".json")) {
+        changeSchemaFormat("json");
+      } else if (file.name.endsWith(".yaml") || file.name.endsWith(".yml")) {
+        changeSchemaFormat("yaml");
+      }
+      setSchemaText(content);
+    };
+    reader.readAsText(file);
+  };
+
+  const handleFileUpload = (event: React.ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0];
+    if (file) loadFile(file);
+    event.target.value = "";
+  };
+
+  useEffect(() => {
+    // Global dragover listener: prevents the browser (Firefox) from navigating
+    // to the dropped file URL. Must be on document, not just the editor panel.
+    const preventBrowserNav = (e: DragEvent) => e.preventDefault();
+    document.addEventListener("dragover", preventBrowserNav);
+
+    return () => {
+      document.removeEventListener("dragover", preventBrowserNav);
+    };
+  }, []);
+
+  useEffect(() => {
+    const editorEl = editorContainerRef.current;
+    if (!editorEl) return;
+
+    // Scoped drop handler: only processes files dropped on the editor panel.
+    const onDragOver = (e: DragEvent) => {
+      e.preventDefault();
+      if (e.dataTransfer) e.dataTransfer.dropEffect = "copy";
+    };
+    const onDrop = (e: DragEvent) => {
+      e.preventDefault();
+      e.stopPropagation();
+      const file = e.dataTransfer?.files?.[0];
+      if (!file) return;
+      const ext = file.name.split(".").pop()?.toLowerCase();
+      if (!["json", "yaml", "yml"].includes(ext ?? "")) return;
+      loadFile(file);
+    };
+
+    editorEl.addEventListener("dragover", onDragOver);
+    editorEl.addEventListener("drop", onDrop);
+    return () => {
+      editorEl.removeEventListener("dragover", onDragOver);
+      editorEl.removeEventListener("drop", onDrop);
+    };
+  }, []);
 
   const VALIDATION_UI = getValidationUI(theme);
 
@@ -315,20 +379,45 @@ const MonacoEditor = () => {
       ref={editorPanelRef}
       collapsible
     >
-      <div className="flex items-center gap-2 px-2 py-1 bg-[var(--validation-bg-color)]">
-        <label htmlFor="schema-format-select" className="sr-only">
-          Schema format
-        </label>
-        <select
-          id="schema-format-select"
-          value={schemaFormat}
-          onChange={(e) => changeSchemaFormat(e.target.value as SchemaFormat)}
-          className="ml-auto flex-shrink-0 bg-[var(--bg-color)] text-[var(--text-color)] text-sm outline-none cursor-pointer border border-[var(--popup-border-color)] rounded-sm"
-        >
-          <option value="json">JSON</option>
-          <option value="yaml">YAML</option>
-        </select>
-      </div>
+      <div ref={editorContainerRef} className="flex flex-col h-full w-full relative">
+        <div className="flex items-center gap-2 px-2 py-1 bg-[var(--validation-bg-color)]">
+          <input
+            type="file"
+            id="schema-file-input"
+            ref={fileInputRef}
+            onChange={handleFileUpload}
+            accept=".json,.yaml,.yml"
+            className="hidden"
+          />
+          <div className="ml-auto flex items-center gap-3">
+            <button
+              className="text-lg cursor-pointer"
+              onClick={() => fileInputRef.current?.click()}
+              data-tooltip-id="upload-file-editor"
+              aria-label="Upload JSON/YAML schema file"
+              title="Upload JSON/YAML schema file"
+            >
+              <BsUpload className="text-[var(--text-color)]" />
+            </button>
+            <Tooltip
+              id="upload-file-editor"
+              content="Upload JSON/YAML (or drag & drop)"
+              style={{ fontSize: "10px", zIndex: 100 }}
+            />
+            <label htmlFor="schema-format-select" className="sr-only">
+              Schema format
+            </label>
+            <select
+              id="schema-format-select"
+              value={schemaFormat}
+              onChange={(e) => changeSchemaFormat(e.target.value as SchemaFormat)}
+              className="flex-shrink-0 bg-[var(--bg-color)] text-[var(--text-color)] text-sm outline-none cursor-pointer border border-[var(--popup-border-color)] rounded-sm"
+            >
+              <option value="json">JSON</option>
+              <option value="yaml">YAML</option>
+            </select>
+          </div>
+        </div>
       <div className="flex-1 min-h-0">
         <Editor
           height="100%"
@@ -351,8 +440,9 @@ const MonacoEditor = () => {
         className="shrink-0 px-2 py-1.5 bg-[var(--validation-bg-color)] text-sm"
       >
         <span className={VALIDATION_UI[schemaValidation.status].className}>
-          {schemaValidation.message}
-        </span>
+            {schemaValidation.message}
+          </span>
+        </div>
       </div>
     </Panel>
   );
