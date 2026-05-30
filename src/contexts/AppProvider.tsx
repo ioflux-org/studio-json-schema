@@ -91,7 +91,9 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
 
   const toggleFullScreen = useCallback(() => {
     const el = containerRef.current;
+
     if (!el) return;
+
     if (!document.fullscreenElement) {
       el.requestFullscreen()
         .then(() => setIsFullScreen(true))
@@ -108,6 +110,7 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
     const handleFullscreenChange = () => {
       setIsFullScreen(!!document.fullscreenElement);
     };
+    
     document.addEventListener("fullscreenchange", handleFullscreenChange);
     return () => {
       document.removeEventListener("fullscreenchange", handleFullscreenChange);
