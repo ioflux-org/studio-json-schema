@@ -5,10 +5,10 @@ on:
     types: [opened, synchronize, reopened]
   push:
     branches:
-      - changeset-release/**
+      - 'changeset-release/**'
 
 concurrency:
-  group: preview-build-${{ github.event.pull_request.number }}
+  group: preview-build-${{ github.event.pull_request.head.repo.full_name || github.repository }}
   cancel-in-progress: true
 
 jobs:
@@ -32,8 +32,24 @@ jobs:
       - name: Build Site
         run: npm run build
 
+      - name: Determine PR number
+        id: pr
+        run: |
+          if [ "${{ github.event_name }}" == "pull_request" ]; then
+            echo "number=${{ github.event.pull_request.number }}" >> $GITHUB_OUTPUT
+          else
+            PR_NUMBER=$(gh pr list --head "${{ github.ref_name }}" --json number --jq '.[0].number')
+            if [ -z "$PR_NUMBER" ] || [ "$PR_NUMBER" == "null" ]; then
+              echo "::error::No open PR found for branch '${{ github.ref_name }}'"
+              exit 1
+            fi
+            echo "number=$PR_NUMBER" >> $GITHUB_OUTPUT
+          fi
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
       - name: Save PR number
-        run: echo "${{ github.event.pull_request.number }}" > pr_number.txt
+        run: echo "${{ steps.pr.outputs.number }}" > pr_number.txt
 
       - name: Save PR head SHA
         run: echo "${{ github.event.pull_request.head.sha }}" > pr_head_sha.txt
