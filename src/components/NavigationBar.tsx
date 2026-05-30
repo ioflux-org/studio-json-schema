@@ -202,7 +202,7 @@ const NavigationBar = () => {
           }`}
         >
           <RiSearchLine className="text-[var(--navigation-text-color)] opacity-70" />
-          
+
           <input
             ref={mobileSearchInputRef}
             type="text"
