@@ -130,23 +130,20 @@ const MonacoEditor = () => {
   };
 
   useEffect(() => {
-    // Global dragover listener: prevents the browser (Firefox) from navigating
-    // to the dropped file URL. Must be on document, not just the editor panel.
-    const preventBrowserNav = (e: DragEvent) => e.preventDefault();
-    document.addEventListener("dragover", preventBrowserNav);
-
+    const blockBrowser = (e: DragEvent) => e.preventDefault();
+    document.addEventListener("dragover", blockBrowser);
+    document.addEventListener("drop", blockBrowser);
     return () => {
-      document.removeEventListener("dragover", preventBrowserNav);
+      document.removeEventListener("dragover", blockBrowser);
+      document.removeEventListener("drop", blockBrowser);
     };
   }, []);
 
   useEffect(() => {
     const editorEl = editorContainerRef.current;
     if (!editorEl) return;
-
-    // Scoped drop handler: only processes files dropped on the editor panel.
     const onDragOver = (e: DragEvent) => {
-      e.preventDefault();
+      e.stopPropagation();
       if (e.dataTransfer) e.dataTransfer.dropEffect = "copy";
     };
     const onDrop = (e: DragEvent) => {
