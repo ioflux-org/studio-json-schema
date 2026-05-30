@@ -57,6 +57,16 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
     navigateMatchRef.current?.(dir);
   };
 
+  const exportGraphRef = useRef<(() => void) | null>(null);
+
+  const registerExportGraph = (fn: () => void) => {
+    exportGraphRef.current = fn;
+  };
+
+  const triggerExportGraph = () => {
+    exportGraphRef.current?.();
+  };
+
   const toggleFullScreen = useCallback(() => {
     const el = containerRef.current;
 
@@ -103,6 +113,8 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
     setSearchString,
     registerNavigateMatch,
     triggerNavigateMatch,
+    registerExportGraph,
+    triggerExportGraph,
   };
 
   return <AppContext.Provider value={value}>{children}</AppContext.Provider>;
