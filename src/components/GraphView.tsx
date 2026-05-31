@@ -261,7 +261,11 @@ const GraphView = ({
     });
     setNodes(resolved);
     setCollisionResolved(true);
-  }, [nodes, collisionResolved, allNodesMeasured, setNodes]);
+
+    setTimeout(() => {
+      fitView({ duration: 800, padding: 0.05 });
+    }, 300);
+  }, [nodes, collisionResolved, allNodesMeasured, setNodes, fitView]);
 
   useEffect(() => {
     if (errorMessage) {
