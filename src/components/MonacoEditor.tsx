@@ -1,6 +1,7 @@
 import { useContext, useState, useEffect, useRef } from "react";
 import { BsUpload } from "react-icons/bs";
 import { Tooltip } from "react-tooltip";
+import { SESSION_SCHEMA_KEY } from "../constants";
 
 import {
   Panel,
@@ -44,7 +45,6 @@ type CreateBrowser = (
 
 const DEFAULT_SCHEMA_ID = "https://studio.ioflux.org/schema";
 const DEFAULT_SCHEMA_DIALECT = "https://json-schema.org/draft/2020-12/schema";
-const SESSION_SCHEMA_KEY = "ioflux.schema.editor.content";
 const DEFAULT_EDITOR_PANEL_WIDTH = 25; // in percentage
 
 const JSON_SCHEMA_DIALECTS = [
@@ -106,7 +106,7 @@ const MonacoEditor = () => {
   );
 
   const fileInputRef = useRef<HTMLInputElement>(null);
-  const editorContainerRef = useRef<HTMLDivElement>(null);
+
 
   const loadFile = (file: File) => {
     const reader = new FileReader();
@@ -139,30 +139,21 @@ const MonacoEditor = () => {
     };
   }, []);
 
-  useEffect(() => {
-    const editorEl = editorContainerRef.current;
-    if (!editorEl) return;
-    const onDragOver = (e: DragEvent) => {
-      e.stopPropagation();
-      if (e.dataTransfer) e.dataTransfer.dropEffect = "copy";
-    };
-    const onDrop = (e: DragEvent) => {
-      e.preventDefault();
-      e.stopPropagation();
-      const file = e.dataTransfer?.files?.[0];
-      if (!file) return;
-      const ext = file.name.split(".").pop()?.toLowerCase();
-      if (!["json", "yaml", "yml"].includes(ext ?? "")) return;
-      loadFile(file);
-    };
+  const handleDragOver = (e: React.DragEvent<HTMLDivElement>) => {
+    e.stopPropagation();
+    e.preventDefault(); // Required to allow dropping
+    if (e.dataTransfer) e.dataTransfer.dropEffect = "copy";
+  };
 
-    editorEl.addEventListener("dragover", onDragOver);
-    editorEl.addEventListener("drop", onDrop);
-    return () => {
-      editorEl.removeEventListener("dragover", onDragOver);
-      editorEl.removeEventListener("drop", onDrop);
-    };
-  }, []);
+  const handleDrop = (e: React.DragEvent<HTMLDivElement>) => {
+    e.preventDefault();
+    e.stopPropagation();
+    const file = e.dataTransfer?.files?.[0];
+    if (!file) return;
+    const ext = file.name.split(".").pop()?.toLowerCase();
+    if (!["json", "yaml", "yml"].includes(ext ?? "")) return;
+    loadFile(file);
+  };
 
   const VALIDATION_UI = getValidationUI(theme);
 
@@ -371,12 +362,13 @@ const MonacoEditor = () => {
 
   const editorPanel = (
     <Panel
-      className="flex flex-col"
+      className="flex flex-col h-full w-full relative"
       defaultSize={isMobile ? 40 : DEFAULT_EDITOR_PANEL_WIDTH}
       ref={editorPanelRef}
       collapsible
+      onDragOver={handleDragOver}
+      onDrop={handleDrop}
     >
-      <div ref={editorContainerRef} className="flex flex-col h-full w-full relative">
         <div className="flex items-center gap-2 px-2 py-1 bg-[var(--validation-bg-color)]">
           <input
             type="file"
@@ -440,7 +432,6 @@ const MonacoEditor = () => {
             {schemaValidation.message}
           </span>
         </div>
-      </div>
     </Panel>
   );
 

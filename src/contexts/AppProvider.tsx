@@ -15,7 +15,7 @@ import {
 import defaultSchema from "../data/defaultJSONSchema.json";
 import YAML from "js-yaml";
 
-const SESSION_SCHEMA_KEY = "ioflux.schema.editor.content";
+import { SESSION_SCHEMA_KEY, SESSION_FORMAT_KEY } from "../constants";
 
 const loadSchemaJSON = (key: string): any => {
   const raw = sessionStorage.getItem(key);
@@ -40,9 +40,7 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
   });
 
   const [schemaFormat, setSchemaFormat] = useState<SchemaFormat>(
-    (window.sessionStorage.getItem(
-      "ioflux.schema.editor.format"
-    ) as SchemaFormat) ?? "json"
+    (window.sessionStorage.getItem(SESSION_FORMAT_KEY) as SchemaFormat) ?? "json"
   );
 
   const initialSchemaJSON = loadSchemaJSON(SESSION_SCHEMA_KEY);
@@ -52,8 +50,6 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
       ? YAML.dump(initialSchemaJSON)
       : JSON.stringify(initialSchemaJSON, null, 2)
   );
-
-
 
   const toggleTheme = () => {
     setTheme((prev) => {
@@ -65,7 +61,7 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
 
   const changeSchemaFormat = useCallback(
     (format: SchemaFormat) => {
-      sessionStorage.setItem("ioflux.schema.editor.format", format);
+      sessionStorage.setItem(SESSION_FORMAT_KEY, format);
       setSchemaFormat(format);
       if (format === schemaFormat) return;
       try {
