@@ -1,4 +1,7 @@
 import { useContext, useState, useEffect, useRef } from "react";
+import { BsUpload } from "react-icons/bs";
+import { Tooltip } from "react-tooltip";
+import { SESSION_SCHEMA_KEY } from "../constants";
 
 import {
   Panel,
@@ -18,7 +21,6 @@ import {
 
 import Editor, { type OnMount } from "@monaco-editor/react";
 import type { editor } from "monaco-editor";
-import defaultSchema from "../data/defaultJSONSchema.json";
 import { AppContext, type SchemaFormat } from "../contexts/AppContext";
 import SchemaVisualization from "./SchemaVisualization";
 import NavigationBar from "./NavigationBar";
@@ -28,7 +30,6 @@ import {
   getHighlightedNodeRangeFromPath,
   type JSONSchema,
 } from "../utils/parseSchema";
-import YAML from "js-yaml";
 
 type ValidationStatus = {
   status: "success" | "warning" | "error";
@@ -44,8 +45,6 @@ type CreateBrowser = (
 
 const DEFAULT_SCHEMA_ID = "https://studio.ioflux.org/schema";
 const DEFAULT_SCHEMA_DIALECT = "https://json-schema.org/draft/2020-12/schema";
-const SESSION_SCHEMA_KEY = "ioflux.schema.editor.content";
-const SESSION_FORMAT_KEY = "ioflux.schema.editor.format";
 const DEFAULT_EDITOR_PANEL_WIDTH = 25; // in percentage
 
 const JSON_SCHEMA_DIALECTS = [
@@ -78,19 +77,6 @@ const getValidationUI = (theme: "light" | "dark") => ({
   },
 });
 
-const saveFormat = (key: string, format: SchemaFormat) => {
-  sessionStorage.setItem(key, format);
-};
-
-const loadSchemaJSON = (key: string): any => {
-  const raw = sessionStorage.getItem(key);
-  if (!raw) return defaultSchema;
-  try {
-    return JSON.parse(raw);
-  } catch {
-    return defaultSchema;
-  }
-};
 
 const saveSchemaJSON = (key: string, schema: JSONSchema) => {
   sessionStorage.setItem(key, JSON.stringify(schema, null, 2));
@@ -104,6 +90,8 @@ const MonacoEditor = () => {
     schemaFormat,
     changeSchemaFormat,
     selectedNode,
+    schemaText,
+    setSchemaText,
   } = useContext(AppContext);
 
   const editorRef = useRef<editor.IStandaloneCodeEditor | null>(null);
@@ -117,13 +105,55 @@ const MonacoEditor = () => {
     null
   );
 
-  const initialSchemaJSON = loadSchemaJSON(SESSION_SCHEMA_KEY);
+  const fileInputRef = useRef<HTMLInputElement>(null);
 
-  const [schemaText, setSchemaText] = useState<string>(
-    schemaFormat === "yaml"
-      ? YAML.dump(initialSchemaJSON)
-      : JSON.stringify(initialSchemaJSON, null, 2)
-  );
+
+  const loadFile = (file: File) => {
+    const reader = new FileReader();
+    reader.onload = (e) => {
+      const content = e.target?.result as string;
+      if (!content) return;
+      if (file.name.endsWith(".json")) {
+        changeSchemaFormat("json");
+      } else if (file.name.endsWith(".yaml") || file.name.endsWith(".yml")) {
+        changeSchemaFormat("yaml");
+      }
+      setSchemaText(content);
+    };
+    reader.readAsText(file);
+  };
+
+  const handleFileUpload = (event: React.ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0];
+    if (file) loadFile(file);
+    event.target.value = "";
+  };
+
+  useEffect(() => {
+    const blockBrowser = (e: DragEvent) => e.preventDefault();
+    document.addEventListener("dragover", blockBrowser);
+    document.addEventListener("drop", blockBrowser);
+    return () => {
+      document.removeEventListener("dragover", blockBrowser);
+      document.removeEventListener("drop", blockBrowser);
+    };
+  }, []);
+
+  const handleDragOver = (e: React.DragEvent<HTMLDivElement>) => {
+    e.stopPropagation();
+    e.preventDefault(); // Required to allow dropping
+    if (e.dataTransfer) e.dataTransfer.dropEffect = "copy";
+  };
+
+  const handleDrop = (e: React.DragEvent<HTMLDivElement>) => {
+    e.preventDefault();
+    e.stopPropagation();
+    const file = e.dataTransfer?.files?.[0];
+    if (!file) return;
+    const ext = file.name.split(".").pop()?.toLowerCase();
+    if (!["json", "yaml", "yml"].includes(ext ?? "")) return;
+    loadFile(file);
+  };
 
   const VALIDATION_UI = getValidationUI(theme);
 
@@ -262,17 +292,6 @@ const MonacoEditor = () => {
     }
   }, [selectedNode?.id, schemaFormat, schemaText]);
 
-  useEffect(() => {
-    saveFormat(SESSION_FORMAT_KEY, schemaFormat);
-
-    const schemaJSON = loadSchemaJSON(SESSION_SCHEMA_KEY);
-
-    setSchemaText(
-      schemaFormat === "yaml"
-        ? YAML.dump(schemaJSON)
-        : JSON.stringify(schemaJSON, null, 2)
-    );
-  }, [schemaFormat]);
 
   useEffect(() => {
     if (!schemaText.trim()) return;
@@ -343,25 +362,51 @@ const MonacoEditor = () => {
 
   const editorPanel = (
     <Panel
-      className="flex flex-col"
+      className="flex flex-col h-full w-full relative"
       defaultSize={isMobile ? 40 : DEFAULT_EDITOR_PANEL_WIDTH}
       ref={editorPanelRef}
       collapsible
+      onDragOver={handleDragOver}
+      onDrop={handleDrop}
     >
-      <div className="flex items-center gap-2 px-2 py-1 bg-[var(--validation-bg-color)]">
-        <label htmlFor="schema-format-select" className="sr-only">
-          Schema format
-        </label>
-        <select
-          id="schema-format-select"
-          value={schemaFormat}
-          onChange={(e) => changeSchemaFormat(e.target.value as SchemaFormat)}
-          className="ml-auto flex-shrink-0 bg-[var(--bg-color)] text-[var(--text-color)] text-sm outline-none cursor-pointer border border-[var(--popup-border-color)] rounded-sm"
-        >
-          <option value="json">JSON</option>
-          <option value="yaml">YAML</option>
-        </select>
-      </div>
+        <div className="flex items-center gap-2 px-2 py-1 bg-[var(--validation-bg-color)]">
+          <input
+            type="file"
+            id="schema-file-input"
+            ref={fileInputRef}
+            onChange={handleFileUpload}
+            accept=".json,.yaml,.yml"
+            className="hidden"
+          />
+          <div className="ml-auto flex items-center gap-3">
+            <button
+              className="text-lg cursor-pointer"
+              onClick={() => fileInputRef.current?.click()}
+              data-tooltip-id="upload-file-editor"
+              aria-label="Upload JSON/YAML schema file"
+              title="Upload JSON/YAML schema file"
+            >
+              <BsUpload className="text-[var(--text-color)]" />
+            </button>
+            <Tooltip
+              id="upload-file-editor"
+              content="Upload JSON/YAML (or drag & drop)"
+              style={{ fontSize: "10px", zIndex: 100 }}
+            />
+            <label htmlFor="schema-format-select" className="sr-only">
+              Schema format
+            </label>
+            <select
+              id="schema-format-select"
+              value={schemaFormat}
+              onChange={(e) => changeSchemaFormat(e.target.value as SchemaFormat)}
+              className="flex-shrink-0 bg-[var(--bg-color)] text-[var(--text-color)] text-sm outline-none cursor-pointer border border-[var(--popup-border-color)] rounded-sm"
+            >
+              <option value="json">JSON</option>
+              <option value="yaml">YAML</option>
+            </select>
+          </div>
+        </div>
       <div className="flex-1 min-h-0">
         <Editor
           height="100%"
@@ -384,9 +429,9 @@ const MonacoEditor = () => {
         className="shrink-0 px-2 py-1.5 bg-[var(--validation-bg-color)] text-sm"
       >
         <span className={VALIDATION_UI[schemaValidation.status].className}>
-          {schemaValidation.message}
-        </span>
-      </div>
+            {schemaValidation.message}
+          </span>
+        </div>
     </Panel>
   );
 

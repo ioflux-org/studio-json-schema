@@ -12,6 +12,21 @@ import {
   type SelectedNode,
 } from "./AppContext";
 
+import defaultSchema from "../data/defaultJSONSchema.json";
+import YAML from "js-yaml";
+
+import { SESSION_SCHEMA_KEY, SESSION_FORMAT_KEY } from "../constants";
+
+const loadSchemaJSON = (key: string): any => {
+  const raw = sessionStorage.getItem(key);
+  if (!raw) return defaultSchema;
+  try {
+    return JSON.parse(raw);
+  } catch {
+    return defaultSchema;
+  }
+};
+
 export const AppProvider = ({ children }: { children: ReactNode }) => {
   const containerRef = useRef<HTMLDivElement>(null);
   const [isFullScreen, setIsFullScreen] = useState(false);
@@ -25,9 +40,15 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
   });
 
   const [schemaFormat, setSchemaFormat] = useState<SchemaFormat>(
-    (window.sessionStorage.getItem(
-      "ioflux.schema.editor.format"
-    ) as SchemaFormat) ?? "json"
+    (window.sessionStorage.getItem(SESSION_FORMAT_KEY) as SchemaFormat) ?? "json"
+  );
+
+  const initialSchemaJSON = loadSchemaJSON(SESSION_SCHEMA_KEY);
+
+  const [schemaText, setSchemaText] = useState<string>(
+    schemaFormat === "yaml"
+      ? YAML.dump(initialSchemaJSON)
+      : JSON.stringify(initialSchemaJSON, null, 2)
   );
 
   const toggleTheme = () => {
@@ -38,9 +59,25 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
     });
   };
 
-  const changeSchemaFormat = (format: SchemaFormat) => {
-    setSchemaFormat(format);
-  };
+  const changeSchemaFormat = useCallback(
+    (format: SchemaFormat) => {
+      sessionStorage.setItem(SESSION_FORMAT_KEY, format);
+      setSchemaFormat(format);
+      if (format === schemaFormat) return;
+      try {
+        if (format === "yaml") {
+          const parsed = JSON.parse(schemaText);
+          setSchemaText(YAML.dump(parsed));
+        } else {
+          const parsed = YAML.load(schemaText) as object;
+          setSchemaText(JSON.stringify(parsed, null, 2));
+        }
+      } catch {
+        // If conversion fails, keep existing text as-is
+      }
+    },
+    [schemaFormat, schemaText]
+  );
 
   const [selectedNode, setSelectedNode] = useState<SelectedNode | null>(null);
   const [searchString, setSearchString] = useState("");
@@ -97,6 +134,8 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
     toggleFullScreen,
     schemaFormat,
     changeSchemaFormat,
+    schemaText,
+    setSchemaText,
     selectedNode,
     setSelectedNode,
     searchString,
