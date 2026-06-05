@@ -38,8 +38,15 @@ const refKeyword = new Set([
 ]);
 
 export const inferSchemaType = (nodeData: GraphNode["data"]["nodeData"]): [string, string] => {
-    if (typeof nodeData.type?.value === "string") {
-        return ["objectSchema", nodeData.type.value as string];
+    const typeValue = nodeData.type?.value;
+
+    if (typeof typeValue === "string") {
+        return ["objectSchema", typeValue];
+    }
+
+    if (Array.isArray(typeValue)) {
+        const primaryType = (typeValue as string[]).find((t) => t !== "null") ?? "others";
+        return ["multiType", primaryType];
     }
 
     const hasAnyKeyword = (keywords: Set<string>) => {
