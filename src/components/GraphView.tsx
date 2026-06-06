@@ -385,7 +385,7 @@ const GraphView = ({
 
     if (viewportNode) {
       toPng(viewportNode, {
-        backgroundColor: theme === "dark" ? "#1e1e1e" : "#ffffff",
+        backgroundColor: getComputedStyle(document.documentElement).getPropertyValue("--visualize-bg-color").trim(),
         width: imageWidth,
         height: imageHeight,
         style: {
