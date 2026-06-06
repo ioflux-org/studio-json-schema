@@ -261,10 +261,11 @@ const GraphView = ({
     });
     setNodes(resolved);
     setCollisionResolved(true);
-
-    setTimeout(() => {
-      fitView({ duration: 800, padding: 0.05 });
-    }, 300);
+    
+    const rafId = requestAnimationFrame(() => {
+      fitView({ padding: 0.05 });
+    });
+    return () => cancelAnimationFrame(rafId);
   }, [nodes, collisionResolved, allNodesMeasured, setNodes, fitView]);
 
   useEffect(() => {
