@@ -1,6 +1,5 @@
 import { useContext, useState, useEffect, useRef } from "react";
-import { BsUpload } from "react-icons/bs";
-import { Tooltip } from "react-tooltip";
+import { BsUpload, BsDownload } from "react-icons/bs";
 import { SESSION_SCHEMA_KEY } from "../constants";
 
 import {
@@ -92,6 +91,7 @@ const MonacoEditor = () => {
     selectedNode,
     schemaText,
     setSchemaText,
+    triggerExportGraph,
   } = useContext(AppContext);
 
   const editorRef = useRef<editor.IStandaloneCodeEditor | null>(null);
@@ -369,7 +369,7 @@ const MonacoEditor = () => {
       onDragOver={handleDragOver}
       onDrop={handleDrop}
     >
-        <div className="flex items-center gap-2 px-2 py-1 bg-[var(--validation-bg-color)]">
+      <div className="flex items-center gap-2 px-2 py-1 bg-[var(--validation-bg-color)] border-b border-[var(--popup-border-color)]">
           <input
             type="file"
             id="schema-file-input"
@@ -380,19 +380,23 @@ const MonacoEditor = () => {
           />
           <div className="ml-auto flex items-center gap-3">
             <button
-              className="text-lg cursor-pointer"
               onClick={() => fileInputRef.current?.click()}
-              data-tooltip-id="upload-file-editor"
+              className="h-[26px] flex items-center gap-1.5 bg-[var(--bg-color)] border border-[var(--popup-border-color)] text-[var(--text-color)] text-sm px-1.5 rounded-sm hover:opacity-75 transition-opacity cursor-pointer"
               aria-label="Upload JSON/YAML schema file"
-              title="Upload JSON/YAML schema file"
+              title="Upload JSON/YAML (or drag & drop)"
             >
-              <BsUpload className="text-[var(--text-color)]" />
+              <BsUpload size={12} />
+              <span>Upload</span>
             </button>
-            <Tooltip
-              id="upload-file-editor"
-              content="Upload JSON/YAML (or drag & drop)"
-              style={{ fontSize: "10px", zIndex: 100 }}
-            />
+            <button
+              onClick={triggerExportGraph}
+              className="h-[26px] flex items-center gap-1.5 bg-[var(--bg-color)] border border-[var(--popup-border-color)] text-[var(--text-color)] text-sm px-1.5 rounded-sm hover:opacity-75 transition-opacity cursor-pointer"
+              aria-label="Export graph as image"
+              title="Export graph as image"
+            >
+              <BsDownload size={12} />
+              <span>Export</span>
+            </button>
             <label htmlFor="schema-format-select" className="sr-only">
               Schema format
             </label>
@@ -400,7 +404,7 @@ const MonacoEditor = () => {
               id="schema-format-select"
               value={schemaFormat}
               onChange={(e) => changeSchemaFormat(e.target.value as SchemaFormat)}
-              className="flex-shrink-0 bg-[var(--bg-color)] text-[var(--text-color)] text-sm outline-none cursor-pointer border border-[var(--popup-border-color)] rounded-sm"
+              className="h-[26px] min-w-[60px] px-1 flex-shrink-0 bg-[var(--bg-color)] text-[var(--text-color)] text-sm outline-none cursor-pointer border border-[var(--popup-border-color)] rounded-sm"
             >
               <option value="json">JSON</option>
               <option value="yaml">YAML</option>

@@ -31,6 +31,9 @@ type AppContextType = {
 
   registerNavigateMatch: (fn: (dir: NavigationDirection) => void) => void;
   triggerNavigateMatch: (dir: NavigationDirection) => void;
+
+  registerExportGraph: (fn: () => void) => void;
+  triggerExportGraph: () => void;
 };
 
 export const AppContext = createContext<AppContextType>({} as AppContextType);
