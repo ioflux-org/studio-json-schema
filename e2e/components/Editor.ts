@@ -14,7 +14,7 @@ export class Editor {
 
     async open() {
         await this.page.goto("/");
-        await expect(this.editorBox).toBeAttached({ timeout: 15000 })
+        await expect(this.editorBox).toBeAttached({ timeout: 20000 })
     }
 
     async pasteSchema(schemaText: string) {

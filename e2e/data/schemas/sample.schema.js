@@ -13,5 +13,18 @@ export const validSchema = {
 }
 
 export const invalidSchema = {
-    "properties": false
+    "properties": "invalid"
+}
+
+export const validSchemaWioutDialect = {
+    "$id": "https://studio.ioflux.org/schema",
+    "description": "A JSON Schema describing a person",
+    "type": "object",
+    "properties": {
+        "name": {
+            "type": "string",
+            "minLength": 2,
+            "maxLength": 50
+        }
+    }
 }
