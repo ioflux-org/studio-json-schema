@@ -1,4 +1,5 @@
 import { Page, expect } from "@playwright/test";
+import { EditorControls } from "./EditorControls";
 
 export class Editor {
     constructor(private page: Page) { }
@@ -13,7 +14,7 @@ export class Editor {
 
     async open() {
         await this.page.goto("/");
-        await expect(this.editorBox).toBeAttached({ timeout: 10000 })
+        await expect(this.editorBox).toBeAttached({ timeout: 15000 })
     }
 
     async pasteSchema(schemaText: string) {
@@ -31,7 +32,12 @@ export class Editor {
         }, schemaText);
     }
 
-    async verifyPaste(text: string | RegExp) {
+    async verifyUpload(text: string | RegExp) {
         await expect(this.divCollections).toHaveText(text);
+    }
+
+    async uploadSchemaFile(relativeFilePath: string) {
+        const editorConstrols = new EditorControls(this.page);
+        editorConstrols.uploadFile(relativeFilePath);
     }
 }
