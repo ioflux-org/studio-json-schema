@@ -123,6 +123,17 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
   }, []);
 
   useEffect(() => {
+    const handleKeyDown = ({ key, ctrlKey, metaKey, altKey, shiftKey, repeat, target }: KeyboardEvent) => {
+      if (repeat || key.toLowerCase() !== "f" || ctrlKey || metaKey || altKey || shiftKey) return;
+      const el = target as HTMLElement;
+      if (el.tagName === "INPUT" || el.tagName === "TEXTAREA" || el.tagName === "SELECT" || el.isContentEditable) return;
+      toggleFullScreen();
+    };
+    document.addEventListener("keydown", handleKeyDown);
+    return () => document.removeEventListener("keydown", handleKeyDown);
+  }, [toggleFullScreen]);
+
+  useEffect(() => {
     document.documentElement.setAttribute("data-theme", theme);
   }, [theme]);
 
