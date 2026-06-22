@@ -298,13 +298,11 @@ const MonacoEditor = () => {
 
     const timeout = setTimeout(async () => {
       try {
-        // Parse the schema into a new object
+        // INFO: parsedSchema is mutated by buildSchemaDocument function
         const parsedSchema = parseSchema(schemaText, schemaFormat);
 
-        // Save the pristine original before any mutations occur
         saveSchemaJSON(SESSION_SCHEMA_KEY, parsedSchema);
         
-        // Create a disposable clone for the mutation-heavy builder
         const schemaForBuild = structuredClone(parsedSchema);
 
         const dialect = parsedSchema.$schema;
