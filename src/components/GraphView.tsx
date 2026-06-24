@@ -309,12 +309,26 @@ const GraphView = ({
     const trimmed = searchString.trim();
 
     const timeout = setTimeout(() => {
-      if (!trimmed || trimmed.length < 3) {
-        setMatchedNodes([]);
+      if (!trimmed) {
+        setMatchedNodes((prev) => (prev.length > 0 ? [] : prev));
         setCurrentMatchIndex(0);
         setErrorMessage("");
-        setNodes((nds) => nds.map((n) => ({ ...n, selected: false })));
-        fitView({ duration: 800, padding: 0.05 });
+        
+        setNodes((nds) => {
+          let hasSelected = false;
+          const newNodes = nds.map((n) => {
+            if (n.selected) hasSelected = true;
+            return { ...n, selected: false };
+          });
+          
+          if (hasSelected) {
+            setTimeout(() => {
+              fitView({ duration: 800, padding: 0.05 });
+            }, 0);
+            return newNodes;
+          }
+          return nds;
+        });
         return;
       }
 
@@ -328,26 +342,34 @@ const GraphView = ({
               return searchWords.every((word) => titleKeyWords.includes(word));
             });
 
-      setMatchedNodes(foundNodes);
+      setMatchedNodes((prev) => {
+        if (
+          prev.length === foundNodes.length &&
+          prev.every((n, i) => n.id === foundNodes[i].id)
+        ) {
+          return prev;
+        }
+        return foundNodes;
+      });
 
       if (foundNodes.length > 0) {
-        setCurrentMatchIndex(0);
-        const firstNode = foundNodes[0];
-        const x = firstNode.position.x + NODE_WIDTH / 2;
-        const y = firstNode.position.y + NODE_HEIGHT / 2;
-
-        setSelectedNode({
-          id: firstNode.id,
-        });
-
-        setCenter(x, y, { zoom: Math.max(getZoom(), 1), duration: 500 });
+        const targetNode = foundNodes[currentMatchIndex % foundNodes.length];
+        
         setNodes((nds) => {
           let changed = false;
           const newNodes = nds.map((n) => {
-            const selected = n.id === firstNode.id;
+            const selected = n.id === targetNode.id;
             if (n.selected !== selected) changed = true;
             return { ...n, selected };
           });
+
+          if (changed) {
+            const x = targetNode.position.x + NODE_WIDTH / 2;
+            const y = targetNode.position.y + NODE_HEIGHT / 2;
+            setTimeout(() => {
+              setCenter(x, y, { zoom: Math.max(getZoom(), 1), duration: 500 });
+            }, 0);
+          }
           return changed ? newNodes : nds;
         });
 
@@ -360,12 +382,28 @@ const GraphView = ({
     }, 300);
 
     return () => clearTimeout(timeout);
-  }, [searchString]);
+  }, [searchString, nodes, currentMatchIndex]);
+
+  const handleKeyDown = useCallback(
+    (e: React.KeyboardEvent<HTMLDivElement>) => {
+      if (matchCount <= 1) return;
+
+      if (e.key === "ArrowRight" || e.key === "Enter") {
+        e.preventDefault();
+        navigateMatch("next");
+      } else if (e.key === "ArrowLeft") {
+        e.preventDefault();
+        navigateMatch("prev");
+      }
+    },
+    [matchCount, navigateMatch]
+  );
+
   return (
     <div
       ref={containerRef}
       tabIndex={0}
-      // onKeyDown={handleKeyDown}
+      onKeyDown={handleKeyDown}
       className="relative w-full h-full"
     >
       <ReactFlow
@@ -378,6 +416,8 @@ const GraphView = ({
         nodeTypes={nodeTypes}
         minZoom={0.05}
         maxZoom={5}
+        fitView
+        fitViewOptions={{ padding: 0.05, duration: 800 }}
         onEdgeMouseEnter={(_, edge) => setHoveredEdgeId(edge.id)}
         onEdgeMouseLeave={() => setHoveredEdgeId(null)}
         onPaneClick={() => {
