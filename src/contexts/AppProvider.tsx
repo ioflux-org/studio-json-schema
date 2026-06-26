@@ -127,6 +127,7 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
       if (repeat || key.toLowerCase() !== "f" || ctrlKey || metaKey || altKey || shiftKey) return;
       const el = target as HTMLElement;
       if (el.tagName === "INPUT" || el.tagName === "TEXTAREA" || el.tagName === "SELECT" || el.isContentEditable) return;
+      if (el.closest(".monaco-editor")) return;
       toggleFullScreen();
     };
     document.addEventListener("keydown", handleKeyDown);
