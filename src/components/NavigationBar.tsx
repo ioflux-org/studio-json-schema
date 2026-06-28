@@ -22,8 +22,10 @@ const NavigationBar = () => {
     setSelectedNode,
     triggerNavigateMatch,
   } = useContext(AppContext);
+
   const searchInputRef = useRef<HTMLInputElement>(null);
   const mobileSearchInputRef = useRef<HTMLInputElement>(null);
+
   const [mobileSearchOpen, setMobileSearchOpen] = useState(false);
 
   const handleKeyDown = useCallback(
@@ -32,7 +34,11 @@ const NavigationBar = () => {
         setSearchString("");
         setSelectedNode(null);
         searchInputRef.current?.blur();
-        if (mobileSearchOpen) setMobileSearchOpen(false);
+
+        if (mobileSearchOpen) {
+          setMobileSearchOpen(false);
+        }
+
         return;
       }
 
@@ -52,6 +58,7 @@ const NavigationBar = () => {
 
   return (
     <nav
+      aria-label="Main navigation"
       className={`flex items-center relative z-10 bg-[var(--bg-color)] ${
         isFullScreen
           ? `w-full px-2 py-1 justify-end ${
@@ -85,14 +92,15 @@ const NavigationBar = () => {
       <ul
         className={`flex items-center gap-5 ${isFullScreen ? "mr-0" : "mr-4"}`}
       >
+        {/* Desktop Search */}
         <li className="hidden sm:flex">
           <div
-            className={`flex items-center gap-2 px-2 py-1 rounded-md  w-[200px]
-            ${
-              theme === "dark"
-                ? "bg-white/8 border border-[var(--popup-border-color)] focus-within:border-blue-500"
-                : "bg-[var(--popup-header-bg-color)] border border-gray-300 focus-within:border-blue-500"
-            }`}
+            className={`flex items-center gap-2 px-2 py-1 rounded-md w-[200px]
+              ${
+                theme === "dark"
+                  ? "bg-white/8 border border-[var(--popup-border-color)] focus-within:border-blue-500"
+                  : "bg-[var(--popup-header-bg-color)] border border-gray-300 focus-within:border-blue-500"
+              }`}
           >
             <input
               ref={searchInputRef}
@@ -105,9 +113,11 @@ const NavigationBar = () => {
               onChange={(e) => setSearchString(e.target.value)}
               onKeyDown={handleKeyDown}
             />
+
             <div className="w-[40px] flex justify-end pr-5">
               {searchString ? (
                 <button
+                  aria-label="Clear search"
                   onClick={() => {
                     setSearchString("");
                     setSelectedNode(null);
@@ -125,18 +135,21 @@ const NavigationBar = () => {
           </div>
         </li>
 
+        {/* Mobile Search Toggle */}
         <li className="flex sm:hidden">
           <button
+            aria-label="Toggle search"
             onClick={() => setMobileSearchOpen((prev) => !prev)}
             className="text-xl cursor-pointer"
-            aria-label="Toggle search"
           >
             <RiSearchLine className="text-[var(--navigation-text-color)]" />
           </button>
         </li>
 
+        {/* Theme Toggle */}
         <li className="flex items-center">
           <button
+            aria-label="Toggle theme"
             className="text-xl cursor-pointer"
             onClick={toggleTheme}
             data-tooltip-id="toggle-theme"
@@ -147,6 +160,7 @@ const NavigationBar = () => {
               <BsMoonStars className="text-[var(--navigation-text-color)]" />
             )}
           </button>
+
           {theme === "light" && (
             <Tooltip
               id="toggle-theme"
@@ -155,8 +169,11 @@ const NavigationBar = () => {
             />
           )}
         </li>
+
+        {/* GitHub */}
         <li className="flex items-center">
           <a
+            aria-label="GitHub repository"
             href="https://github.com/ioflux-org/studio-json-schema"
             target="_blank"
             rel="noopener noreferrer"
@@ -164,6 +181,7 @@ const NavigationBar = () => {
             data-tooltip-id="github"
           >
             <BsGithub className="text-[var(--navigation-text-color)]" />
+
             <Tooltip
               id="github"
               content="Star on Github"
@@ -171,8 +189,11 @@ const NavigationBar = () => {
             />
           </a>
         </li>
+
+        {/* Documentation */}
         <li className="flex items-center">
           <a
+            aria-label="Documentation"
             href="https://github.com/ioflux-org/studio-json-schema?tab=readme-ov-file#json-schema-visualizer"
             target="_blank"
             rel="noopener noreferrer"
@@ -180,6 +201,7 @@ const NavigationBar = () => {
             data-tooltip-id="learn-keywords"
           >
             <BsBook className="text-[var(--navigation-text-color)]" />
+
             <Tooltip
               id="learn-keywords"
               content="Docs"
@@ -187,19 +209,22 @@ const NavigationBar = () => {
             />
           </a>
         </li>
+
+        {/* Fullscreen */}
         <li className="flex items-center">
           <FullscreenToggleButton />
         </li>
       </ul>
 
+      {/* Mobile Search */}
       {mobileSearchOpen && (
         <div
           className={`absolute top-full left-0 w-full sm:hidden flex items-center gap-2 px-3 py-2 border-t shadow-md z-500
-          ${
-            theme === "dark"
-              ? "bg-[var(--bg-color)] border-[var(--popup-border-color)]"
-              : "bg-white border-gray-200"
-          }`}
+            ${
+              theme === "dark"
+                ? "bg-[var(--bg-color)] border-[var(--popup-border-color)]"
+                : "bg-white border-gray-200"
+            }`}
         >
           <RiSearchLine className="text-[var(--navigation-text-color)] opacity-70" />
 
@@ -208,14 +233,15 @@ const NavigationBar = () => {
             type="text"
             maxLength={30}
             placeholder="Search node"
+            aria-label="Search nodes"
             className="outline-none bg-transparent text-[var(--navigation-text-color)] text-sm flex-1"
             value={searchString}
-            onChange={(e) => {
-              setSearchString(e.target.value);
-            }}
+            onChange={(e) => setSearchString(e.target.value)}
             onKeyDown={handleKeyDown}
           />
+
           <button
+            aria-label="Close search"
             onClick={() => {
               setSearchString("");
               setSelectedNode(null);
