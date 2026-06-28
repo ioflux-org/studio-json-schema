@@ -264,11 +264,15 @@ const GraphView = ({
     });
     setNodes(resolved);
     setCollisionResolved(true);
+  }, [nodes, collisionResolved, allNodesMeasured, setNodes]);
 
-    setTimeout(() => {
-      fitView({ duration: 800, padding: 0.05 });
-    }, 300);
-  }, [nodes, collisionResolved, allNodesMeasured, setNodes, fitView]);
+  useEffect(() => {
+    if (!collisionResolved) return;
+    const rafId = requestAnimationFrame(() => {
+      fitView({ padding: 0.05, duration: 300 });
+    });
+    return () => cancelAnimationFrame(rafId);
+  }, [collisionResolved, fitView]);
 
   useEffect(() => {
     if (errorMessage) {
