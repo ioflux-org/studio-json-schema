@@ -28,6 +28,7 @@ const NodeDetailsPopup = ({
       setTimeout(() => setCopied(false), 2000);
     }
   };
+
   const formatValue = (value: string | string[]) => {
     return (
       <div className="flex flex-col">
@@ -46,11 +47,20 @@ const NodeDetailsPopup = ({
       onClick={onClose}
     >
       <div className="absolute inset-0 bg-[var(--popup-backdrop-color)] backdrop-blur-sm" />
+
       <div
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby="node-details-title"
         className="relative z-50 w-[90%] sm:w-[60%] min-w-[320px] max-h-[80%] p-4 rounded-lg shadow-xl bg-[var(--popup-bg-color)] overflow-x-hidden overflow-auto"
         onClick={(e) => e.stopPropagation()}
       >
+        <h2 id="node-details-title" className="sr-only">
+          Node Details
+        </h2>
+
         <button
+          aria-label="Close node details"
           className="absolute z-50 top-2 right-2 text-[var(--popup-text-color)] hover:text-[var(--popup-close-btn-hover-color)]"
           onClick={onClose}
         >
@@ -61,12 +71,16 @@ const NodeDetailsPopup = ({
           {nodeId && (
             <div className="mb-4 p-2 bg-[var(--popup-header-bg-color)] rounded border border-[var(--popup-border-color)] flex items-center justify-between">
               <div className="overflow-x-auto max-h-[60px] overflow-y-auto pr-1 flex-1">
-                <div className="font-mono text-xs text-[var(--text-color)] whitespace-nowrap">{extractPath(nodeId)}</div>
+                <div className="font-mono text-xs text-[var(--text-color)] whitespace-nowrap">
+                  {extractPath(nodeId)}
+                </div>
               </div>
+
               <button
                 onClick={copyPathToClipboard}
                 className="ml-2 p-1.5 text-[var(--navigation-text-color)] hover:text-[var(--text-color)] hover:bg-[var(--validation-bg-color)] rounded transition-colors flex-shrink-0"
                 title="Copy path to clipboard"
+                aria-label="Copy path to clipboard"
               >
                 {copied ? (
                   <BsCheck size={16} className="text-green-600" />
@@ -76,30 +90,40 @@ const NodeDetailsPopup = ({
               </button>
             </div>
           )}
+
           <div className="overflow-x-auto">
-          <table className="w-full border border-[var(--popup-border-color)] text-left">
-            <thead>
-              <tr className="bg-[var(--popup-header-bg-color)] border-b border-[var(--popup-border-color)]">
-                <th className="p-2 font-bold text-[var(--popup-header-text-color)] w-1/3">Keyword</th>
-                <th className="p-2 font-bold text-[var(--popup-header-text-color)]">Value</th>
-              </tr>
-            </thead>
-            <tbody>
-              {data.nodeData &&
-                Object.entries(data.nodeData).map(([key, keyData]) => (
-                  <tr key={key} className="border-b border-[var(--popup-border-color)]">
-                    <td className="p-2 font-medium text-[var(--popup-text-color)] whitespace-nowrap">
-                      {key}
-                    </td>
-                    <td className="p-2 text-[var(--popup-text-color)] max-w-0">
-                      <div className="max-h-[150px] overflow-auto pr-1 break-words">
-                        {formatValue(keyData.value as string)}
-                      </div>
-                    </td>
-                  </tr>
-                ))}
-            </tbody>
-          </table>
+            <table className="w-full border border-[var(--popup-border-color)] text-left">
+              <thead>
+                <tr className="bg-[var(--popup-header-bg-color)] border-b border-[var(--popup-border-color)]">
+                  <th className="p-2 font-bold text-[var(--popup-header-text-color)] w-1/3">
+                    Keyword
+                  </th>
+                  <th className="p-2 font-bold text-[var(--popup-header-text-color)]">
+                    Value
+                  </th>
+                </tr>
+              </thead>
+
+              <tbody>
+                {data.nodeData &&
+                  Object.entries(data.nodeData).map(([key, keyData]) => (
+                    <tr
+                      key={key}
+                      className="border-b border-[var(--popup-border-color)]"
+                    >
+                      <td className="p-2 font-medium text-[var(--popup-text-color)] whitespace-nowrap">
+                        {key}
+                      </td>
+
+                      <td className="p-2 text-[var(--popup-text-color)] max-w-0">
+                        <div className="max-h-[150px] overflow-auto pr-1 break-words">
+                          {formatValue(keyData.value as string)}
+                        </div>
+                      </td>
+                    </tr>
+                  ))}
+              </tbody>
+            </table>
           </div>
         </div>
       </div>
