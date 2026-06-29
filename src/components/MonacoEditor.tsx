@@ -10,6 +10,7 @@ import {
 } from "react-resizable-panels";
 // INFO: modifying the following import statement to (import type { SchemaObject } from "@hyperjump/json-schema/draft-2020-12") creates error;
 import { type SchemaObject } from "@hyperjump/json-schema/draft-2020-12";
+import { setMetaSchemaOutputFormat, unregisterSchema } from "@hyperjump/json-schema";
 import {
   getSchema,
   compile,
@@ -17,6 +18,7 @@ import {
   type CompiledSchema,
   type SchemaDocument,
 } from "@hyperjump/json-schema/experimental";
+import { jsonSchemaErrors } from "@hyperjump/json-schema-errors";
 
 import Editor, { type OnMount } from "@monaco-editor/react";
 import type { editor } from "monaco-editor";
@@ -29,10 +31,22 @@ import {
   getHighlightedNodeRangeFromPath,
   type JSONSchema,
 } from "../utils/parseSchema";
+import { pointerSegments } from "@hyperjump/json-pointer";
+import { getKeywordDocLink } from "../utils/keywordDocs";
+import SchemaErrorsPopup from "./SchemaErrorsPopup";
 
-type ValidationStatus = {
+export type ValidationStatus = {
   status: "success" | "warning" | "error";
   message: string;
+  schemaErrors?: SchemaValidationError[];
+  syntaxError?: string;
+};
+
+export type SchemaValidationError = {
+  linePrefix?: string;
+  message: string;
+  path: (string | number)[];
+  docLink?: string;
 };
 
 type CreateBrowser = (
@@ -162,6 +176,7 @@ const MonacoEditor = () => {
     message: VALIDATION_UI["success"].message,
   });
 
+  const [activeErrorIndex, setActiveErrorIndex] = useState<number | null>(null);
   const [editorVisible, setEditorVisible] = useState(true);
   const [isAnimating, setIsAnimating] = useState(false);
 
@@ -230,6 +245,39 @@ const MonacoEditor = () => {
     }, 300);
   };
 
+  const highlightPathInEditor = (path: (string | number)[]) => {
+    if (!editorRef.current) return;
+    const model = editorRef.current.getModel();
+    if (!model) return;
+
+    const text = model.getValue();
+    const range = getHighlightedNodeRangeFromPath(text, path, schemaFormat);
+    if (!range) return;
+
+    const startPos = model.getPositionAt(range.start);
+    const endPos = model.getPositionAt(range.end);
+
+    editorRef.current.revealPositionInCenter(startPos);
+    editorRef.current.setPosition(startPos);
+
+    const decoration = {
+      range: new (window as any).monaco.Range(
+        startPos.lineNumber,
+        1,
+        endPos.lineNumber,
+        1
+      ),
+      options: { isWholeLine: true, className: "monaco-highlight-line" },
+    };
+
+    const oldDecorations = model
+      .getAllDecorations()
+      .filter((d: any) => d.options.className === "monaco-highlight-line")
+      .map((d: any) => d.id);
+
+    model.deltaDecorations(oldDecorations, [decoration]);
+  };
+
   useEffect(() => {
     if (!editorRef.current) return;
     const model = editorRef.current.getModel();
@@ -244,8 +292,6 @@ const MonacoEditor = () => {
       return;
     }
 
-    const text = model.getValue();
-
     const uriParts = selectedNode.id.split("#");
     const fragment = uriParts.length > 1 ? uriParts[1] : "";
 
@@ -257,50 +303,15 @@ const MonacoEditor = () => {
         return /^\d+$/.test(decoded) ? parseInt(decoded, 10) : decoded;
       });
 
-    const highlightedNodeRange = getHighlightedNodeRangeFromPath(
-      text,
-      path,
-      schemaFormat
-    );
-
-    if (highlightedNodeRange) {
-      const startPos = model.getPositionAt(highlightedNodeRange.start);
-      const endPos = model.getPositionAt(highlightedNodeRange.end);
-
-      editorRef.current.revealPositionInCenter(startPos);
-      editorRef.current.setPosition(startPos);
-
-      const decoration = {
-        range: new (window as any).monaco.Range(
-          startPos.lineNumber,
-          1,
-          endPos.lineNumber,
-          1
-        ),
-        options: {
-          isWholeLine: true,
-          className: "monaco-highlight-line",
-        },
-      };
-
-      const oldDecorations = model
-        .getAllDecorations()
-        .filter((d: any) => d.options.className === "monaco-highlight-line")
-        .map((d: any) => d.id);
-
-      model.deltaDecorations(oldDecorations, [decoration]);
-    }
+    highlightPathInEditor(path);
   }, [selectedNode?.id, schemaFormat, schemaText]);
-
 
   useEffect(() => {
     if (!schemaText.trim()) return;
 
     const timeout = setTimeout(async () => {
       try {
-        // INFO: parsedSchema is mutated by buildSchemaDocument function
         const parsedSchema = parseSchema(schemaText, schemaFormat);
-        
         const schemaForBuild = structuredClone(parsedSchema);
 
         const dialect = parsedSchema.$schema;
@@ -334,26 +345,104 @@ const MonacoEditor = () => {
         // @ts-expect-error
         const schema = await getSchema(schemaDocument.baseUri, browser);
 
-        setCompiledSchema(await compile(schema));
-        setSchemaValidation(
-          !dialect && typeof parsedSchema !== "boolean"
-            ? {
-                status: "warning",
-                message: VALIDATION_UI["warning"].message,
+        // Clear cache and set format to BASIC so that meta-schema validation
+        // actually produces the .output.errors array instead of a boolean
+        unregisterSchema(schemaId);
+        setMetaSchemaOutputFormat("BASIC");
+
+        let schemaValidationStatus: ValidationStatus = {
+          status: "success",
+          message: VALIDATION_UI["success"].message,
+        };
+
+        try {
+          setCompiledSchema(await compile(schema));
+          if (!dialect && typeof parsedSchema !== "boolean") {
+            schemaValidationStatus = {
+              status: "warning",
+              message: VALIDATION_UI["warning"].message,
+            };
+          }
+
+          // Reset stale error pointer whenever schema becomes valid.
+          setActiveErrorIndex(null);
+          setSchemaValidation(schemaValidationStatus);
+        } catch (compileErr) {
+          // If compile fails, it could be InvalidSchemaError
+          const isInvalidSchema =
+            compileErr instanceof Error &&
+            compileErr.name === "InvalidSchemaError" &&
+            (compileErr as any).output?.errors;
+
+          if (isInvalidSchema) {
+            const rawOutput = (compileErr as any).output;
+            const fixedOutput = {
+              ...rawOutput,
+              errors: (rawOutput.errors || []).map((err: any) => {
+                const hashIdx = err.instanceLocation.indexOf("#");
+                return {
+                  ...err,
+                  instanceLocation: hashIdx !== -1 ? err.instanceLocation.substring(hashIdx) : "#"
+                };
+              })
+            };
+
+            const hjErrors = await jsonSchemaErrors(
+              fixedOutput,
+              dialectVersion,
+              parsedSchema as any
+            );
+
+            const schemaErrors: SchemaValidationError[] = hjErrors.map(
+              (err) => {
+                const fragment = err.instanceLocation.substring(1); // removes #
+                const path: (string | number)[] = fragment
+                  ? [...pointerSegments(fragment)].map((s) =>
+                    /^\d+$/.test(s) ? parseInt(s, 10) : s
+                  )
+                  : [];
+                const displayPath = fragment || "#";
+                const keywordLabel = path.length > 0 ? String(path[path.length - 1]) : "";
+
+                let linePrefix = "";
+                const range = getHighlightedNodeRangeFromPath(schemaText, path, schemaFormat);
+                if (range) {
+                  const lineNumber = schemaText.slice(0, range.start).split("\n").length;
+                  linePrefix = `[Line ${lineNumber}]`;
+                }
+
+                return {
+                  linePrefix,
+                  message: `${displayPath}: ${err.message}`,
+                  path,
+                  docLink: keywordLabel ? getKeywordDocLink(keywordLabel) : undefined,
+                  _lineNumber: range ? schemaText.slice(0, range.start).split("\n").length : 999999,
+                };
               }
-            : {
-                status: "success",
-                message: VALIDATION_UI["success"].message,
-              }
-        );
+            );
+
+            schemaErrors.sort((a, b) => (a as any)._lineNumber - (b as any)._lineNumber);
+
+            setActiveErrorIndex(null);
+            setSchemaValidation({
+              status: "error",
+              message: schemaErrors.length === 1
+                ? "✗ Schema error (click to locate)"
+                : `✗ ${schemaErrors.length} schema errors (click to locate)`,
+              schemaErrors,
+            });
+          } else {
+            throw compileErr; // Let the outer catch handle other runtime errors
+          }
+        }
 
         saveSchemaJSON(SESSION_SCHEMA_KEY, parsedSchema);
       } catch (err) {
         const message = err instanceof Error ? err.message : String(err);
-
         setSchemaValidation({
           status: "error",
           message: VALIDATION_UI["error"].message + message,
+          syntaxError: message,
         });
       }
     }, 300);
@@ -410,8 +499,20 @@ const MonacoEditor = () => {
               <option value="json">JSON</option>
               <option value="yaml">YAML</option>
             </select>
-          </div>
+          {/* Inline validation status indicator */}
+          <span
+            id="validation-status-icon"
+            aria-label={schemaValidation.message}
+            title={schemaValidation.message}
+            className={`text-base leading-none ${VALIDATION_UI[schemaValidation.status].className.replace("break-words", "")}`}
+            aria-hidden
+          >
+            {schemaValidation.status === "success" && "✓"}
+            {schemaValidation.status === "warning" && "⚠"}
+            {schemaValidation.status === "error" && "✗"}
+          </span>
         </div>
+      </div>
       <div className="flex-1 min-h-0">
         <Editor
           height="100%"
@@ -427,16 +528,6 @@ const MonacoEditor = () => {
           onMount={handleEditorDidMount}
         />
       </div>
-      <div
-        role="status"
-        aria-live="polite"
-        aria-label={`Schema validation: ${schemaValidation.message}`}
-        className="shrink-0 px-2 py-1.5 bg-[var(--validation-bg-color)] text-sm"
-      >
-        <span className={VALIDATION_UI[schemaValidation.status].className}>
-            {schemaValidation.message}
-          </span>
-        </div>
     </Panel>
   );
 
@@ -446,6 +537,12 @@ const MonacoEditor = () => {
       className="flex flex-col relative bg-[var(--visualize-bg-color)]"
     >
       <SchemaVisualization compiledSchema={compiledSchema} />
+      <SchemaErrorsPopup
+        schemaValidation={schemaValidation}
+        activeErrorIndex={activeErrorIndex}
+        setActiveErrorIndex={setActiveErrorIndex}
+        highlightPathInEditor={highlightPathInEditor}
+      />
     </Panel>
   );
 
