@@ -1,6 +1,7 @@
-import { useContext, useState, useEffect, useRef } from "react";
+import { useContext, useState, useEffect, useRef, useMemo } from "react";
 import { BsUpload, BsDownload } from "react-icons/bs";
 import { SESSION_SCHEMA_KEY } from "../constants";
+
 import {
   Panel,
   PanelGroup,
@@ -305,17 +306,23 @@ const MonacoEditor = () => {
     highlightPathInEditor(path);
   }, [selectedNode?.id, schemaFormat, schemaText]);
 
+  const instanceId = useMemo(() => Math.random().toString(36).slice(2), []);
+
   useEffect(() => {
     if (!schemaText.trim()) return;
+
+    let cancelled = false;
 
     const timeout = setTimeout(async () => {
       try {
         const parsedSchema = parseSchema(schemaText, schemaFormat);
         const schemaForBuild = structuredClone(parsedSchema);
 
-        const dialect = parsedSchema.$schema;
+        const dialect = typeof parsedSchema !== "boolean" ? parsedSchema.$schema : undefined;
         const dialectVersion = dialect ?? DEFAULT_SCHEMA_DIALECT;
-        const schemaId = parsedSchema.$id ?? DEFAULT_SCHEMA_ID;
+        // Use per-instance suffix so multiple instances never share the same registry key.
+        const schemaId = (typeof parsedSchema !== "boolean" ? parsedSchema.$id : undefined)
+          ?? `${DEFAULT_SCHEMA_ID}/${instanceId}`;
 
         if (
           JSON_SCHEMA_DIALECTS.includes(dialectVersion) &&
@@ -355,7 +362,10 @@ const MonacoEditor = () => {
         };
 
         try {
-          setCompiledSchema(await compile(schema));
+          const compiled = await compile(schema);
+          if (cancelled) return;
+
+          setCompiledSchema(compiled);
           if (!dialect && typeof parsedSchema !== "boolean") {
             schemaValidationStatus = {
               status: "warning",
@@ -389,8 +399,10 @@ const MonacoEditor = () => {
             const hjErrors = await jsonSchemaErrors(
               fixedOutput,
               dialectVersion,
-              parsedSchema as any
+              parsedSchema
             );
+
+            if (cancelled) return;
 
             const schemaErrors: SchemaValidationError[] = hjErrors.map(
               (err) => {
@@ -435,8 +447,10 @@ const MonacoEditor = () => {
           }
         }
 
+        if (cancelled) return;
         saveSchemaJSON(SESSION_SCHEMA_KEY, parsedSchema);
       } catch (err) {
+        if (cancelled) return;
         const message = err instanceof Error ? err.message : String(err);
         setSchemaValidation({
           status: "error",
@@ -446,7 +460,10 @@ const MonacoEditor = () => {
       }
     }, 300);
 
-    return () => clearTimeout(timeout);
+    return () => {
+      cancelled = true;
+      clearTimeout(timeout);
+    };
   }, [schemaText, schemaFormat]);
 
   const editorPanel = (
