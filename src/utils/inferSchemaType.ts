@@ -37,9 +37,22 @@ const refKeyword = new Set([
     "$ref"
 ]);
 
-export const inferSchemaType = (nodeData: GraphNode["data"]["nodeData"]): [string, string] => {
-    if (typeof nodeData.type?.value === "string") {
-        return ["objectSchema", nodeData.type.value as string];
+export const inferSchemaType = (nodeData: GraphNode["data"]["nodeData"]): [string, string, string[]?] => {
+    const typeValue = nodeData.type?.value;
+
+    if (typeof typeValue === "string") {
+        return ["objectSchema", typeValue];
+    }
+
+    if (Array.isArray(typeValue)) {
+        let primaryType = "others";
+        for (const t of typeValue as string[]) {
+            if (t !== "null") {
+                primaryType = t;
+                break;
+            }
+        }
+        return ["multiType", primaryType, typeValue as string[]];
     }
 
     const hasAnyKeyword = (keywords: Set<string>) => {

@@ -32,7 +32,7 @@ export type RFNodeData = {
 }
 
 type NodeStyle = {
-    color: string
+    color: string;
 }
 
 export type GraphEdge = RFEdge & {
@@ -80,7 +80,7 @@ type GenerateSourceHandles = (key: string | undefined, value: unknown, nodeId: s
 type UpdateNode = (node: UnpositionedGraphNode, update: UpdateNodeOptionalParameters) => void;
 
 
-const neonColors = {
+export const neonColors = {
     string: "#FF6EFF", // neon magenta
     number: "#00FF95", // neon mint
     integer: "#00FF95", // neon mint
@@ -91,6 +91,7 @@ const neonColors = {
     booleanSchemaTrue: "#12FF4B", // neon green
     booleanSchemaFalse: "#FF3B3B", // neon red 
     reference: "#FFE1BD", // soft neon cream
+    multiType: "#FF007F", // neon rose 
     others: "#CCCCCC", // soft gray
 };
 
@@ -157,7 +158,8 @@ export const processAST: ProcessAST = ({ ast, schemaUri, nodes, edges, parentId,
     }
 
     const getColor = (nodeData: NodeData) => {
-        const [, definedFor] = inferSchemaType(nodeData);
+        const [schemaType, definedFor] = inferSchemaType(nodeData);
+        if (schemaType === "multiType") return neonColors.multiType;
         return (
             neonColors[definedFor as keyof typeof neonColors] ?? neonColors.others
         );
@@ -179,7 +181,7 @@ export const processAST: ProcessAST = ({ ast, schemaUri, nodes, edges, parentId,
 
     updateNode(
         newNode,
-        { nodeData, nodeStyle: { color: color }, addTargetHandle: { handleId: targetHandle, position: Position.Left } }
+        { nodeData, nodeStyle: { color }, addTargetHandle: { handleId: targetHandle, position: Position.Left } }
     );
 };
 
