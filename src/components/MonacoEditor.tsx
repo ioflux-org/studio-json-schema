@@ -300,8 +300,6 @@ const MonacoEditor = () => {
       try {
         // INFO: parsedSchema is mutated by buildSchemaDocument function
         const parsedSchema = parseSchema(schemaText, schemaFormat);
-
-        saveSchemaJSON(SESSION_SCHEMA_KEY, parsedSchema);
         
         const schemaForBuild = structuredClone(parsedSchema);
 
@@ -349,6 +347,7 @@ const MonacoEditor = () => {
               }
         );
 
+        saveSchemaJSON(SESSION_SCHEMA_KEY, parsedSchema);
       } catch (err) {
         const message = err instanceof Error ? err.message : String(err);
 
