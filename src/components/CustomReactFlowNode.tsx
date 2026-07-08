@@ -1,6 +1,6 @@
-import { Handle } from "@xyflow/react";
+import { Handle, useUpdateNodeInternals } from "@xyflow/react";
 import type { RFNodeData } from "../utils/processAST";
-import { useContext, useLayoutEffect, useRef, useState } from "react";
+import { useContext, useEffect, useLayoutEffect, useRef, useState } from "react";
 import { AppContext } from "../contexts/AppContext";
 
 const CustomNode = ({ data, id, selected }: { data: RFNodeData; id: string; selected: boolean }) => {
@@ -12,6 +12,14 @@ const CustomNode = ({ data, id, selected }: { data: RFNodeData; id: string; sele
   const [handleOffsets, setHandleOffsets] = useState<Record<string, number>>(
     {}
   );
+  const updateNodeInternals = useUpdateNodeInternals();
+
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      updateNodeInternals(id);
+    }, 0);
+    return () => clearTimeout(timer);
+  }, [handleOffsets, id, updateNodeInternals]);
 
   useLayoutEffect(() => {
     const container = Object.values(rowRefs.current)[0]?.offsetParent;
