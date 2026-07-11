@@ -3,7 +3,15 @@ import type { RFNodeData } from "../utils/processAST";
 import { useContext, useLayoutEffect, useRef, useState } from "react";
 import { AppContext } from "../contexts/AppContext";
 
-const CustomNode = ({ data, id, selected }: { data: RFNodeData; id: string; selected: boolean }) => {
+const CustomNode = ({
+  data,
+  id,
+  selected,
+}: {
+  data: RFNodeData;
+  id: string;
+  selected: boolean;
+}) => {
   const { theme } = useContext(AppContext);
 
   const rowRefs = useRef<
@@ -30,6 +38,8 @@ const CustomNode = ({ data, id, selected }: { data: RFNodeData; id: string; sele
     setHandleOffsets(offsets);
   }, [data.nodeData]);
 
+  const { color } = data.nodeStyle;
+
   return (
     <div
       className={`
@@ -40,15 +50,18 @@ const CustomNode = ({ data, id, selected }: { data: RFNodeData; id: string; sele
         }
         relative transition-shadow duration-300 text-sm bg-[var(--node-bg-color)] text-[var(--text-color)]
         min-w-[100px] max-w-[400px] hover:shadow-[0_0_10px_var(--color)]
-        ${/* Change 25: Apply visual highlighting (shadow and ring) when node is selected */ ""}
-        ${selected ? "shadow-[0_0_15px_var(--color)] ring-2 ring-[var(--color)]" : ""}
+        ${
+          selected
+            ? "shadow-[0_0_15px_var(--color)] ring-2 ring-[var(--color)]"
+            : ""
+        }
       `}
       style={{
-        ["--color" as string]: data.nodeStyle.color,
+        ["--color" as string]: color,
         border:
           theme === "dark"
-            ? `1px solid ${data.nodeStyle.color}`
-            : `1px solid color-mix(in srgb, ${data.nodeStyle.color} 80%, black)`,
+            ? `1px solid ${color}`
+            : `1px solid color-mix(in srgb, ${color} 80%, black)`,
         wordBreak: "break-word",
       }}
     >
@@ -64,12 +77,12 @@ const CustomNode = ({ data, id, selected }: { data: RFNodeData; id: string; sele
       <div
         className="px-2 font-semibold"
         style={{
-          background: `${data.nodeStyle.color}50`,
-          borderBottom: `1px solid ${data.nodeStyle.color}`,
+          background: `${color}50`,
+          borderBottom: `1px solid ${color}`,
           color:
             theme === "dark"
-              ? data.nodeStyle.color
-              : `color-mix(in srgb, ${data.nodeStyle.color} 60%, black)`,
+              ? color
+              : `color-mix(in srgb, ${color} 60%, black)`,
         }}
       >
         {data.nodeLabel}
@@ -77,7 +90,12 @@ const CustomNode = ({ data, id, selected }: { data: RFNodeData; id: string; sele
 
       <div className="flex flex-col">
         {Object.entries(data.nodeData).map(([key, keyData]) => {
-          const isArray = Array.isArray(keyData.value);
+          const isTypeColorMap =
+            key === "type" &&
+            typeof keyData.value === "object" &&
+            keyData.value !== null &&
+            !Array.isArray(keyData.value);
+          const isArray = !isTypeColorMap && Array.isArray(keyData.value);
 
           return (
             <div
@@ -95,8 +113,32 @@ const CustomNode = ({ data, id, selected }: { data: RFNodeData; id: string; sele
                 {!data.isBooleanNode && `${key}:`}
               </span>
 
-              {isArray ? (
-                <div className="flex-col w-full">
+              {isTypeColorMap ? (
+                <div className="flex-col w-full gap-1 flex py-1">
+                  {Object.entries(keyData.value as Record<string, string>).map(
+                    ([typeName, itemColor]) => (
+                      <div
+                        ref={(el) => {
+                          rowRefs.current[`${id}-${typeName}`] = el;
+                        }}
+                        key={typeName}
+                        className="px-2 py-[2px] rounded text-center font-medium shadow-sm"
+                        style={{
+                          border: `1px solid ${itemColor}`,
+                          backgroundColor: `${itemColor}33`,
+                          color:
+                            theme === "dark"
+                              ? itemColor
+                              : `color-mix(in srgb, ${itemColor} 60%, black)`,
+                        }}
+                      >
+                        {typeName}
+                      </div>
+                    )
+                  )}
+                </div>
+              ) : isArray ? (
+                <div className="flex-col w-full gap-1 flex py-1">
                   {(keyData.value as string[]).map((item, index) => (
                     <div
                       ref={(el) => {
@@ -104,7 +146,7 @@ const CustomNode = ({ data, id, selected }: { data: RFNodeData; id: string; sele
                       }}
                       key={index}
                       className="px-2 py-[2px] bg-[var(--node-value-bg-color)]"
-                      style={{ border: `1px solid ${data.nodeStyle.color}30` }}
+                      style={{ border: `1px solid ${color}30` }}
                     >
                       {item}
                     </div>
