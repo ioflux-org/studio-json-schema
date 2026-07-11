@@ -80,7 +80,7 @@ type GenerateSourceHandles = (key: string | undefined, value: unknown, nodeId: s
 type UpdateNode = (node: UnpositionedGraphNode, update: UpdateNodeOptionalParameters) => void;
 
 
-export const neonColors = {
+const neonColors = {
     string: "#FF6EFF", // neon magenta
     number: "#00FF95", // neon mint
     integer: "#00FF95", // neon mint
@@ -158,11 +158,8 @@ export const processAST: ProcessAST = ({ ast, schemaUri, nodes, edges, parentId,
     }
 
     const getColor = (nodeData: NodeData) => {
-        const [schemaType, definedFor] = inferSchemaType(nodeData);
-        if (schemaType === "multiType") return neonColors.multiType;
-        return (
-            neonColors[definedFor as keyof typeof neonColors] ?? neonColors.others
-        );
+        const colorKey = inferSchemaType(nodeData);
+        return neonColors[colorKey as keyof typeof neonColors] ?? neonColors.others;
     };
 
     const color = getColor(nodeData);

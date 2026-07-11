@@ -37,38 +37,29 @@ const refKeyword = new Set([
     "$ref"
 ]);
 
-export const inferSchemaType = (nodeData: GraphNode["data"]["nodeData"]): [string, string] => {
+export const inferSchemaType = (nodeData: GraphNode["data"]["nodeData"]): string => {
     const typeValue = nodeData.type?.value;
 
     if (typeof typeValue === "string") {
-        return ["objectSchema", typeValue];
+        return typeValue;
     }
 
     if (typeof typeValue === "object" && typeValue !== null && !Array.isArray(typeValue)) {
-        let primaryType = "others";
-        for (const t of Object.keys(typeValue as Record<string, string>)) {
-            if (t !== "null") {
-                primaryType = t;
-                break;
-            }
-        }
-        return ["multiType", primaryType];
+        return "multiType";
     }
 
     const hasAnyKeyword = (keywords: Set<string>) => {
         return Object.keys(nodeData).some((key) => keywords.has(key));
     }
 
-    const getBooleanSchemaValue = (value: string): string => {
-        return value ? "booleanSchemaTrue" : "booleanSchemaFalse";
+    if ("booleanSchema" in nodeData) {
+        return nodeData.booleanSchema.value ? "booleanSchemaTrue" : "booleanSchemaFalse";
     }
+    if (hasAnyKeyword(objectKeywords)) return "object";
+    if (hasAnyKeyword(arrayKeywords)) return "array";
+    if (hasAnyKeyword(stringKeywords)) return "string";
+    if (hasAnyKeyword(numberKeywords)) return "number";
+    if (hasAnyKeyword(refKeyword)) return "reference";
 
-    if ("booleanSchema" in nodeData) return ["booleanSchema", getBooleanSchemaValue(nodeData.booleanSchema.value as string)];
-    if (hasAnyKeyword(objectKeywords)) return ["objectSchema", "object"];
-    if (hasAnyKeyword(arrayKeywords)) return ["objectSchema", "array"];
-    if (hasAnyKeyword(stringKeywords)) return ["objectSchema", "string"];
-    if (hasAnyKeyword(numberKeywords)) return ["objectSchema", "number"];
-    if (hasAnyKeyword(refKeyword)) return ["objectSchema", "reference"];
-
-    return ["objectSchema", "others"];
+    return "others";
 };
