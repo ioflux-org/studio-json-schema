@@ -381,7 +381,18 @@ const keywordHandlerMap: KeywordHandlerMap = {
     },
 
     // Validation
-    "https://json-schema.org/keyword/type": createBasicKeywordHandler("type"),
+    "https://json-schema.org/keyword/type": (_ast, keywordValue) => {
+        if (Array.isArray(keywordValue)) {
+            const typeColorMap = Object.fromEntries(
+                (keywordValue as string[]).map((t) => [
+                    t,
+                    neonColors[t as keyof typeof neonColors] ?? neonColors.others,
+                ])
+            );
+            return { key: "type", data: { value: typeColorMap }, leafNode: true };
+        }
+        return { key: "type", data: { value: keywordValue }, leafNode: true };
+    },
     "https://json-schema.org/keyword/enum": createBasicKeywordHandler("enum"),
     "https://json-schema.org/keyword/const": createBasicKeywordHandler("const"),
     "https://json-schema.org/keyword/maxLength": createBasicKeywordHandler("maxLength"),
