@@ -3,7 +3,15 @@ import type { RFNodeData } from "../utils/processAST";
 import { useContext, useLayoutEffect, useRef, useState } from "react";
 import { AppContext } from "../contexts/AppContext";
 
-const CustomNode = ({ data, id, selected }: { data: RFNodeData; id: string; selected: boolean }) => {
+const CustomNode = ({
+  data,
+  id,
+  selected,
+}: {
+  data: RFNodeData;
+  id: string;
+  selected: boolean;
+}) => {
   const { theme } = useContext(AppContext);
 
   const rowRefs = useRef<
@@ -35,14 +43,18 @@ const CustomNode = ({ data, id, selected }: { data: RFNodeData; id: string; sele
   return (
     <div
       className={`
-        ${data.isBooleanNode
-          ? "rounded-2xl text-center overflow-hidden"
-          : "rounded"
+        ${
+          data.isBooleanNode
+            ? "rounded-2xl text-center overflow-hidden"
+            : "rounded"
         }
         relative transition-shadow duration-300 text-sm bg-[var(--node-bg-color)] text-[var(--text-color)]
         min-w-[100px] max-w-[400px] hover:shadow-[0_0_10px_var(--color)]
-        ${/* Change 25: Apply visual highlighting (shadow and ring) when node is selected */ ""}
-        ${selected ? "shadow-[0_0_15px_var(--color)] ring-2 ring-[var(--color)]" : ""}
+        ${
+          selected
+            ? "shadow-[0_0_15px_var(--color)] ring-2 ring-[var(--color)]"
+            : ""
+        }
       `}
       style={{
         ["--color" as string]: color,
@@ -103,27 +115,27 @@ const CustomNode = ({ data, id, selected }: { data: RFNodeData; id: string; sele
 
               {isTypeColorMap ? (
                 <div className="flex-col w-full gap-1 flex py-1">
-                  {Object.entries(
-                    keyData.value as Record<string, string>
-                  ).map(([typeName, itemColor]) => (
-                    <div
-                      ref={(el) => {
-                        rowRefs.current[`${id}-${typeName}`] = el;
-                      }}
-                      key={typeName}
-                      className="px-2 py-[2px] rounded text-center font-medium shadow-sm"
-                      style={{
-                        border: `1px solid ${itemColor}`,
-                        backgroundColor: `${itemColor}33`,
-                        color:
-                          theme === "dark"
-                            ? itemColor
-                            : `color-mix(in srgb, ${itemColor} 60%, black)`,
-                      }}
-                    >
-                      {typeName}
-                    </div>
-                  ))}
+                  {Object.entries(keyData.value as Record<string, string>).map(
+                    ([typeName, itemColor]) => (
+                      <div
+                        ref={(el) => {
+                          rowRefs.current[`${id}-${typeName}`] = el;
+                        }}
+                        key={typeName}
+                        className="px-2 py-[2px] rounded text-center font-medium shadow-sm"
+                        style={{
+                          border: `1px solid ${itemColor}`,
+                          backgroundColor: `${itemColor}33`,
+                          color:
+                            theme === "dark"
+                              ? itemColor
+                              : `color-mix(in srgb, ${itemColor} 60%, black)`,
+                        }}
+                      >
+                        {typeName}
+                      </div>
+                    )
+                  )}
                 </div>
               ) : isArray ? (
                 <div className="flex-col w-full gap-1 flex py-1">
@@ -152,7 +164,6 @@ const CustomNode = ({ data, id, selected }: { data: RFNodeData; id: string; sele
             </div>
           );
         })}
-
       </div>
 
       {data.sourceHandles.map(({ handleId, position }) => (
