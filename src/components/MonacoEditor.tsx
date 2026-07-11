@@ -399,9 +399,6 @@ const MonacoEditor = () => {
             const hjErrors = await jsonSchemaErrors(
               fixedOutput,
               dialectVersion,
-              // schemaForBuild is already mutated by buildSchemaDocument (strips
-              // annotation-only keywords like $comment), so it is safe to pass here.
-              // eslint-disable-next-line @typescript-eslint/no-explicit-any
               schemaForBuild as any
             );
 
