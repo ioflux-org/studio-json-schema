@@ -1,6 +1,6 @@
-import { Handle } from "@xyflow/react";
+import { Handle, useUpdateNodeInternals } from "@xyflow/react";
 import type { RFNodeData } from "../utils/processAST";
-import { useContext, useLayoutEffect, useRef, useState } from "react";
+import { useContext, useEffect, useLayoutEffect, useRef, useState } from "react";
 import { AppContext } from "../contexts/AppContext";
 
 const CustomNode = ({
@@ -17,31 +17,68 @@ const CustomNode = ({
   const rowRefs = useRef<
     Record<string, HTMLDivElement | HTMLSpanElement | null>
   >({});
+  const nodeRef = useRef<HTMLDivElement>(null);
   const [handleOffsets, setHandleOffsets] = useState<Record<string, number>>(
     {}
   );
+  const updateNodeInternals = useUpdateNodeInternals();
 
-  useLayoutEffect(() => {
-    const container = Object.values(rowRefs.current)[0]?.offsetParent;
-    if (!(container instanceof HTMLElement)) return;
+  useEffect(() => {
+    if (!nodeRef.current) return;
 
-    const containerRect = container.getBoundingClientRect();
-    const offsets: Record<string, number> = {};
+    const updateOffsets = () => {
+      const container = nodeRef.current;
+      if (!container) return;
 
-    for (const [key, row] of Object.entries(rowRefs.current)) {
-      if (!row) continue;
+      const offsets: Record<string, number> = {};
+      let changed = false;
 
-      const rect = row.getBoundingClientRect();
-      offsets[key] = rect.top + rect.height / 2 - containerRect.top;
-    }
+      for (const [key, row] of Object.entries(rowRefs.current)) {
+        if (!row) continue;
 
-    setHandleOffsets(offsets);
-  }, [data.nodeData]);
+        // Compute local unscaled coordinates by climbing offsetParents up to the container
+        let top = 0;
+        let el: HTMLElement | null = row;
+        while (el && el !== container) {
+          top += el.offsetTop;
+          el = el.offsetParent as HTMLElement | null;
+        }
+
+        offsets[key] = top + row.offsetHeight / 2;
+      }
+
+      setHandleOffsets((prev) => {
+        if (Object.keys(prev).length !== Object.keys(offsets).length) changed = true;
+        else {
+          for (const k in offsets) {
+            if (prev[k] !== offsets[k]) {
+              changed = true;
+              break;
+            }
+          }
+        }
+        if (changed) {
+          // React state update triggers re-render, we notify React Flow immediately after
+          setTimeout(() => updateNodeInternals(id), 0);
+          return offsets;
+        }
+        return prev;
+      });
+    };
+
+    // Use ResizeObserver to catch layout changes regardless of data changes or word wraps
+    const observer = new ResizeObserver(updateOffsets);
+    observer.observe(nodeRef.current);
+    updateOffsets(); // Run initially
+
+    return () => observer.disconnect();
+  }, [id, updateNodeInternals, data.nodeData]);
 
   const { color } = data.nodeStyle;
 
   return (
     <div
+      ref={nodeRef}
       className={`
         ${
           data.isBooleanNode
