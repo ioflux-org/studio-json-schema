@@ -9,37 +9,66 @@ const CustomNode = ({ data, id, selected }: { data: RFNodeData; id: string; sele
   const rowRefs = useRef<
     Record<string, HTMLDivElement | HTMLSpanElement | null>
   >({});
+  const nodeRef = useRef<HTMLDivElement>(null);
   const [handleOffsets, setHandleOffsets] = useState<Record<string, number>>(
     {}
   );
   const updateNodeInternals = useUpdateNodeInternals();
 
   useEffect(() => {
-    const timer = setTimeout(() => {
-      updateNodeInternals(id);
-    }, 0);
-    return () => clearTimeout(timer);
-  }, [handleOffsets, id, updateNodeInternals]);
+    if (!nodeRef.current) return;
 
-  useLayoutEffect(() => {
-    const container = Object.values(rowRefs.current)[0]?.offsetParent;
-    if (!(container instanceof HTMLElement)) return;
+    const updateOffsets = () => {
+      const container = nodeRef.current;
+      if (!container) return;
 
-    const containerRect = container.getBoundingClientRect();
-    const offsets: Record<string, number> = {};
+      const offsets: Record<string, number> = {};
+      let changed = false;
 
-    for (const [key, row] of Object.entries(rowRefs.current)) {
-      if (!row) continue;
+      for (const [key, row] of Object.entries(rowRefs.current)) {
+        if (!row) continue;
 
-      const rect = row.getBoundingClientRect();
-      offsets[key] = rect.top + rect.height / 2 - containerRect.top;
-    }
+        // Compute local unscaled coordinates by climbing offsetParents up to the container
+        let top = 0;
+        let el: HTMLElement | null = row;
+        while (el && el !== container) {
+          top += el.offsetTop;
+          el = el.offsetParent as HTMLElement | null;
+        }
 
-    setHandleOffsets(offsets);
-  }, [data.nodeData]);
+        offsets[key] = top + row.offsetHeight / 2;
+      }
+
+      setHandleOffsets((prev) => {
+        if (Object.keys(prev).length !== Object.keys(offsets).length) changed = true;
+        else {
+          for (const k in offsets) {
+            if (prev[k] !== offsets[k]) {
+              changed = true;
+              break;
+            }
+          }
+        }
+        if (changed) {
+          // React state update triggers re-render, we notify React Flow immediately after
+          setTimeout(() => updateNodeInternals(id), 0);
+          return offsets;
+        }
+        return prev;
+      });
+    };
+
+    // Use ResizeObserver to catch layout changes regardless of data changes or word wraps
+    const observer = new ResizeObserver(updateOffsets);
+    observer.observe(nodeRef.current);
+    updateOffsets(); // Run initially
+
+    return () => observer.disconnect();
+  }, [id, updateNodeInternals, data.nodeData]);
 
   return (
     <div
+      ref={nodeRef}
       className={`
         ${
           data.isBooleanNode
