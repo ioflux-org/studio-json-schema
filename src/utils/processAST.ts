@@ -32,7 +32,7 @@ export type RFNodeData = {
 }
 
 type NodeStyle = {
-    color: string
+    color: string;
 }
 
 export type GraphEdge = RFEdge & {
@@ -91,6 +91,7 @@ const neonColors = {
     booleanSchemaTrue: "#12FF4B", // neon green
     booleanSchemaFalse: "#FF3B3B", // neon red 
     reference: "#FFE1BD", // soft neon cream
+    multiType: "#FF007F", // neon rose 
     others: "#CCCCCC", // soft gray
 };
 
@@ -157,10 +158,8 @@ export const processAST: ProcessAST = ({ ast, schemaUri, nodes, edges, parentId,
     }
 
     const getColor = (nodeData: NodeData) => {
-        const [, definedFor] = inferSchemaType(nodeData);
-        return (
-            neonColors[definedFor as keyof typeof neonColors] ?? neonColors.others
-        );
+        const colorKey = inferSchemaType(nodeData);
+        return neonColors[colorKey as keyof typeof neonColors] ?? neonColors.others;
     };
 
     const color = getColor(nodeData);
@@ -179,7 +178,7 @@ export const processAST: ProcessAST = ({ ast, schemaUri, nodes, edges, parentId,
 
     updateNode(
         newNode,
-        { nodeData, nodeStyle: { color: color }, addTargetHandle: { handleId: targetHandle, position: Position.Left } }
+        { nodeData, nodeStyle: { color }, addTargetHandle: { handleId: targetHandle, position: Position.Left } }
     );
 };
 
@@ -385,7 +384,18 @@ const keywordHandlerMap: KeywordHandlerMap = {
     },
 
     // Validation
-    "https://json-schema.org/keyword/type": createBasicKeywordHandler("type"),
+    "https://json-schema.org/keyword/type": (_ast, keywordValue) => {
+        if (Array.isArray(keywordValue)) {
+            const typeColorMap = Object.fromEntries(
+                (keywordValue as string[]).map((t) => [
+                    t,
+                    neonColors[t as keyof typeof neonColors] ?? neonColors.others,
+                ])
+            );
+            return { key: "type", data: { value: typeColorMap }, leafNode: true };
+        }
+        return { key: "type", data: { value: keywordValue }, leafNode: true };
+    },
     "https://json-schema.org/keyword/enum": createBasicKeywordHandler("enum"),
     "https://json-schema.org/keyword/const": createBasicKeywordHandler("const"),
     "https://json-schema.org/keyword/maxLength": createBasicKeywordHandler("maxLength"),

@@ -16,6 +16,7 @@
   "dependencies": {
     "@dagrejs/dagre": "^1.1.5",
     "@hyperjump/json-schema": "^1.17.5",
+    "@hyperjump/json-schema-errors": "github:hyperjump-io/json-schema-errors",
     "@monaco-editor/react": "^4.7.0",
     "@tailwindcss/vite": "^4.1.10",
     "@xyflow/react": "^12.8.3",
