@@ -235,9 +235,8 @@ const GraphView = ({
       setNodes(layoutedNodes);
       setEdges(layoutedEdges);
 
-      // important: reset collision flag and graph visibility when schema changes
+      // important: reset collision flag when schema changes
       setCollisionResolved(false);
-      setIsGraphReady(false);
     } catch (err) {
       console.error("Error generating visualization graph: ", err);
     }
@@ -268,7 +267,7 @@ const GraphView = ({
     setCollisionResolved(true);
 
     setTimeout(() => {
-      fitView({ duration: 800, padding: 0.05 });
+      fitView({ duration: isGraphReady ? 800 : 0, padding: 0.05 });
       setIsGraphReady(true);
     }, 300);
   }, [nodes, collisionResolved, allNodesMeasured, setNodes, fitView]);
@@ -335,9 +334,9 @@ const GraphView = ({
         searchWords.length === 0
           ? []
           : nodes.filter((node) => {
-              const titleKeyWords = extractKeywords(node.data.nodeLabel);
-              return searchWords.every((word) => titleKeyWords.includes(word));
-            });
+            const titleKeyWords = extractKeywords(node.data.nodeLabel);
+            return searchWords.every((word) => titleKeyWords.includes(word));
+          });
 
       setMatchedNodes(foundNodes);
 
