@@ -11,7 +11,9 @@
     "lint": "eslint .",
     "preview": "vite preview",
     "test:e2e": "playwright test",
-    "test:e2e:ui": "playwright test --ui"
+    "test:e2e:ui": "playwright test --ui",
+    "docs:dev": "cd docs && npm run dev",
+    "docs:build": "cd docs && npm install && npm run build"
   },
   "dependencies": {
     "@dagrejs/dagre": "^1.1.5",
