@@ -334,9 +334,9 @@ const GraphView = ({
         searchWords.length === 0
           ? []
           : nodes.filter((node) => {
-            const titleKeyWords = extractKeywords(node.data.nodeLabel);
-            return searchWords.every((word) => titleKeyWords.includes(word));
-          });
+              const titleKeyWords = extractKeywords(node.data.nodeLabel);
+              return searchWords.every((word) => titleKeyWords.includes(word));
+            });
 
       setMatchedNodes(foundNodes);
 
