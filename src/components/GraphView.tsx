@@ -26,6 +26,7 @@ import {
 } from "@xyflow/react";
 
 import CustomNode from "./CustomReactFlowNode";
+import CustomReactFlowEdge from "./CustomReactFlowEdge";
 import NodeDetailsPopup from "./NodeDetailsPopup";
 
 import {
@@ -40,6 +41,7 @@ import { CgClose } from "react-icons/cg";
 import { extractKeywords } from "../utils/searchNodeHelpers";
 
 const nodeTypes = { customNode: CustomNode };
+const edgeTypes = { smoothstep: CustomReactFlowEdge };
 
 const NODE_WIDTH = 172;
 const NODE_HEIGHT = 36;
@@ -421,6 +423,7 @@ const GraphView = ({
         onEdgesChange={onEdgeChange}
         deleteKeyCode={null}
         nodeTypes={nodeTypes}
+        edgeTypes={edgeTypes}
         minZoom={0.05}
         maxZoom={5}
         onEdgeMouseEnter={(_, edge) => setHoveredEdgeId(edge.id)}
