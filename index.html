@@ -1,47 +1,31 @@
 <!doctype html>
 <html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <link rel="icon" type="image/svg+xml" href="logo-dark.svg" />
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Roboto:ital,wght@0,100..900;1,100..900&display=swap" rel="stylesheet">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>JSON Schema Studio — Visual JSON Schema Viewer & Editor</title>
+    <meta name="description" content="JSON Schema Studio — A free, open-source visual tool that converts JSON Schema into interactive node graphs. Explore, debug, and understand complex schemas instantly.">
+    <meta name="keywords" content="json schema viewer, json schema visualizer, json schema editor, json schema explorer, json schema graph, json schema online, json schema tool, visualize json schema, json schema diagram, interactive json schema">
+    <meta name="robots" content="index, follow">
+    <link rel="canonical" href="https://studio.ioflux.org" />
 
-<head>
-  <meta charset="UTF-8" />
-  <link rel="icon" type="image/svg+xml" href="logo-dark.svg" />
-  <link rel="preconnect" href="https://fonts.googleapis.com">
-  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link href="https://fonts.googleapis.com/css2?family=Roboto:ital,wght@0,100..900;1,100..900&display=swap"
-    rel="stylesheet">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>JSON Schema Studio — Visual JSON Schema Viewer & Editor</title>
-  <meta name="description"
-    content="JSON Schema Studio — A free, open-source visual tool that converts JSON Schema into interactive node graphs. Explore, debug, and understand complex schemas instantly.">
-  <meta name="keywords"
-    content="json schema viewer, json schema visualizer, json schema editor, json schema explorer, json schema graph, json schema online, json schema tool, visualize json schema, json schema diagram, interactive json schema">
-  <meta name="robots" content="index, follow">
-  <link rel="canonical" href="https://studio.ioflux.org" />
+    <meta property="og:title" content="JSON Schema Studio — Visual JSON Schema Viewer & Editor">
+    <meta property="og:description" content="Visualize JSON Schemas as interactive graphs. Free and open-source.">
+    <meta property="og:type" content="website">
+    <meta property="og:url" content="https://studio.ioflux.org">
+    <meta property="og:image" content="https://studio.ioflux.org/example-visualization.png">
 
-  <meta property="og:title" content="JSON Schema Studio — Visual JSON Schema Viewer & Editor">
-  <meta property="og:description" content="Visualize JSON Schemas as interactive graphs. Free and open-source.">
-  <meta property="og:type" content="website">
-  <meta property="og:url" content="https://studio.ioflux.org">
-  <meta property="og:image" content="https://studio.ioflux.org/example-visualization.png">
+    <meta name="twitter:card" content="summary_large_image">
+    <meta name="twitter:title" content="JSON Schema Studio — Visual JSON Schema Viewer & Editor">
+    <meta name="twitter:description" content="Visualize JSON Schemas as interactive graphs. Free and open-source.">
+  </head>
 
-  <meta name="twitter:card" content="summary_large_image">
-  <meta name="twitter:title" content="JSON Schema Studio — Visual JSON Schema Viewer & Editor">
-  <meta name="twitter:description" content="Visualize JSON Schemas as interactive graphs. Free and open-source.">
-  <script>
-      (function() {
-        try {
-          var t = localStorage.getItem('theme');
-          if (!t) {
-            t = window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light';
-          }
-          document.documentElement.setAttribute('data-theme', t);
-        } catch (e) {}
-      })();
-    </script>
-</head>
-
-<body>
-  <div id="root"></div>
-  <script type="module" src="/src/main.tsx"></script>
-</body>
-
+  <body>
+    <div id="root"></div>
+    <script type="module" src="/src/main.tsx"></script>
+  </body>
 </html>
