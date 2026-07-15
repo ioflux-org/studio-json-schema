@@ -9,7 +9,6 @@ import { useState, useRef } from "react";
 import { MdCenterFocusStrong } from "react-icons/md";
 
 export default function CustomReactFlowEdge({
-  id,
   sourceX,
   sourceY,
   targetX,
