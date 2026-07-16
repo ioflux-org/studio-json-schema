@@ -5,7 +5,7 @@ import {
   useReactFlow,
   type EdgeProps,
 } from "@xyflow/react";
-import { useState, useRef } from "react";
+import { useState, useRef, useEffect, useCallback } from "react";
 import { MdCenterFocusStrong } from "react-icons/md";
 
 export default function CustomReactFlowEdge({
@@ -23,6 +23,7 @@ export default function CustomReactFlowEdge({
 }: EdgeProps) {
   const { setCenter, getNode, getZoom, setNodes } = useReactFlow();
   const [isHovered, setIsHovered] = useState(false);
+  const [activeButton, setActiveButton] = useState<"source" | "target" | null>(null);
   const timeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   const [edgePath, labelX, labelY] = getSmoothStepPath({
@@ -42,15 +43,14 @@ export default function CustomReactFlowEdge({
   const handleMouseLeave = () => {
     timeoutRef.current = setTimeout(() => {
       setIsHovered(false);
+      setActiveButton(null);
     }, 150);
   };
 
-  const focusNode = (nodeId: string, event: React.MouseEvent) => {
-    event.stopPropagation();
+  const focusNode = useCallback((nodeId: string, event?: React.MouseEvent | KeyboardEvent) => {
+    event?.stopPropagation();
     const node = getNode(nodeId);
     if (!node) return;
-    
-    // We want a good zoom level when focusing, but don't zoom out if user is already zoomed in
     const currentZoom = getZoom();
     const targetZoom = Math.max(currentZoom, 1.2); 
     
@@ -58,15 +58,33 @@ export default function CustomReactFlowEdge({
     const y = node.position.y + (node.measured?.height ?? 0) / 2;
     
     setCenter(x, y, { duration: 800, zoom: targetZoom });
-
-    // Automatically select the node so it glows
     setNodes((nodes) =>
       nodes.map((n) => ({
         ...n,
         selected: n.id === nodeId,
       }))
     );
-  };
+  }, [getNode, getZoom, setCenter, setNodes]);
+
+  useEffect(() => {
+    if (!isHovered) return;
+
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key === "ArrowLeft") {
+        setActiveButton("source");
+        e.preventDefault(); 
+      } else if (e.key === "ArrowRight") {
+        setActiveButton("target");
+        e.preventDefault();
+      } else if (e.key === "Enter" && activeButton) {
+        focusNode(activeButton === "source" ? source : target, e);
+        e.preventDefault();
+      }
+    };
+
+    window.addEventListener("keydown", handleKeyDown);
+    return () => window.removeEventListener("keydown", handleKeyDown);
+  }, [isHovered, activeButton, focusNode, source, target]);
 
   return (
     <>
@@ -91,7 +109,7 @@ export default function CustomReactFlowEdge({
         onMouseLeave={handleMouseLeave}
       />
       
-      {(isHovered || selected) && (
+      {isHovered && (
         <EdgeLabelRenderer>
           <div
             style={{
@@ -105,8 +123,10 @@ export default function CustomReactFlowEdge({
           >
             <button
               onClick={(e) => focusNode(source, e)}
-              className="flex items-center gap-1 hover:text-[var(--node-key-color)] transition-colors whitespace-nowrap text-[var(--text-color)] font-medium px-1"
-              title="Focus Source Node"
+              className={`flex items-center gap-1 hover:text-[var(--node-key-color)] transition-colors whitespace-nowrap text-[var(--text-color)] font-medium px-1.5 py-0.5 rounded ${
+                activeButton === "source" ? "ring-2 ring-[var(--node-key-color)] bg-black/5 dark:bg-white/10" : ""
+              }`}
+              title="Focus Source Node (Left Arrow)"
             >
               <MdCenterFocusStrong size={14} />
               <span>Source</span>
@@ -114,8 +134,10 @@ export default function CustomReactFlowEdge({
             <div className="w-[1px] h-4 bg-gray-300 dark:bg-gray-600"></div>
             <button
               onClick={(e) => focusNode(target, e)}
-              className="flex items-center gap-1 hover:text-[var(--node-key-color)] transition-colors whitespace-nowrap text-[var(--text-color)] font-medium px-1"
-              title="Focus Target Node"
+              className={`flex items-center gap-1 hover:text-[var(--node-key-color)] transition-colors whitespace-nowrap text-[var(--text-color)] font-medium px-1.5 py-0.5 rounded ${
+                activeButton === "target" ? "ring-2 ring-[var(--node-key-color)] bg-black/5 dark:bg-white/10" : ""
+              }`}
+              title="Focus Target Node (Right Arrow)"
             >
               <span>Target</span>
               <MdCenterFocusStrong size={14} />

@@ -408,6 +408,22 @@ const GraphView = ({
     registerExportGraph(onDownload);
   }, [onDownload, registerExportGraph]);
 
+  useEffect(() => {
+    const handleGlobalKeyDown = (e: KeyboardEvent) => {
+      if (
+        e.key === "Backspace" &&
+        e.target instanceof HTMLElement &&
+        e.target.tagName !== "INPUT" &&
+        e.target.tagName !== "TEXTAREA"
+      ) {
+        fitView({ duration: 800, padding: 0.05 });
+      }
+    };
+
+    window.addEventListener("keydown", handleGlobalKeyDown);
+    return () => window.removeEventListener("keydown", handleGlobalKeyDown);
+  }, [fitView]);
+
   return (
     <div
       ref={containerRef}
