@@ -34,6 +34,9 @@ without manually tracing large JSON Schema files.
 - [Future Enhancements / Roadmap](#future-enhancements--roadmap)
 - [Contributing](#contributing)
   - [Getting started](#getting-started)
+  - [Versioning Rules & Release Process](#versioning-rules--release-process)
+    - [How to create a changeset](#how-to-create-a-changeset)
+    - [When you do NOT need a changeset](#when-you-do-not-need-a-changeset)
 - [Additional Notes](#additional-notes)
 
 ---
@@ -206,22 +209,30 @@ These issues will be addressed as time permits. If you encounter any other probl
 ### Getting started
 
 - Fork the repository
- ```bash
-    $ git clone https://github.com/ioflux-org/studio-json-schema.git
-  ```  
-- Create a new branch  
-  `$ git checkout -b feature/my-feature`
+
+  ```bash
+  git clone https://github.com/ioflux-org/studio-json-schema.git
+  ```
+
+- Create a new branch
+
+  ```bash
+  git checkout -b feature/my-feature
+  ```
+
 - Make your changes
 - Create a Pull Request
   - After making changes, don't forget to commit with the sign-off flag (-s)
+
   ```bash
-   $ git commit -s -m “commit message”
-  ``` 
-  - Once all the changes have been commited, push the changes.
-  ```bash
-    $ git push origin <branch-name>
+  git commit -s -m "commit message"
   ```
-    
+
+  - Once all the changes have been commited, push the changes.
+
+  ```bash
+  git push origin <branch-name>
+  ```
 
 ## Run locally
 
@@ -295,42 +306,46 @@ Ways to contribute:
 - Fix bugs or implement new features
 - Suggest better visual or UX improvement
 
-### Versioning Rules (Important)
+### Versioning Rules & Release Process
 
-We use the `version` field in `package.json` as the single source of truth for releases. Any PR that introduces **application-level changes** (changes that affect the behavior, UI, or functionality of the app) must bump the version appropriately.
+We use [Changesets](https://github.com/changesets/changesets) to manage versioning, changelogs, and releases.
 
-We follow **Semantic Versioning (SemVer)**: `MAJOR.MINOR.PATCH`
+When you make a change that affects the application (new features, bug fixes, UI updates), you must include a changeset.
 
-Update the version in `package.json` based on the type of change:
+#### How to create a changeset
 
-| Change Type        | Version Bump | Example        |
-|--------------------|--------------|----------------|
-| Bug fix            | PATCH        | 1.2.3 → 1.2.4  |
-| New feature        | MINOR        | 1.2.3 → 1.3.0  |
-| Breaking change    | MAJOR        | 1.2.3 → 2.0.0  |
-| Pre-release build  | Prerelease   | 1.2.3 → 1.2.4-beta |
+Run the following command in your terminal:
 
-### When you do NOT need to bump the version
+```bash
+npx changeset
+```
 
-Do **not** bump the version if your PR only changes:
+The CLI will prompt you to select the package(s) to bump (select `json-schema-studio` if prompted).
 
-- `.github/**`
-- Markdown files (`*.md`)
+Choose the bump type according to Semantic Versioning (SemVer):
 
-These PRs are treated as non-release changes and will not trigger deployments or releases.
+- `major`: Breaking changes
+- `minor`: New features
+- `patch`: Bug fixes
+
+Provide a clear summary of your changes. This will be included in `CHANGELOG.md`.
+
+Once completed, a new markdown file will be generated in the `.changeset` folder. Commit this file along with your code changes.
+
+#### When you do NOT need a changeset
+
+You do not need to generate a changeset if your PR only touches:
+
+- `.github/**` (CI/CD workflows)
+- `*.md` files (Documentation)
+- Internal tests or tooling not affecting the shipped application
 
 ### Enforcement
 >
 > [!IMPORTANT]
-> Our CI will block PRs if:
+> Pull requests without a changeset file will be blocked by CI.
 >
-> - Application code is changed but `package.json` version is not bumped
-> - The version format is invalid
-> - The version already exists as a Git tag
->
-> This ensures every release is clean, predictable, and traceable.
-
-
+> This policy ensures all changes are properly versioned and that every integration remains clean, predictable, and traceable.
 
 ---
 

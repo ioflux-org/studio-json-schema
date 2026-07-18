@@ -32,7 +32,7 @@ export type RFNodeData = {
 }
 
 type NodeStyle = {
-    color: string
+    color: string;
 }
 
 export type GraphEdge = RFEdge & {
@@ -48,7 +48,7 @@ type ProcessASTParams = {
     edges: GraphEdge[],
     parentId: string,
     nodeTitle: string,
-    renderedNodes?: string[],
+    renderedNodes?: Map<string, UnpositionedGraphNode>,
     childId: string | null,
     nodeDepth?: number
 };
@@ -60,7 +60,7 @@ type KeywordHandlerParams = [
     edges: GraphEdge[],
     parentId: string,
     nodeDepth: number,
-    renderedNodes?: string[],
+    renderedNodes?: Map<string, UnpositionedGraphNode>,
 ];
 
 type UpdateNodeOptionalParameters = Partial<{
@@ -77,7 +77,7 @@ type CreateBasicKeywordHandler = (key: string) => KeywordHandler;
 type GetArrayFromNumber = (number: number) => number[];
 type GetSourceHandle = (parentId: string, childId: string | null) => string;
 type GenerateSourceHandles = (key: string | undefined, value: unknown, nodeId: string, defs: boolean | undefined) => HandleConfig[];
-type UpdateNode = (nodes: UnpositionedGraphNode[], schemaUri: string, update: UpdateNodeOptionalParameters) => void;
+type UpdateNode = (node: UnpositionedGraphNode, update: UpdateNodeOptionalParameters) => void;
 
 
 const neonColors = {
@@ -91,26 +91,28 @@ const neonColors = {
     booleanSchemaTrue: "#12FF4B", // neon green
     booleanSchemaFalse: "#FF3B3B", // neon red 
     reference: "#FFE1BD", // soft neon cream
+    multiType: "#FF007F", // neon rose 
     others: "#CCCCCC", // soft gray
 };
 
-export const processAST: ProcessAST = ({ ast, schemaUri, nodes, edges, parentId, childId, renderedNodes = [], nodeTitle, nodeDepth = 0 }) => {
-    if (renderedNodes.includes(schemaUri)) {
+export const processAST: ProcessAST = ({ ast, schemaUri, nodes, edges, parentId, childId, renderedNodes = new Map(), nodeTitle, nodeDepth = 0 }) => {
+    if (renderedNodes.has(schemaUri)) {
         const sourceHandle = getSourceHandle(parentId, childId);
         const targetHandle = `${sourceHandle}-target`;
+        const targetNode = renderedNodes.get(schemaUri);
+        const backEdgeColor = targetNode.data.nodeStyle.color ?? "#CCCCCC";
+
         edges.push({
             id: `${parentId}--${sourceHandle}--${schemaUri}--${targetHandle}`,
             type: "smoothstep",
-            // TODO: pass the color of the targeted node instead of handcoded value
-            data: { color: "#CCCCCC" },
+            data: { color: backEdgeColor },
             source: parentId,
             target: schemaUri,
             sourceHandle: sourceHandle,
             targetHandle: targetHandle
         });
         updateNode(
-            nodes,
-            schemaUri,
+            targetNode,
             { addTargetHandle: { handleId: targetHandle, position: Position.Top } }
         );
         return;
@@ -121,8 +123,7 @@ export const processAST: ProcessAST = ({ ast, schemaUri, nodes, edges, parentId,
     const sourceHandles: HandleConfig[] = [];
     const targetHandles: HandleConfig[] = [];
 
-    renderedNodes.push(schemaUri);
-    nodes.push({
+    const newNode: UnpositionedGraphNode = {
         id: schemaUri,
         type: "customNode",
         data: {
@@ -134,7 +135,9 @@ export const processAST: ProcessAST = ({ ast, schemaUri, nodes, edges, parentId,
             targetHandles
         },
         depth: nodeDepth
-    });
+    };
+    renderedNodes.set(schemaUri, newNode);
+    nodes.push(newNode);
 
     if (typeof schemaNodes === "boolean") {
         nodeData.booleanSchema = {
@@ -155,10 +158,8 @@ export const processAST: ProcessAST = ({ ast, schemaUri, nodes, edges, parentId,
     }
 
     const getColor = (nodeData: NodeData) => {
-        const [, definedFor] = inferSchemaType(nodeData);
-        return (
-            neonColors[definedFor as keyof typeof neonColors] ?? neonColors.others
-        );
+        const colorKey = inferSchemaType(nodeData);
+        return neonColors[colorKey as keyof typeof neonColors] ?? neonColors.others;
     };
 
     const color = getColor(nodeData);
@@ -176,9 +177,8 @@ export const processAST: ProcessAST = ({ ast, schemaUri, nodes, edges, parentId,
     });
 
     updateNode(
-        nodes,
-        schemaUri,
-        { nodeData, nodeStyle: { color: color }, addTargetHandle: { handleId: targetHandle, position: Position.Left } }
+        newNode,
+        { nodeData, nodeStyle: { color }, addTargetHandle: { handleId: targetHandle, position: Position.Left } }
     );
 };
 
@@ -208,11 +208,9 @@ const generateSourceHandles: GenerateSourceHandles = (key, value, nodeId, defs) 
     }];
 }
 
-const updateNode: UpdateNode = (nodes, nodeId, update) => {
-    const node = nodes.find(n => n.id === nodeId);
+const updateNode: UpdateNode = (node, update) => {
     if (!node) {
-        // throw new Error(`Node with id ${nodeId} not found`);
-        console.log(`Node with id ${nodeId} not found`)
+        console.log(`Node not found`)
         return;
     }
 
@@ -290,7 +288,8 @@ const keywordHandlerMap: KeywordHandlerMap = {
     "https://json-schema.org/keyword/$defs": (ast, keywordValue, nodes, edges, parentId, nodeDepth, renderedNodes) => {
         const value = keywordValue as string[];
         for (const [index, item] of value.entries()) {
-            processAST({ ast, schemaUri: item, nodes, edges, parentId, renderedNodes, childId: String(index), nodeTitle: `defs[${index}]`, nodeDepth });
+            const defName = `$defs["${item.split("#/$defs/").pop()}"]`;
+            processAST({ ast, schemaUri: item, nodes, edges, parentId, renderedNodes, childId: String(index), nodeTitle: defName, nodeDepth });
         }
         return { key: "$defs", data: { value: getArrayFromNumber(value.length) } }
     },
@@ -351,7 +350,13 @@ const keywordHandlerMap: KeywordHandlerMap = {
         }
         return { key: "patternProperties", data: { value: getArrayFromNumber(value.length) } }
     },
-    // "https://json-schema.org/keyword/dependentSchemas": createBasicKeywordHandler("dependentSchemas"),
+    "https://json-schema.org/keyword/dependentSchemas": (ast, keywordValue, nodes, edges, parentId, nodeDepth, renderedNodes) => {
+        const value = keywordValue as [string, string][];
+        for (const [propertyName, schemaUri] of value) {
+            processAST({ ast, schemaUri, nodes, edges, parentId, renderedNodes, childId: propertyName, nodeTitle: `dependentSchemas["${propertyName}"]`, nodeDepth });
+        }
+        return { key: "dependentSchemas", data: { value: value.map(([propertyName]) => propertyName) } };
+    },
     "https://json-schema.org/keyword/contains": (ast, keywordValue, nodes, edges, parentId, nodeDepth, renderedNodes) => {
         const value = keywordValue as { contains: string; minContains: number; maxContains: number };
         processAST({ ast, schemaUri: value.contains, nodes, edges, parentId, childId: "contains", renderedNodes, nodeTitle: "contains", nodeDepth });
@@ -379,7 +384,18 @@ const keywordHandlerMap: KeywordHandlerMap = {
     },
 
     // Validation
-    "https://json-schema.org/keyword/type": createBasicKeywordHandler("type"),
+    "https://json-schema.org/keyword/type": (_ast, keywordValue) => {
+        if (Array.isArray(keywordValue)) {
+            const typeColorMap = Object.fromEntries(
+                (keywordValue as string[]).map((t) => [
+                    t,
+                    neonColors[t as keyof typeof neonColors] ?? neonColors.others,
+                ])
+            );
+            return { key: "type", data: { value: typeColorMap }, leafNode: true };
+        }
+        return { key: "type", data: { value: keywordValue }, leafNode: true };
+    },
     "https://json-schema.org/keyword/enum": createBasicKeywordHandler("enum"),
     "https://json-schema.org/keyword/const": createBasicKeywordHandler("const"),
     "https://json-schema.org/keyword/maxLength": createBasicKeywordHandler("maxLength"),

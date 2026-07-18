@@ -4,8 +4,10 @@ export type SchemaFormat = "json" | "yaml";
 
 export type SelectedNode = {
   id: string;
-  data: Record<string, unknown>;
+  data?: Record<string, unknown>;
 };
+
+export type NavigationDirection = "next" | "prev";
 
 type AppContextType = {
   containerRef: Ref<HTMLDivElement>;
@@ -18,9 +20,20 @@ type AppContextType = {
   schemaFormat: SchemaFormat;
   changeSchemaFormat: (format: SchemaFormat) => void;
 
-  selectedNode: SelectedNode | null;
+  schemaText: string;
+  setSchemaText: (text: string) => void;
 
+  selectedNode: SelectedNode | null;
   setSelectedNode: (selectedNode: SelectedNode | null) => void;
+
+  searchString: string;
+  setSearchString: (search: string) => void;
+
+  registerNavigateMatch: (fn: (dir: NavigationDirection) => void) => void;
+  triggerNavigateMatch: (dir: NavigationDirection) => void;
+
+  registerExportGraph: (fn: () => void) => void;
+  triggerExportGraph: () => void;
 };
 
 export const AppContext = createContext<AppContextType>({} as AppContextType);

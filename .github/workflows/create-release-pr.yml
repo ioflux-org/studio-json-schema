@@ -1,0 +1,40 @@
+name: Create Release PR
+
+on:
+  push:
+    branches:
+      - main
+  workflow_dispatch:
+
+concurrency:
+  group: versioning-${{ github.ref }}-${{ github.event_name }}
+  cancel-in-progress: true
+
+jobs:
+  version-bump:
+    runs-on: ubuntu-latest
+
+    permissions:
+      contents: write
+      pull-requests: write
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v7
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: lts/*
+          cache: npm
+
+      - name: Install Dependencies and Build
+        run: npm ci
+
+      - name: Create/Update Release PR
+        uses: changesets/action@v1
+        with:
+          commit: "chore: version bump"
+          title: "Release: New changes from recent PRs"
+        env:
+          GITHUB_TOKEN: ${{ secrets.MY_RELEASE_PAT }}
