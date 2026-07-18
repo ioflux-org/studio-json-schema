@@ -466,7 +466,7 @@ const GraphView = ({
         <Controls />
       </ReactFlow>
 
-      {selectedNode?.data && (
+      {detailsNode && (
         <NodeDetailsPopup
           nodeId={detailsNode.id}
           data={detailsNode.data}
