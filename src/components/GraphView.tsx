@@ -32,6 +32,7 @@ import {
   processAST,
   type GraphEdge,
   type GraphNode,
+  type NodeData,
 } from "../utils/processAST";
 import { sortAST } from "../utils/sortAST";
 import { resolveCollisions } from "../utils/resolveCollisions";
@@ -64,7 +65,7 @@ const GraphView = ({
   const [currentMatchIndex, setCurrentMatchIndex] = useState(0);
   const [errorMessage, setErrorMessage] = useState("");
   const [showErrorPopup, setShowErrorPopup] = useState(true);
-  const [detailsNode, setDetailsNode] = useState<{ id: string; data: any } | null>(null);
+  const [isDetailsOpen, setIsDetailsOpen] = useState(false);
   const matchCount = matchedNodes.length;
 
   const navigateMatch = useCallback(
@@ -106,16 +107,13 @@ const GraphView = ({
 
   const onNodeClick: NodeMouseHandler = useCallback((_event, node) => {
     if (selectedNode?.id === node.id) {
-      setDetailsNode({
-        id: node.id,
-        data: node.data,
-      });
+      setIsDetailsOpen(true);
     } else {
       setSelectedNode({
         id: node.id,
         data: node.data,
       });
-      setDetailsNode(null);
+      setIsDetailsOpen(false);
     }
     // Select connected edges programmatically to allow native selection handling
     setEdges((eds) =>
@@ -446,7 +444,7 @@ const GraphView = ({
         onEdgeMouseLeave={() => setHoveredEdgeId(null)}
         onPaneClick={() => {
           setSelectedNode(null);
-          setDetailsNode(null);
+          setIsDetailsOpen(false);
         }}
       >
         <Background
@@ -466,12 +464,12 @@ const GraphView = ({
         <Controls />
       </ReactFlow>
 
-      {detailsNode && (
+      {isDetailsOpen && selectedNode && (
         <NodeDetailsPopup
-          nodeId={detailsNode.id}
-          data={detailsNode.data}
+          nodeId={selectedNode.id}
+          data={selectedNode.data as { nodeData?: NodeData }}
           onClose={() => {
-            setDetailsNode(null);
+            setIsDetailsOpen(false);
           }}
         />
       )}
