@@ -115,8 +115,52 @@ const MonacoEditor = () => {
   const editorRef = useRef<editor.IStandaloneCodeEditor | null>(null);
   const editorPanelRef = useRef<ImperativePanelHandle>(null);
 
-  const handleEditorDidMount: OnMount = (editor) => {
+  const handleEditorDidMount: OnMount = (editor, monaco) => {
     editorRef.current = editor;
+
+    monaco.editor.defineTheme("studio-dark", {
+      base: "vs-dark",
+      inherit: true,
+      rules: [],
+      colors: {
+        "editor.background": "#0d0d14",
+        "editor.foreground": "#eeeef2",
+        "editorLineNumber.foreground": "#3a3d4a",
+        "editorLineNumber.activeForeground": "#818cf8",
+        "editor.lineHighlightBackground": "#13131d",
+        "editor.selectionBackground": "#818cf830",
+        "editorCursor.foreground": "#818cf8",
+        "editorWidget.background": "#111119",
+        "editorWidget.border": "#1e1e2e",
+        "input.background": "#0d0d14",
+        "input.border": "#1e1e2e",
+        "scrollbarSlider.background": "#1e1e2e80",
+        "scrollbarSlider.hoverBackground": "#2a2a3a",
+      },
+    });
+
+    monaco.editor.defineTheme("studio-light", {
+      base: "vs",
+      inherit: true,
+      rules: [],
+      colors: {
+        "editor.background": "#f8f9fc",
+        "editor.foreground": "#0f172a",
+        "editorLineNumber.foreground": "#c4c7d4",
+        "editorLineNumber.activeForeground": "#6366f1",
+        "editor.lineHighlightBackground": "#f0f2f7",
+        "editor.selectionBackground": "#6366f125",
+        "editorCursor.foreground": "#6366f1",
+        "editorWidget.background": "#ffffff",
+        "editorWidget.border": "#e2e5ef",
+        "input.background": "#f5f6fa",
+        "input.border": "#e2e5ef",
+        "scrollbarSlider.background": "#e2e5ef80",
+        "scrollbarSlider.hoverBackground": "#d1d5db",
+      },
+    });
+
+    monaco.editor.setTheme(theme === "dark" ? "studio-dark" : "studio-light");
   };
 
   const [compiledSchema, setCompiledSchema] = useState<CompiledSchema | null>(
@@ -471,14 +515,14 @@ const MonacoEditor = () => {
 
   const editorPanel = (
     <Panel
-      className="flex flex-col h-full w-full relative"
+      className="flex flex-col h-full w-full relative bg-[var(--editor-panel-bg-color)]"
       defaultSize={isMobile ? 40 : DEFAULT_EDITOR_PANEL_WIDTH}
       ref={editorPanelRef}
       collapsible
       onDragOver={handleDragOver}
       onDrop={handleDrop}
     >
-      <div className="flex items-center gap-2 px-2 py-1 bg-[var(--validation-bg-color)] border-b border-[var(--popup-border-color)]">
+      <div className="flex items-center gap-2 px-3 py-1.5 bg-[var(--toolbar-bg-color)] border-b border-[var(--toolbar-border-color)] backdrop-blur-sm">
           <input
             type="file"
             id="schema-file-input"
@@ -487,23 +531,23 @@ const MonacoEditor = () => {
             accept=".json,.yaml,.yml"
             className="hidden"
           />
-          <div className="ml-auto flex items-center gap-3">
+          <div className="ml-auto flex items-center gap-2">
             <button
               onClick={() => fileInputRef.current?.click()}
-              className="h-[26px] flex items-center gap-1.5 bg-[var(--bg-color)] border border-[var(--popup-border-color)] text-[var(--text-color)] text-sm px-1.5 rounded-sm hover:opacity-75 transition-opacity cursor-pointer"
+              className="h-[28px] flex items-center gap-1.5 bg-[var(--bg-color)] border border-[var(--toolbar-border-color)] text-[var(--text-secondary-color)] text-xs font-medium px-2.5 rounded-md hover:text-[var(--accent-color)] hover:border-[var(--accent-color)] transition-all duration-200 cursor-pointer"
               aria-label="Upload JSON/YAML schema file"
               title="Upload JSON/YAML (or drag & drop)"
             >
-              <BsUpload size={12} />
+              <BsUpload size={11} />
               <span>Upload</span>
             </button>
             <button
               onClick={triggerExportGraph}
-              className="h-[26px] flex items-center gap-1.5 bg-[var(--bg-color)] border border-[var(--popup-border-color)] text-[var(--text-color)] text-sm px-1.5 rounded-sm hover:opacity-75 transition-opacity cursor-pointer"
+              className="h-[28px] flex items-center gap-1.5 bg-[var(--bg-color)] border border-[var(--toolbar-border-color)] text-[var(--text-secondary-color)] text-xs font-medium px-2.5 rounded-md hover:text-[var(--accent-color)] hover:border-[var(--accent-color)] transition-all duration-200 cursor-pointer"
               aria-label="Export graph as image"
               title="Export graph as image"
             >
-              <BsDownload size={12} />
+              <BsDownload size={11} />
               <span>Export</span>
             </button>
             <label htmlFor="schema-format-select" className="sr-only">
@@ -513,7 +557,7 @@ const MonacoEditor = () => {
               id="schema-format-select"
               value={schemaFormat}
               onChange={(e) => changeSchemaFormat(e.target.value as SchemaFormat)}
-              className="h-[26px] min-w-[60px] px-1 flex-shrink-0 bg-[var(--bg-color)] text-[var(--text-color)] text-sm outline-none cursor-pointer border border-[var(--popup-border-color)] rounded-sm"
+              className="h-[28px] min-w-[60px] px-2 flex-shrink-0 bg-[var(--bg-color)] text-[var(--text-secondary-color)] text-xs font-medium outline-none cursor-pointer border border-[var(--toolbar-border-color)] rounded-md hover:text-[var(--accent-color)] hover:border-[var(--accent-color)] transition-colors"
             >
               <option value="json">JSON</option>
               <option value="yaml">YAML</option>
@@ -523,7 +567,7 @@ const MonacoEditor = () => {
             id="validation-status-icon"
             aria-label={schemaValidation.message}
             title={schemaValidation.message}
-            className={`text-base leading-none ${VALIDATION_UI[schemaValidation.status].className.replace("break-words", "")}`}
+            className={`text-sm leading-none ${VALIDATION_UI[schemaValidation.status].className.replace("break-words", "")}`}
             aria-hidden
           >
             {schemaValidation.status === "success" && "✓"}
@@ -538,7 +582,7 @@ const MonacoEditor = () => {
           width="100%"
           language={schemaFormat}
           value={schemaText}
-          theme={theme === "light" ? "vs-light" : "vs-dark"}
+          theme={theme === "light" ? "studio-light" : "studio-dark"}
           options={{
             minimap: { enabled: false },
             occurrencesHighlight: "off",
@@ -567,9 +611,9 @@ const MonacoEditor = () => {
 
   const resizeHandle = (
     <PanelResizeHandle
-      className={`${isMobile ? "h-[1px]" : "w-[1px]"} ${
-        isMobile && !editorVisible ? "bg-transparent" : "bg-gray-400"
-      } relative`}
+      className={`${isMobile ? "h-[2px]" : "w-[3px]"} ${
+        isMobile && !editorVisible ? "bg-transparent" : "bg-[var(--toolbar-border-color)]"
+      } relative active:bg-[var(--accent-color)] transition-colors duration-200`}
     >
       {(!isMobile || editorVisible) && (
         <div>

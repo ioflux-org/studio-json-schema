@@ -450,15 +450,15 @@ const GraphView = ({
         <Background
           id="main-grid"
           variant={BackgroundVariant.Lines}
-          lineWidth={0.05}
-          gap={100}
+          lineWidth={0.02}
+          gap={40}
           color="var(--reactflow-bg-main-pattern-color)"
         />
         <Background
           id="sub-grid"
-          variant={BackgroundVariant.Lines}
-          lineWidth={0.02}
-          gap={20}
+          variant={BackgroundVariant.Cross}
+          lineWidth={0.1}
+          gap={80}
           color="var(--reactflow-bg-sub-pattern-color)"
         />
         <Controls />
@@ -475,33 +475,33 @@ const GraphView = ({
       )}
       {/*Error Message */}
       {errorMessage && showErrorPopup && (
-        <div className="absolute bottom-[50px] left-[100px] flex gap-2 px-2 py-1 bg-red-500 text-white rounded-md shadow-lg">
-          <div className="text-sm font-medium tracking-wide font-roboto">
+        <div className="absolute bottom-[50px] left-[100px] flex items-center gap-2 px-3 py-2 bg-red-500/90 backdrop-blur-sm text-white rounded-lg shadow-lg">
+          <div className="text-xs font-medium tracking-wide">
             {errorMessage}
           </div>
           <button
-            className="cursor-pointer"
+            className="cursor-pointer hover:bg-white/20 rounded p-0.5 transition-colors"
             onClick={() => setShowErrorPopup(false)}
           >
-            <CgClose size={18} />
+            <CgClose size={14} />
           </button>
         </div>
       )}
       {matchCount > 1 && (
-        <div className="absolute bottom-3 left-1/2 -translate-x-1/2 flex items-center gap-0.5 bg-[var(--node-bg-color)] px-1.5 py-0.5 rounded border border-[var(--popup-border-color)] opacity-80 shadow-sm">
+        <div className="absolute bottom-3 left-1/2 -translate-x-1/2 flex items-center gap-1 bg-[var(--node-bg-color)] px-2 py-1 rounded-lg border border-[var(--toolbar-border-color)] shadow-md backdrop-blur-sm">
           <button
             onClick={() => navigateMatch("prev")}
-            className="hover:bg-[var(--text-color)] hover:bg-opacity-20 rounded p-0.5 transition-colors"
+            className="hover:bg-[var(--view-bg-color)] rounded p-0.5 transition-colors"
             title="Previous match"
           >
             <MdNavigateBefore size={14} className="text-[var(--text-color)]" />
           </button>
-          <span className="text-[10px] text-[var(--text-color)] min-w-[32px] text-center">
+          <span className="text-[10px] text-[var(--text-secondary-color)] min-w-[32px] text-center font-medium">
             {currentMatchIndex + 1}/{matchCount}
           </span>
           <button
             onClick={() => navigateMatch("next")}
-            className="hover:bg-[var(--text-color)] hover:bg-opacity-20 rounded p-0.5 transition-colors"
+            className="hover:bg-[var(--view-bg-color)] rounded p-0.5 transition-colors"
             title="Next match"
           >
             <MdNavigateNext size={14} className="text-[var(--text-color)]" />

@@ -9,14 +9,12 @@ const FullscreenToggleButton = () => {
   return (
     <button
       onClick={toggleFullScreen}
-      className="cursor-pointer"
-      style={{ color: "var(--navigation-text-color)" }}
-      title={isFullScreen ? "Exit Fullscreen" : "Enter Fullscreen"}
+      className="p-2 rounded-md border border-transparent text-[var(--navigation-text-color)] hover:border-[var(--accent-color)] hover:text-[var(--accent-color)] cursor-pointer transition-all duration-200"
     >
       {isFullScreen ? (
-        <AiOutlineFullscreenExit size={20} />
+        <AiOutlineFullscreenExit size={16} />
       ) : (
-        <BsArrowsFullscreen/>
+        <BsArrowsFullscreen size={14} />
       )}
     </button>
   );
