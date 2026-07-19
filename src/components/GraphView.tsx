@@ -6,6 +6,7 @@ import {
   useContext,
   useRef,
 } from "react";
+import { createPortal } from "react-dom";
 import { AppContext } from "../contexts/AppContext";
 import type { CompiledSchema } from "@hyperjump/json-schema/experimental";
 import "@xyflow/react/dist/style.css";
@@ -474,18 +475,21 @@ const GraphView = ({
         />
       )}
       {/*Error Message */}
-      {errorMessage && showErrorPopup && (
-        <div className="absolute bottom-[50px] left-[100px] flex gap-2 px-2 py-1 bg-red-500 text-white rounded-md shadow-lg">
+      {errorMessage && showErrorPopup && createPortal(
+        <div role="alert" aria-live="assertive" aria-atomic="true" className="fixed top-[120px] sm:top-[100px] left-1/2 -translate-x-1/2 flex gap-2 px-2 py-1 bg-red-500 text-white rounded-md shadow-lg z-[9999]">
           <div className="text-sm font-medium tracking-wide font-roboto">
             {errorMessage}
           </div>
           <button
+            type="button"
+            aria-label="Close error"
             className="cursor-pointer"
             onClick={() => setShowErrorPopup(false)}
           >
             <CgClose size={18} />
           </button>
-        </div>
+        </div>,
+        document.body
       )}
       {matchCount > 1 && (
         <div className="absolute bottom-3 left-1/2 -translate-x-1/2 flex items-center gap-0.5 bg-[var(--node-bg-color)] px-1.5 py-0.5 rounded border border-[var(--popup-border-color)] opacity-80 shadow-sm">
