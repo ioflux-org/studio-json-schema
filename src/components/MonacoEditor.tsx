@@ -10,7 +10,11 @@ import {
 } from "react-resizable-panels";
 // INFO: modifying the following import statement to (import type { SchemaObject } from "@hyperjump/json-schema/draft-2020-12") creates error;
 import { type SchemaObject } from "@hyperjump/json-schema/draft-2020-12";
-import { setMetaSchemaOutputFormat, unregisterSchema } from "@hyperjump/json-schema";
+import {
+  setMetaSchemaOutputFormat,
+  unregisterSchema,
+  InvalidSchemaError,
+} from "@hyperjump/json-schema";
 import {
   getSchema,
   compile,
@@ -379,8 +383,7 @@ const MonacoEditor = () => {
         } catch (compileErr) {
           // If compile fails, it could be InvalidSchemaError
           const isInvalidSchema =
-            compileErr instanceof Error &&
-            compileErr.name === "InvalidSchemaError" &&
+            compileErr instanceof InvalidSchemaError &&
             (compileErr as any).output?.errors;
 
           if (isInvalidSchema) {
