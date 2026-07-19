@@ -63,6 +63,10 @@
   --shadow-lg: 0 8px 30px rgba(15, 23, 42, 0.08);
   --shadow-xl: 0 16px 50px rgba(15, 23, 42, 0.1);
 
+  /* Boolean node */
+  --bool-true-color: #16a34a;
+  --bool-false-color: #dc2626;
+
   /* Border radius */
   --radius-sm: 6px;
   --radius-md: 8px;
@@ -125,6 +129,10 @@
   --shadow-md: 0 4px 16px rgba(0, 0, 0, 0.4);
   --shadow-lg: 0 8px 30px rgba(0, 0, 0, 0.5);
   --shadow-xl: 0 16px 50px rgba(0, 0, 0, 0.6);
+
+  /* Boolean node */
+  --bool-true-color: #4ade80;
+  --bool-false-color: #f87171;
 
   /* Border radius */
   --radius-sm: 6px;
