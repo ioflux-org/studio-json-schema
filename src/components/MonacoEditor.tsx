@@ -111,8 +111,52 @@ const MonacoEditor = () => {
   const editorRef = useRef<editor.IStandaloneCodeEditor | null>(null);
   const editorPanelRef = useRef<ImperativePanelHandle>(null);
 
-  const handleEditorDidMount: OnMount = (editor) => {
+  const handleEditorDidMount: OnMount = (editor, monaco) => {
     editorRef.current = editor;
+
+    monaco.editor.defineTheme("studio-dark", {
+      base: "vs-dark",
+      inherit: true,
+      rules: [],
+      colors: {
+        "editor.background": "#0d0d14",
+        "editor.foreground": "#eeeef2",
+        "editorLineNumber.foreground": "#3a3d4a",
+        "editorLineNumber.activeForeground": "#818cf8",
+        "editor.lineHighlightBackground": "#13131d",
+        "editor.selectionBackground": "#818cf830",
+        "editorCursor.foreground": "#818cf8",
+        "editorWidget.background": "#111119",
+        "editorWidget.border": "#1e1e2e",
+        "input.background": "#0d0d14",
+        "input.border": "#1e1e2e",
+        "scrollbarSlider.background": "#1e1e2e80",
+        "scrollbarSlider.hoverBackground": "#2a2a3a",
+      },
+    });
+
+    monaco.editor.defineTheme("studio-light", {
+      base: "vs",
+      inherit: true,
+      rules: [],
+      colors: {
+        "editor.background": "#ffffff",
+        "editor.foreground": "#0f172a",
+        "editorLineNumber.foreground": "#c4c7d4",
+        "editorLineNumber.activeForeground": "#6366f1",
+        "editor.lineHighlightBackground": "#f0f2f7",
+        "editor.selectionBackground": "#6366f125",
+        "editorCursor.foreground": "#6366f1",
+        "editorWidget.background": "#ffffff",
+        "editorWidget.border": "#e2e5ef",
+        "input.background": "#f5f6fa",
+        "input.border": "#e2e5ef",
+        "scrollbarSlider.background": "#e2e5ef80",
+        "scrollbarSlider.hoverBackground": "#d1d5db",
+      },
+    });
+
+    monaco.editor.setTheme(theme === "dark" ? "studio-dark" : "studio-light");
   };
 
   const [compiledSchema, setCompiledSchema] = useState<CompiledSchema | null>(
@@ -468,7 +512,7 @@ const MonacoEditor = () => {
 
   const editorPanel = (
     <Panel
-      className="flex flex-col h-full w-full relative"
+      className="flex flex-col h-full w-full relative bg-[var(--editor-panel-bg-color)]"
       defaultSize={isMobile ? 40 : DEFAULT_EDITOR_PANEL_WIDTH}
       ref={editorPanelRef}
       collapsible
@@ -535,7 +579,7 @@ const MonacoEditor = () => {
           width="100%"
           language={schemaFormat}
           value={schemaText}
-          theme={theme === "light" ? "vs-light" : "vs-dark"}
+          theme={theme === "light" ? "studio-light" : "studio-dark"}
           options={{
             minimap: { enabled: false },
             occurrencesHighlight: "off",
@@ -564,9 +608,9 @@ const MonacoEditor = () => {
 
   const resizeHandle = (
     <PanelResizeHandle
-      className={`${isMobile ? "h-[1px]" : "w-[1px]"} ${
+      className={`${isMobile ? "h-[2px]" : "w-[3px]"} ${
         isMobile && !editorVisible ? "bg-transparent" : "bg-[var(--toolbar-border-color)]"
-      } relative`}
+      } relative hover:bg-[var(--accent-color)] transition-colors duration-200`}
     >
       {(!isMobile || editorVisible) && (
         <div>

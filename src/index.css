@@ -11,6 +11,7 @@
   /* Backgrounds */
   --bg-color: #f8f9fc;
   --nav-bg-color: rgba(255, 255, 255, 0.92);
+  --editor-panel-bg-color: #ffffff;
   --node-bg-color: #ffffff;
   --node-key-color: #00b7ff;
   --node-value-bg-color: #f5f6fa;
@@ -72,6 +73,7 @@
   /* Backgrounds */
   --bg-color: #09090f;
   --nav-bg-color: rgba(9, 9, 15, 0.92);
+  --editor-panel-bg-color: #0d0d14;
   --node-bg-color: #111119;
   --node-key-color: #00b7ff;
   --node-value-bg-color: #0d0d14;
