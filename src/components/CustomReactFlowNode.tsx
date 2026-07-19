@@ -75,12 +75,12 @@ const CustomNode = ({
       <div
         className={`px-3 py-1.5 font-semibold text-sm tracking-wide ${data.isBooleanNode ? "" : "rounded-t-lg"}`}
         style={{
-          background: theme === "dark" ? `${color}55` : `${color}50`,
+          background: theme === "dark" ? `${color}40` : `${color}50`,
           borderBottom: theme === "dark" ? `1px solid ${color}80` : `1px solid ${color}`,
           color:
             theme === "dark"
-              ? "#fff"
-              : `color-mix(in srgb, ${color} 40%, black)`,
+              ? color
+              : `color-mix(in srgb, ${color} 50%, black)`,
         }}
       >
         {data.nodeLabel}
@@ -107,7 +107,7 @@ const CustomNode = ({
                   : "",
               }}
             >
-              <span className="font-medium mr-2 whitespace-nowrap text-[var(--node-key-color)] text-xs">
+              <span className="font-semibold mr-2 whitespace-nowrap text-[var(--node-key-color)] text-xs">
                 {!data.isBooleanNode && `${key}:`}
               </span>
 

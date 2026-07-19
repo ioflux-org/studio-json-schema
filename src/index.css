@@ -4,3 +4,192 @@
   --font-sans: "Geist", -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
   --font-mono: "JetBrains Mono", ui-monospace, "SF Mono", monospace;
 }
+
+/* ====================== Theme Variables ====================== */
+
+[data-theme="light"] {
+  /* Backgrounds */
+  --bg-color: #f8f9fc;
+  --nav-bg-color: rgba(255, 255, 255, 0.92);
+  --node-bg-color: #ffffff;
+  --node-key-color: #00b7ff;
+  --node-value-bg-color: #f5f6fa;
+  --reactflow-bg-main-pattern-color: #e8eaef;
+  --reactflow-bg-sub-pattern-color: #eef0f5;
+  --visualize-bg-color: #f0f2f7;
+  --visualize-bg-image: rgba(99, 102, 241, 0.07);
+  --visualize-grid-color: rgba(99, 102, 241, 0.04);
+  --bottom-bg-color: #3d85c6;
+  --view-bg-color: #eef0f5;
+  --control-bg-color: #6b7280;
+  --validation-bg-color: #f5f6fa;
+  --pillar-bg-color: #d1d5db;
+  --validation-heading-color: #9ca3af;
+  --toolbar-bg-color: rgba(255, 255, 255, 0.9);
+  --toolbar-border-color: #e2e5ef;
+
+  /* Text color */
+  --text-color: #0f172a;
+  --text-secondary-color: #64748b;
+  --bottom-text-color: #ffffff;
+  --tool-name-color: #0f172a;
+  --tool-content-color: #64748b;
+  --navigation-text-color: #475569;
+  --dropdown-text-color: #334155;
+  --view-text-color: #64748b;
+  --validation-text-color: #334155;
+
+  /* Accent */
+  --accent-color: #6366f1;
+  --accent-hover-color: #4f46e5;
+
+  /* Monaco Editor Highlight */
+  --monaco-highlight-bg: rgba(99, 102, 241, 0.18);
+  --monaco-highlight-border: rgba(99, 102, 241, 0.4);
+
+  /* Popup */
+  --popup-bg-color: #ffffff;
+  --popup-text-color: #0f172a;
+  --popup-border-color: #e2e5ef;
+  --popup-header-bg-color: #f5f6fa;
+  --popup-header-text-color: #334155;
+  --popup-close-btn-hover-color: #6b7280;
+  --popup-backdrop-color: rgba(248, 249, 252, 0.7);
+
+  /* Shadows */
+  --shadow-sm: 0 1px 3px rgba(15, 23, 42, 0.04);
+  --shadow-md: 0 4px 16px rgba(15, 23, 42, 0.06);
+  --shadow-lg: 0 8px 30px rgba(15, 23, 42, 0.08);
+  --shadow-xl: 0 16px 50px rgba(15, 23, 42, 0.1);
+
+  /* Border radius */
+  --radius-sm: 6px;
+  --radius-md: 8px;
+  --radius-lg: 12px;
+}
+
+[data-theme="dark"] {
+  /* Backgrounds */
+  --bg-color: #09090f;
+  --nav-bg-color: rgba(9, 9, 15, 0.92);
+  --node-bg-color: #111119;
+  --node-key-color: #00b7ff;
+  --node-value-bg-color: #0d0d14;
+  --reactflow-bg-main-pattern-color: #1a1a25;
+  --reactflow-bg-sub-pattern-color: #131320;
+  --editor-bg-color: #09090f;
+  --visualize-bg-color: #0b0b12;
+  --visualize-bg-image: rgba(129, 140, 248, 0.06);
+  --visualize-grid-color: rgba(129, 140, 248, 0.04);
+  --bottom-bg-color: #111119;
+  --view-bg-color: #13131d;
+  --control-bg-color: #1a1a25;
+  --validation-bg-color: #0d0d14;
+  --pillar-bg-color: #2a2a3a;
+  --validation-heading-color: #6b7280;
+  --toolbar-bg-color: rgba(13, 13, 20, 0.92);
+  --toolbar-border-color: #1e1e2e;
+
+  /* Text color */
+  --text-color: #eeeef2;
+  --text-secondary-color: #7f849c;
+  --bottom-text-color: #eeeef2;
+  --tool-name-color: #eeeef2;
+  --tool-content-color: #7f849c;
+  --navigation-text-color: #7f849c;
+  --dropdown-text-color: #eeeef2;
+  --view-text-color: #7f849c;
+  --validation-text-color: #eeeef2;
+
+  /* Accent */
+  --accent-color: #818cf8;
+  --accent-hover-color: #a5b4fc;
+
+  /* Monaco Editor Highlight */
+  --monaco-highlight-bg: rgba(129, 140, 248, 0.2);
+  --monaco-highlight-border: rgba(129, 140, 248, 0.5);
+
+  /* Popup */
+  --popup-bg-color: #111119;
+  --popup-text-color: #eeeef2;
+  --popup-border-color: #1e1e2e;
+  --popup-header-bg-color: #0d0d14;
+  --popup-header-text-color: #c4c7d4;
+  --popup-close-btn-hover-color: #9ca3af;
+  --popup-backdrop-color: rgba(0, 0, 0, 0.7);
+
+  /* Shadows */
+  --shadow-sm: 0 1px 3px rgba(0, 0, 0, 0.3);
+  --shadow-md: 0 4px 16px rgba(0, 0, 0, 0.4);
+  --shadow-lg: 0 8px 30px rgba(0, 0, 0, 0.5);
+  --shadow-xl: 0 16px 50px rgba(0, 0, 0, 0.6);
+
+  /* Border radius */
+  --radius-sm: 6px;
+  --radius-md: 8px;
+  --radius-lg: 12px;
+}
+
+/* ====================== Global Styles ====================== */
+
+body {
+  background-color: var(--bg-color);
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+/* ====================== Visualization Canvas ====================== */
+
+.visualize {
+  background-color: var(--visualize-bg-color);
+  background-image:
+    radial-gradient(circle, var(--visualize-bg-image) 1.2px, transparent 1.2px),
+    linear-gradient(var(--visualize-grid-color) 1px, transparent 1px),
+    linear-gradient(90deg, var(--visualize-grid-color) 1px, transparent 1px);
+  background-size:
+    20px 20px,
+    80px 80px,
+    80px 80px;
+}
+
+.react-flow__panel.react-flow__attribution.bottom.right {
+  display: none;
+}
+
+/* ====================== Monaco Editor ====================== */
+
+.monaco-highlight-line {
+  background-color: var(--monaco-highlight-bg);
+  border-left: 3px solid var(--monaco-highlight-border);
+  width: 100% !important;
+}
+
+/* ====================== Panel Transitions ====================== */
+
+.panel-animating [data-panel] {
+  transition: flex-basis 300ms ease, flex-grow 300ms ease;
+}
+
+/* ====================== React Flow ====================== */
+
+.react-flow__pane {
+  cursor: default !important;
+}
+
+.react-flow__controls {
+  border-radius: var(--radius-md) !important;
+  border: 1px solid var(--toolbar-border-color) !important;
+  box-shadow: var(--shadow-md) !important;
+  overflow: hidden !important;
+}
+
+.react-flow__controls-button {
+  background-color: var(--toolbar-bg-color) !important;
+  border-color: var(--toolbar-border-color) !important;
+  color: var(--navigation-text-color) !important;
+  fill: var(--navigation-text-color) !important;
+}
+
+.react-flow__controls-button:hover {
+  background-color: var(--view-bg-color) !important;
+}
