@@ -30,7 +30,6 @@ const EditorToggleButton = ({
       <Tooltip
         id="editor-toggle-tooltip"
         content={editorVisible ? "Hide Editor" : "Show Editor"}
-        style={{ fontSize: "10px" }}
       />
     </div>
   );

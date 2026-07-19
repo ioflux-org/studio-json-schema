@@ -195,3 +195,19 @@ body {
 .react-flow__controls-button:hover {
   background-color: var(--view-bg-color) !important;
 }
+
+/* ====================== Tooltips ====================== */
+
+.react-tooltip {
+  background-color: var(--node-bg-color) !important;
+  color: var(--text-color) !important;
+  border: 1px solid var(--toolbar-border-color) !important;
+  border-radius: 6px !important;
+  padding: 6px 10px !important;
+  font-size: 11px !important;
+  font-weight: 500 !important;
+  box-shadow: var(--shadow-md) !important;
+  opacity: 1 !important;
+  z-index: 9999 !important;
+  transition: opacity 0.15s ease, visibility 0.15s ease !important;
+}

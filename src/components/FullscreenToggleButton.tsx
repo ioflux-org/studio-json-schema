@@ -10,7 +10,6 @@ const FullscreenToggleButton = () => {
     <button
       onClick={toggleFullScreen}
       className="p-2 rounded-md border border-transparent text-[var(--navigation-text-color)] hover:border-[var(--accent-color)] hover:text-[var(--accent-color)] cursor-pointer transition-all duration-200"
-      title={isFullScreen ? "Exit Fullscreen" : "Enter Fullscreen"}
     >
       {isFullScreen ? (
         <AiOutlineFullscreenExit size={16} />

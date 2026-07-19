@@ -157,7 +157,8 @@ const NavigationBar = () => {
             <Tooltip
               id="toggle-theme"
               content="Better visuals in dark mode"
-              style={{ fontSize: "10px" }}
+              delayShow={150}
+              delayHide={0}
             />
           )}
         </li>
@@ -177,7 +178,8 @@ const NavigationBar = () => {
             <Tooltip
               id="github"
               content="Star on Github"
-              style={{ fontSize: "10px" }}
+              delayShow={150}
+              delayHide={0}
             />
           </a>
         </li>
@@ -197,7 +199,8 @@ const NavigationBar = () => {
             <Tooltip
               id="learn-keywords"
               content="Docs"
-              style={{ fontSize: "10px" }}
+              delayShow={150}
+              delayHide={0}
             />
           </a>
         </li>
