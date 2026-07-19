@@ -32,13 +32,13 @@ const SchemaErrorsPopup = ({
       {/* Error card */}
       <div
         className="relative z-50 w-[90%] sm:w-[50%] min-w-[280px] max-h-[80%] p-6 rounded-2xl border border-red-500/20 bg-[var(--popup-bg-color)] overflow-hidden flex flex-col gap-3 ring-1 ring-red-500/10"
-        style={{ boxShadow: "0 25px 60px -12px rgba(0, 0, 0, 0.4), 0 0 40px -8px rgba(239, 68, 68, 0.15)" }}
+        style={{ boxShadow: "0 0 60px rgba(239, 68, 68, 0.35), 0 0 25px rgba(239, 68, 68, 0.25), 0 25px 50px -12px rgba(0, 0, 0, 0.5)" }}
         role="status"
         aria-live="polite"
         aria-label="Schema validation errors"
       >
         <div className="flex justify-between items-end pb-3 border-b border-[var(--popup-border-color)]">
-          <div className="text-red-400 font-semibold text-sm">
+          <div className="text-red-500 font-semibold text-sm">
             {schemaValidation.syntaxError
               ? "Syntax Error"
               : `Schema Errors (${
