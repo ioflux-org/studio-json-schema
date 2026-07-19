@@ -1,5 +1,11 @@
 # json-schema-studio
 
+## 0.9.1
+
+### Patch Changes
+
+- d81c79b: fix: use instanceof for InvalidSchemaError detection in prod builds
+
 ## 0.9.0
 
 ### Minor Changes
