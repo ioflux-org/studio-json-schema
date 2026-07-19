@@ -40,12 +40,12 @@
   --validation-text-color: #334155;
 
   /* Accent */
-  --accent-color: #6366f1;
-  --accent-hover-color: #4f46e5;
+  --accent-color: #00b7ff;
+  --accent-hover-color: #00b7ff;
 
   /* Monaco Editor Highlight */
-  --monaco-highlight-bg: rgba(99, 102, 241, 0.18);
-  --monaco-highlight-border: rgba(99, 102, 241, 0.4);
+  --monaco-highlight-bg: #00b7ff2a;
+  --monaco-highlight-border: #00b7ff8a;
 
   /* Popup */
   --popup-bg-color: #ffffff;
@@ -102,12 +102,12 @@
   --validation-text-color: #eeeef2;
 
   /* Accent */
-  --accent-color: #818cf8;
-  --accent-hover-color: #a5b4fc;
+  --accent-color: #00b7ff;
+  --accent-hover-color: #00b7ff;
 
   /* Monaco Editor Highlight */
-  --monaco-highlight-bg: rgba(129, 140, 248, 0.2);
-  --monaco-highlight-border: rgba(129, 140, 248, 0.5);
+  --monaco-highlight-bg: #00b7ff2a;
+  --monaco-highlight-border: #00b7ff8a;
 
   /* Popup */
   --popup-bg-color: #111119;
