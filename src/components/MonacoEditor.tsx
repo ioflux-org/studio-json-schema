@@ -475,7 +475,7 @@ const MonacoEditor = () => {
       onDragOver={handleDragOver}
       onDrop={handleDrop}
     >
-      <div className="flex items-center gap-2 px-2 py-1 bg-[var(--validation-bg-color)] border-b border-[var(--popup-border-color)]">
+      <div className="flex items-center gap-2 px-3 py-1.5 bg-[var(--toolbar-bg-color)] border-b border-[var(--toolbar-border-color)] backdrop-blur-sm">
           <input
             type="file"
             id="schema-file-input"
@@ -484,23 +484,23 @@ const MonacoEditor = () => {
             accept=".json,.yaml,.yml"
             className="hidden"
           />
-          <div className="ml-auto flex items-center gap-3">
+          <div className="ml-auto flex items-center gap-2">
             <button
               onClick={() => fileInputRef.current?.click()}
-              className="h-[26px] flex items-center gap-1.5 bg-[var(--bg-color)] border border-[var(--popup-border-color)] text-[var(--text-color)] text-sm px-1.5 rounded-sm hover:opacity-75 transition-opacity cursor-pointer"
+              className="h-[28px] flex items-center gap-1.5 bg-[var(--bg-color)] border border-[var(--toolbar-border-color)] text-[var(--text-secondary-color)] text-xs font-medium px-2.5 rounded-md hover:text-[var(--text-color)] hover:border-[var(--accent-color)] transition-all duration-200 cursor-pointer"
               aria-label="Upload JSON/YAML schema file"
               title="Upload JSON/YAML (or drag & drop)"
             >
-              <BsUpload size={12} />
+              <BsUpload size={11} />
               <span>Upload</span>
             </button>
             <button
               onClick={triggerExportGraph}
-              className="h-[26px] flex items-center gap-1.5 bg-[var(--bg-color)] border border-[var(--popup-border-color)] text-[var(--text-color)] text-sm px-1.5 rounded-sm hover:opacity-75 transition-opacity cursor-pointer"
+              className="h-[28px] flex items-center gap-1.5 bg-[var(--bg-color)] border border-[var(--toolbar-border-color)] text-[var(--text-secondary-color)] text-xs font-medium px-2.5 rounded-md hover:text-[var(--text-color)] hover:border-[var(--accent-color)] transition-all duration-200 cursor-pointer"
               aria-label="Export graph as image"
               title="Export graph as image"
             >
-              <BsDownload size={12} />
+              <BsDownload size={11} />
               <span>Export</span>
             </button>
             <label htmlFor="schema-format-select" className="sr-only">
@@ -510,7 +510,7 @@ const MonacoEditor = () => {
               id="schema-format-select"
               value={schemaFormat}
               onChange={(e) => changeSchemaFormat(e.target.value as SchemaFormat)}
-              className="h-[26px] min-w-[60px] px-1 flex-shrink-0 bg-[var(--bg-color)] text-[var(--text-color)] text-sm outline-none cursor-pointer border border-[var(--popup-border-color)] rounded-sm"
+              className="h-[28px] min-w-[60px] px-2 flex-shrink-0 bg-[var(--bg-color)] text-[var(--text-color)] text-xs font-medium outline-none cursor-pointer border border-[var(--toolbar-border-color)] rounded-md hover:border-[var(--accent-color)] transition-colors"
             >
               <option value="json">JSON</option>
               <option value="yaml">YAML</option>
@@ -520,7 +520,7 @@ const MonacoEditor = () => {
             id="validation-status-icon"
             aria-label={schemaValidation.message}
             title={schemaValidation.message}
-            className={`text-base leading-none ${VALIDATION_UI[schemaValidation.status].className.replace("break-words", "")}`}
+            className={`text-sm leading-none ${VALIDATION_UI[schemaValidation.status].className.replace("break-words", "")}`}
             aria-hidden
           >
             {schemaValidation.status === "success" && "✓"}
@@ -565,7 +565,7 @@ const MonacoEditor = () => {
   const resizeHandle = (
     <PanelResizeHandle
       className={`${isMobile ? "h-[1px]" : "w-[1px]"} ${
-        isMobile && !editorVisible ? "bg-transparent" : "bg-gray-400"
+        isMobile && !editorVisible ? "bg-transparent" : "bg-[var(--toolbar-border-color)]"
       } relative`}
     >
       {(!isMobile || editorVisible) && (

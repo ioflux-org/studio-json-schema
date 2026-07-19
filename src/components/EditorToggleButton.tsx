@@ -21,7 +21,7 @@ const EditorToggleButton = ({
     <div className={className}>
       <button
         onClick={toggleEditorVisibility}
-        className="flex items-center justify-center rounded-lg cursor-pointer bg-[var(--view-bg-color)] duration-300 border-2 hover:scale-105 text-[var(--navigation-text-color)] w-8 h-8 py-1"
+        className="flex items-center justify-center rounded-md cursor-pointer bg-[var(--popup-bg-color)] border border-[var(--toolbar-border-color)] hover:border-[var(--accent-color)] text-[var(--text-color)] hover:text-[var(--accent-color)] w-7 h-7 transition-all duration-200 shadow-lg"
         data-tooltip-id="editor-toggle-tooltip"
         aria-label={editorVisible ? "Hide Editor" : "Show Editor"}
       >
@@ -46,24 +46,24 @@ const ButtonIcon = ({
   return isMobile ? (
     editorVisible ? (
       <span className="flex flex-col items-center leading-none">
-        <BsChevronDown size={10} className="-mb-1" />
-        <BsChevronDown size={10} />
+        <BsChevronDown size={9} className="-mb-0.5" />
+        <BsChevronDown size={9} />
       </span>
     ) : (
       <span className="flex flex-col items-center leading-none">
-        <BsChevronUp size={10} className="-mb-1" />
-        <BsChevronUp size={10} />
+        <BsChevronUp size={9} className="-mb-0.5" />
+        <BsChevronUp size={9} />
       </span>
     )
   ) : editorVisible ? (
     <>
-      <BsChevronLeft size={10} />
-      <BsChevronLeft size={10} />
+      <BsChevronLeft size={9} />
+      <BsChevronLeft size={9} />
     </>
   ) : (
     <>
-      <BsChevronRight size={10} />
-      <BsChevronRight size={10} />
+      <BsChevronRight size={9} />
+      <BsChevronRight size={9} />
     </>
   );
 };

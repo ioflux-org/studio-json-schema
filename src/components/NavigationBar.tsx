@@ -59,27 +59,23 @@ const NavigationBar = () => {
   return (
     <nav
       aria-label="Main navigation"
-      className={`flex items-center relative z-10 bg-[var(--bg-color)] ${
+      className={`flex items-center relative z-10 backdrop-blur-md bg-[var(--nav-bg-color)] border-b border-[var(--toolbar-border-color)] ${
         isFullScreen
-          ? `w-full px-2 py-1 justify-end ${
-              theme === "light"
-                ? "shadow-md border-b-[1px] border-gray-200"
-                : ""
-            }`
-          : "h-[8vh] justify-between shadow-lg"
+          ? "w-full px-3 py-1.5 justify-end"
+          : "h-[56px] justify-between px-1"
       }`}
     >
       {!isFullScreen && (
-        <div className="flex items-center text-center select-none">
+        <div className="flex items-center text-center select-none gap-">
           <img
             src={theme === "dark" ? "logo-dark.svg" : "logo-light.svg"}
             alt="Studio JSON Schema"
-            className="w-15 h-15 md:w-15 md:h-15"
+            className="w-15 h-15"
             draggable="false"
           />
 
           <div className="flex font-mono flex-col">
-            <span className="text-2xl font-bold text-[var(--tool-name-color)]">
+            <span className="text-xl font-bold text-[var(--tool-name-color)]">
               Studio
             </span>
             <span className="text-xs opacity-70 text-[var(--tool-name-color)]">
@@ -90,31 +86,27 @@ const NavigationBar = () => {
       )}
 
       <ul
-        className={`flex items-center gap-5 ${isFullScreen ? "mr-0" : "mr-4"}`}
+        className={`flex items-center gap-1 ${isFullScreen ? "mr-0" : "mr-3"}`}
       >
         {/* Desktop Search */}
         <li className="hidden sm:flex">
           <div
-            className={`flex items-center gap-2 px-2 py-1 rounded-md w-[200px]
-              ${
-                theme === "dark"
-                  ? "bg-white/8 border border-[var(--popup-border-color)] focus-within:border-blue-500"
-                  : "bg-[var(--popup-header-bg-color)] border border-gray-300 focus-within:border-blue-500"
-              }`}
+            className="flex items-center gap-2 px-3 py-1.5 rounded-lg w-[210px] bg-[var(--view-bg-color)] border border-[var(--toolbar-border-color)] focus-within:border-[var(--accent-color)] focus-within:ring-1 focus-within:ring-[var(--accent-color)] transition-all duration-200"
           >
+            <RiSearchLine className="text-[var(--text-secondary-color)] text-sm flex-shrink-0" />
             <input
               ref={searchInputRef}
               type="text"
               maxLength={30}
-              placeholder="Search node"
+              placeholder="Search nodes..."
               aria-label="Search nodes"
-              className="outline-none bg-transparent text-[var(--navigation-text-color)] text-sm placeholder:text-[var(--navigation-text-color)]"
+              className="outline-none bg-transparent text-[var(--text-color)] text-sm placeholder:text-[var(--text-secondary-color)] w-full"
               value={searchString}
               onChange={(e) => setSearchString(e.target.value)}
               onKeyDown={handleKeyDown}
             />
 
-            <div className="w-[40px] flex justify-end pr-5">
+            <div className="flex-shrink-0">
               {searchString ? (
                 <button
                   aria-label="Clear search"
@@ -122,13 +114,13 @@ const NavigationBar = () => {
                     setSearchString("");
                     setSelectedNode(null);
                   }}
-                  className="text-[var(--navigation-text-color)] opacity-70 hover:opacity-100 cursor-pointer"
+                  className="text-[var(--text-secondary-color)] hover:text-[var(--text-color)] cursor-pointer transition-colors"
                 >
-                  <RiCloseLine />
+                  <RiCloseLine size={16} />
                 </button>
               ) : (
-                <kbd className="text-[var(--navigation-text-color)] text-xs border border-[var(--navigation-text-color)] rounded opacity-70 p-0.5 font-sans leading-none">
-                  ⌘K
+                <kbd className="text-[var(--text-secondary-color)] text-[10px] border border-[var(--toolbar-border-color)] rounded px-1 py-0.5 font-mono leading-none bg-[var(--bg-color)]">
+                  /
                 </kbd>
               )}
             </div>
@@ -140,9 +132,9 @@ const NavigationBar = () => {
           <button
             aria-label="Toggle search"
             onClick={() => setMobileSearchOpen((prev) => !prev)}
-            className="text-xl cursor-pointer"
+            className="p-2 rounded-lg text-[var(--navigation-text-color)] hover:bg-[var(--view-bg-color)] cursor-pointer transition-colors"
           >
-            <RiSearchLine className="text-[var(--navigation-text-color)]" />
+            <RiSearchLine size={18} />
           </button>
         </li>
 
@@ -150,14 +142,14 @@ const NavigationBar = () => {
         <li className="flex items-center">
           <button
             aria-label="Toggle theme"
-            className="text-xl cursor-pointer"
+            className="p-2 rounded-lg text-[var(--navigation-text-color)] hover:bg-[var(--view-bg-color)] cursor-pointer transition-colors"
             onClick={toggleTheme}
             data-tooltip-id="toggle-theme"
           >
             {theme === "light" ? (
-              <BsSun className="text-[var(--navigation-text-color)]" />
+              <BsSun size={16} />
             ) : (
-              <BsMoonStars className="text-[var(--navigation-text-color)]" />
+              <BsMoonStars size={15} />
             )}
           </button>
 
@@ -177,10 +169,10 @@ const NavigationBar = () => {
             href="https://github.com/ioflux-org/studio-json-schema"
             target="_blank"
             rel="noopener noreferrer"
-            className="text-xl flex items-center"
+            className="p-2 rounded-lg text-[var(--navigation-text-color)] hover:bg-[var(--view-bg-color)] flex items-center transition-colors"
             data-tooltip-id="github"
           >
-            <BsGithub className="text-[var(--navigation-text-color)]" />
+            <BsGithub size={16} />
 
             <Tooltip
               id="github"
@@ -197,10 +189,10 @@ const NavigationBar = () => {
             href="https://github.com/ioflux-org/studio-json-schema?tab=readme-ov-file#json-schema-visualizer"
             target="_blank"
             rel="noopener noreferrer"
-            className="text-xl flex items-center"
+            className="p-2 rounded-lg text-[var(--navigation-text-color)] hover:bg-[var(--view-bg-color)] flex items-center transition-colors"
             data-tooltip-id="learn-keywords"
           >
-            <BsBook className="text-[var(--navigation-text-color)]" />
+            <BsBook size={16} />
 
             <Tooltip
               id="learn-keywords"
@@ -219,22 +211,17 @@ const NavigationBar = () => {
       {/* Mobile Search */}
       {mobileSearchOpen && (
         <div
-          className={`absolute top-full left-0 w-full sm:hidden flex items-center gap-2 px-3 py-2 border-t shadow-md z-500
-            ${
-              theme === "dark"
-                ? "bg-[var(--bg-color)] border-[var(--popup-border-color)]"
-                : "bg-white border-gray-200"
-            }`}
+          className="absolute top-full left-0 w-full sm:hidden flex items-center gap-2 px-4 py-2.5 border-b border-[var(--toolbar-border-color)] backdrop-blur-md bg-[var(--nav-bg-color)] z-500"
         >
-          <RiSearchLine className="text-[var(--navigation-text-color)] opacity-70" />
+          <RiSearchLine className="text-[var(--text-secondary-color)] flex-shrink-0" size={16} />
 
           <input
             ref={mobileSearchInputRef}
             type="text"
             maxLength={30}
-            placeholder="Search node"
+            placeholder="Search nodes..."
             aria-label="Search nodes"
-            className="outline-none bg-transparent text-[var(--navigation-text-color)] text-sm flex-1"
+            className="outline-none bg-transparent text-[var(--text-color)] text-sm flex-1"
             value={searchString}
             onChange={(e) => setSearchString(e.target.value)}
             onKeyDown={handleKeyDown}
@@ -247,9 +234,9 @@ const NavigationBar = () => {
               setSelectedNode(null);
               setMobileSearchOpen(false);
             }}
-            className="text-[var(--navigation-text-color)] opacity-70 hover:opacity-100 cursor-pointer"
+            className="text-[var(--text-secondary-color)] hover:text-[var(--text-color)] cursor-pointer transition-colors"
           >
-            <RiCloseLine />
+            <RiCloseLine size={18} />
           </button>
         </div>
       )}

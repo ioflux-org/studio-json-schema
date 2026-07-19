@@ -45,22 +45,21 @@ const CustomNode = ({
         ${
           data.isBooleanNode
             ? "rounded-2xl text-center overflow-hidden"
-            : "rounded"
+            : "rounded-lg"
         }
-        relative transition-shadow duration-300 text-sm bg-[var(--node-bg-color)] text-[var(--text-color)]
-        min-w-[100px] max-w-[400px] hover:shadow-[0_0_10px_var(--color)]
+        relative transition-all duration-300 text-sm bg-[var(--node-bg-color)] text-[var(--text-color)]
+        min-w-[100px] max-w-[400px]
         ${
           selected
-            ? "shadow-[0_0_15px_var(--color)] ring-2 ring-[var(--color)]"
-            : ""
+            ? "shadow-[0_0_20px_var(--color)] ring-1 ring-[var(--color)]"
+            : "hover:shadow-[0_0_14px_var(--color)]"
         }
       `}
       style={{
         ["--color" as string]: color,
-        border:
-          theme === "dark"
-            ? `1px solid ${color}`
-            : `1px solid color-mix(in srgb, ${color} 80%, black)`,
+        border: theme === "dark"
+          ? `2px solid ${color}aa`
+          : `2px solid ${color}`,
         wordBreak: "break-word",
       }}
     >
@@ -74,14 +73,14 @@ const CustomNode = ({
       ))}
 
       <div
-        className="px-2 font-semibold"
+        className={`px-3 py-1.5 font-semibold text-sm tracking-wide ${data.isBooleanNode ? "" : "rounded-t-lg"}`}
         style={{
-          background: `${color}50`,
-          borderBottom: `1px solid ${color}`,
+          background: theme === "dark" ? `${color}55` : `${color}50`,
+          borderBottom: theme === "dark" ? `1px solid ${color}80` : `1px solid ${color}`,
           color:
             theme === "dark"
-              ? color
-              : `color-mix(in srgb, ${color} 60%, black)`,
+              ? "#fff"
+              : `color-mix(in srgb, ${color} 40%, black)`,
         }}
       >
         {data.nodeLabel}
@@ -101,19 +100,19 @@ const CustomNode = ({
               key={key}
               className={`${data.isBooleanNode && "text-center"} flex`}
               style={{
-                border: `1px solid ${data.nodeStyle.color}40`,
-                padding: "4px",
+                borderBottom: `1px solid ${data.nodeStyle.color}35`,
+                padding: "5px 8px",
                 background: data.isBooleanNode
-                  ? `${data.nodeStyle.color}50`
+                  ? `${data.nodeStyle.color}38`
                   : "",
               }}
             >
-              <span className="font-semibold mr-2 whitespace-nowrap text-[var(--node-key-color)]">
+              <span className="font-medium mr-2 whitespace-nowrap text-[var(--node-key-color)] text-xs">
                 {!data.isBooleanNode && `${key}:`}
               </span>
 
               {isTypeColorMap ? (
-                <div className="flex-col w-full gap-1 flex py-1">
+                <div className="flex-col w-full gap-1 flex py-0.5">
                   {Object.entries(keyData.value as Record<string, string>).map(
                     ([typeName, itemColor]) => (
                       <div
@@ -121,14 +120,14 @@ const CustomNode = ({
                           rowRefs.current[`${id}-${typeName}`] = el;
                         }}
                         key={typeName}
-                        className="px-2 py-[2px] rounded text-center font-medium shadow-sm"
+                        className="px-2 py-[3px] rounded-md text-center text-xs font-medium"
                         style={{
-                          border: `1px solid ${itemColor}`,
-                          backgroundColor: `${itemColor}33`,
+                          border: `1px solid ${itemColor}99`,
+                          backgroundColor: theme === "dark" ? `${itemColor}30` : `${itemColor}28`,
                           color:
                             theme === "dark"
                               ? itemColor
-                              : `color-mix(in srgb, ${itemColor} 60%, black)`,
+                              : `color-mix(in srgb, ${itemColor} 90%, black)`,
                         }}
                       >
                         {typeName}
@@ -137,15 +136,15 @@ const CustomNode = ({
                   )}
                 </div>
               ) : isArray ? (
-                <div className="flex-col w-full gap-1 flex py-1">
+                <div className="flex-col w-full gap-1 flex py-0.5">
                   {(keyData.value as string[]).map((item, index) => (
                     <div
                       ref={(el) => {
                         rowRefs.current[`${id}-${item}`] = el;
                       }}
                       key={index}
-                      className="px-2 py-[2px] bg-[var(--node-value-bg-color)]"
-                      style={{ border: `1px solid ${color}30` }}
+                      className="px-2 py-[3px] bg-[var(--node-value-bg-color)] rounded text-xs"
+                      style={{ border: `1px solid ${color}50` }}
                     >
                       {item}
                     </div>
@@ -156,6 +155,7 @@ const CustomNode = ({
                   ref={(el) => {
                     rowRefs.current[`${id}-${key}`] = el;
                   }}
+                  className="text-xs"
                 >
                   {keyData.ellipsis ?? String(keyData.value)}
                 </span>
