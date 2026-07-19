@@ -177,6 +177,7 @@ const MonacoEditor = () => {
   });
 
   const [activeErrorIndex, setActiveErrorIndex] = useState<number | null>(null);
+  const [warningPopupOpen, setWarningPopupOpen] = useState(false);
   const [editorVisible, setEditorVisible] = useState(true);
   const [isAnimating, setIsAnimating] = useState(false);
 
@@ -191,6 +192,21 @@ const MonacoEditor = () => {
     window.addEventListener("resize", handleResize);
     return () => window.removeEventListener("resize", handleResize);
   }, []);
+
+  useEffect(() => {
+    if (schemaValidation.status !== "warning") {
+      setWarningPopupOpen(false);
+    }
+  }, [schemaValidation.status]);
+
+  useEffect(() => {
+    if (!warningPopupOpen) return;
+    const handleEscape = (e: KeyboardEvent) => {
+      if (e.key === "Escape") setWarningPopupOpen(false);
+    };
+    window.addEventListener("keydown", handleEscape);
+    return () => window.removeEventListener("keydown", handleEscape);
+  }, [warningPopupOpen]);
 
   useEffect(() => {
     editorPanelRef.current?.resize(isMobile ? 40 : DEFAULT_EDITOR_PANEL_WIDTH);
@@ -516,17 +532,29 @@ const MonacoEditor = () => {
               <option value="yaml">YAML</option>
             </select>
           {/* Inline validation status indicator */}
-          <span
-            id="validation-status-icon"
-            aria-label={schemaValidation.message}
-            title={schemaValidation.message}
-            className={`text-base leading-none ${VALIDATION_UI[schemaValidation.status].className.replace("break-words", "")}`}
-            aria-hidden
-          >
-            {schemaValidation.status === "success" && "✓"}
-            {schemaValidation.status === "warning" && "⚠"}
-            {schemaValidation.status === "error" && "✗"}
-          </span>
+          {schemaValidation.status === "warning" ? (
+            <button
+              id="validation-status-icon"
+              type="button"
+              aria-label={`${schemaValidation.message} (click for details)`}
+              title={schemaValidation.message}
+              onClick={() => setWarningPopupOpen(true)}
+              className={`text-base leading-none cursor-pointer hover:opacity-75 transition-opacity ${VALIDATION_UI[schemaValidation.status].className.replace("break-words", "")}`}
+            >
+              ⚠
+            </button>
+          ) : (
+            <span
+              id="validation-status-icon"
+              aria-label={schemaValidation.message}
+              title={schemaValidation.message}
+              className={`text-base leading-none ${VALIDATION_UI[schemaValidation.status].className.replace("break-words", "")}`}
+              aria-hidden
+            >
+              {schemaValidation.status === "success" && "✓"}
+              {schemaValidation.status === "error" && "✗"}
+            </span>
+          )}
         </div>
       </div>
       <div className="flex-1 min-h-0">
@@ -558,6 +586,8 @@ const MonacoEditor = () => {
         activeErrorIndex={activeErrorIndex}
         setActiveErrorIndex={setActiveErrorIndex}
         highlightPathInEditor={highlightPathInEditor}
+        warningPopupOpen={warningPopupOpen}
+        onCloseWarningPopup={() => setWarningPopupOpen(false)}
       />
     </Panel>
   );
