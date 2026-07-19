@@ -531,7 +531,7 @@ const MonacoEditor = () => {
           <div className="ml-auto flex items-center gap-2">
             <button
               onClick={() => fileInputRef.current?.click()}
-              className="h-[28px] flex items-center gap-1.5 bg-[var(--bg-color)] border border-[var(--toolbar-border-color)] text-[var(--text-secondary-color)] text-xs font-medium px-2.5 rounded-md hover:text-[var(--text-color)] hover:border-[var(--accent-color)] transition-all duration-200 cursor-pointer"
+              className="h-[28px] flex items-center gap-1.5 bg-[var(--bg-color)] border border-[var(--toolbar-border-color)] text-[var(--text-secondary-color)] text-xs font-medium px-2.5 rounded-md hover:text-[var(--accent-color)] hover:border-[var(--accent-color)] transition-all duration-200 cursor-pointer"
               aria-label="Upload JSON/YAML schema file"
               title="Upload JSON/YAML (or drag & drop)"
             >
@@ -540,7 +540,7 @@ const MonacoEditor = () => {
             </button>
             <button
               onClick={triggerExportGraph}
-              className="h-[28px] flex items-center gap-1.5 bg-[var(--bg-color)] border border-[var(--toolbar-border-color)] text-[var(--text-secondary-color)] text-xs font-medium px-2.5 rounded-md hover:border-[var(--accent-color)] transition-all duration-200 cursor-pointer"
+              className="h-[28px] flex items-center gap-1.5 bg-[var(--bg-color)] border border-[var(--toolbar-border-color)] text-[var(--text-secondary-color)] text-xs font-medium px-2.5 rounded-md hover:text-[var(--accent-color)] hover:border-[var(--accent-color)] transition-all duration-200 cursor-pointer"
               aria-label="Export graph as image"
               title="Export graph as image"
             >
@@ -554,7 +554,7 @@ const MonacoEditor = () => {
               id="schema-format-select"
               value={schemaFormat}
               onChange={(e) => changeSchemaFormat(e.target.value as SchemaFormat)}
-              className="h-[28px] min-w-[60px] px-2 flex-shrink-0 bg-[var(--bg-color)] text-[var(--text-secondary-color)] text-xs font-medium outline-none cursor-pointer border border-[var(--toolbar-border-color)] rounded-md hover:border-[var(--accent-color)] transition-colors"
+              className="h-[28px] min-w-[60px] px-2 flex-shrink-0 bg-[var(--bg-color)] text-[var(--text-secondary-color)] text-xs font-medium outline-none cursor-pointer border border-[var(--toolbar-border-color)] rounded-md hover:text-[var(--accent-color)] hover:border-[var(--accent-color)] transition-colors"
             >
               <option value="json">JSON</option>
               <option value="yaml">YAML</option>

@@ -15,8 +15,8 @@
   --node-bg-color: #ffffff;
   --node-key-color: #00b7ff;
   --node-value-bg-color: #f5f6fa;
-  --reactflow-bg-main-pattern-color: #e8eaef;
-  --reactflow-bg-sub-pattern-color: #eef0f5;
+  --reactflow-bg-main-pattern-color: #222222;
+  --reactflow-bg-sub-pattern-color: #36373a;
   --visualize-bg-color: #f0f2f7;
   --visualize-bg-image: rgba(99, 102, 241, 0.07);
   --visualize-grid-color: rgba(99, 102, 241, 0.04);
@@ -77,12 +77,12 @@
   --node-bg-color: #111119;
   --node-key-color: #00b7ff;
   --node-value-bg-color: #0d0d14;
-  --reactflow-bg-main-pattern-color: #1a1a25;
-  --reactflow-bg-sub-pattern-color: #131320;
+  --reactflow-bg-main-pattern-color: #d2d2d2;
+  --reactflow-bg-sub-pattern-color: #c7c7c7;
   --editor-bg-color: #09090f;
-  --visualize-bg-color: #0b0b12;
-  --visualize-bg-image: rgba(129, 140, 248, 0.06);
-  --visualize-grid-color: rgba(129, 140, 248, 0.04);
+  --visualize-bg-color: #10101a;
+  --visualize-bg-image: rgba(129, 140, 248, 0.08);
+  --visualize-grid-color: rgba(129, 140, 248, 0.05);
   --bottom-bg-color: #111119;
   --view-bg-color: #13131d;
   --control-bg-color: #1a1a25;
@@ -138,20 +138,6 @@ body {
   background-color: var(--bg-color);
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
-}
-
-/* ====================== Visualization Canvas ====================== */
-
-.visualize {
-  background-color: var(--visualize-bg-color);
-  background-image:
-    radial-gradient(circle, var(--visualize-bg-image) 1.2px, transparent 1.2px),
-    linear-gradient(var(--visualize-grid-color) 1px, transparent 1px),
-    linear-gradient(90deg, var(--visualize-grid-color) 1px, transparent 1px);
-  background-size:
-    20px 20px,
-    80px 80px,
-    80px 80px;
 }
 
 .react-flow__panel.react-flow__attribution.bottom.right {
