@@ -65,7 +65,7 @@ const GraphView = ({
   const [currentMatchIndex, setCurrentMatchIndex] = useState(0);
   const [errorMessage, setErrorMessage] = useState("");
   const [showErrorPopup, setShowErrorPopup] = useState(true);
-  const [isDetailsOpen, setIsDetailsOpen] = useState(false);
+  const [openNodeDetailsPopup, setOpenNodeDetailsPopup] = useState(false);
   const matchCount = matchedNodes.length;
 
   const navigateMatch = useCallback(
@@ -107,13 +107,13 @@ const GraphView = ({
 
   const onNodeClick: NodeMouseHandler = useCallback((_event, node) => {
     if (selectedNode?.id === node.id) {
-      setIsDetailsOpen(true);
+      setOpenNodeDetailsPopup(true);
     } else {
       setSelectedNode({
         id: node.id,
         data: node.data,
       });
-      setIsDetailsOpen(false);
+      setOpenNodeDetailsPopup(false);
     }
     // Select connected edges programmatically to allow native selection handling
     setEdges((eds) =>
@@ -444,7 +444,7 @@ const GraphView = ({
         onEdgeMouseLeave={() => setHoveredEdgeId(null)}
         onPaneClick={() => {
           setSelectedNode(null);
-          setIsDetailsOpen(false);
+          setOpenNodeDetailsPopup(false);
         }}
       >
         <Background
@@ -464,12 +464,12 @@ const GraphView = ({
         <Controls />
       </ReactFlow>
 
-      {isDetailsOpen && selectedNode && (
+      {openNodeDetailsPopup && selectedNode && (
         <NodeDetailsPopup
           nodeId={selectedNode.id}
           data={selectedNode.data as { nodeData?: NodeData }}
           onClose={() => {
-            setIsDetailsOpen(false);
+            setOpenNodeDetailsPopup(false);
           }}
         />
       )}
