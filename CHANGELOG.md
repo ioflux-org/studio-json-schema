@@ -1,5 +1,31 @@
 # json-schema-studio
 
+## 0.9.0
+
+### Minor Changes
+
+- 0e25aed: Implement `dependentSchemas` keyword handler in graph visualization
+
+  Properties with `dependentSchemas` now render as connected child nodes in the graph, making schema dependencies visually explorable.
+
+- 8842bfa: feat: add ability to export schema visualization graph as an image
+- 7a12315: Add F key shortcut to toggle fullscreen mode
+- 2e55c33: feat: enhance interactive JSON schema validation errors with click-to-locate functionality and documentation links
+- 107f64d: feat: add file upload and global drag-and-drop support for JSON/YAML schemas
+- d185af2: Fix : Handle Node edge misallignment during Live edits
+- 3171fc3: Adding e2e test cases
+
+### Patch Changes
+
+- fb46700: open node details popup on double click
+- c50dde7: Fix graph node alignment issue when modifying schema in real time
+- f2b5d97: Fix: Handle multi-type schemas in node type inference
+
+  Multi-type schemas (like `["string", "null"]`) were previously failing type inference and falling back to a default "others" node style. The type inference logic has been updated to pick the first non-null type from the array to determine the node's visual style.
+
+- 37d06bb: Fix the yaml selected node higlighter in the monaco editor
+- be0036d: Prevent mutation of original parsedSchema by passing a clone to buildSchemaDocument
+
 ## 0.8.0
 
 ### Minor Changes

@@ -32,6 +32,7 @@ import {
   processAST,
   type GraphEdge,
   type GraphNode,
+  type NodeData,
 } from "../utils/processAST";
 import { sortAST } from "../utils/sortAST";
 import { resolveCollisions } from "../utils/resolveCollisions";
@@ -64,6 +65,7 @@ const GraphView = ({
   const [currentMatchIndex, setCurrentMatchIndex] = useState(0);
   const [errorMessage, setErrorMessage] = useState("");
   const [showErrorPopup, setShowErrorPopup] = useState(true);
+  const [openNodeDetailsPopup, setOpenNodeDetailsPopup] = useState(false);
   const matchCount = matchedNodes.length;
 
   const navigateMatch = useCallback(
@@ -104,10 +106,15 @@ const GraphView = ({
   }, [navigateMatch, registerNavigateMatch]);
 
   const onNodeClick: NodeMouseHandler = useCallback((_event, node) => {
-    setSelectedNode({
-      id: node.id,
-      data: node.data,
-    });
+    if (selectedNode?.id === node.id) {
+      setOpenNodeDetailsPopup(true);
+    } else {
+      setSelectedNode({
+        id: node.id,
+        data: node.data,
+      });
+      setOpenNodeDetailsPopup(false);
+    }
     // Select connected edges programmatically to allow native selection handling
     setEdges((eds) =>
       eds.map((edge) => {
@@ -118,7 +125,7 @@ const GraphView = ({
         };
       })
     );
-  }, []);
+  }, [selectedNode, setSelectedNode, setEdges]);
 
   const generateNodesAndEdges = useCallback(
     (
@@ -437,6 +444,7 @@ const GraphView = ({
         onEdgeMouseLeave={() => setHoveredEdgeId(null)}
         onPaneClick={() => {
           setSelectedNode(null);
+          setOpenNodeDetailsPopup(false);
         }}
       >
         <Background
@@ -456,12 +464,12 @@ const GraphView = ({
         <Controls />
       </ReactFlow>
 
-      {selectedNode?.data && (
+      {openNodeDetailsPopup && selectedNode && (
         <NodeDetailsPopup
           nodeId={selectedNode.id}
-          data={selectedNode.data}
+          data={selectedNode.data as { nodeData?: NodeData }}
           onClose={() => {
-            setSelectedNode(null);
+            setOpenNodeDetailsPopup(false);
           }}
         />
       )}
