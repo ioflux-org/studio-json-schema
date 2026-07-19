@@ -91,16 +91,16 @@ const NavigationBar = () => {
         {/* Desktop Search */}
         <li className="hidden sm:flex">
           <div
-            className="flex items-center gap-2 px-3 py-1.5 rounded-lg w-[210px] bg-[var(--view-bg-color)] border border-[var(--toolbar-border-color)] focus-within:border-[var(--accent-color)] focus-within:ring-1 focus-within:ring-[var(--accent-color)] transition-all duration-200"
+            className="flex items-center gap-1.5 px-2 h-[28px] rounded-md w-[180px] max-w-[40vw] bg-[var(--bg-color)] border border-[var(--toolbar-border-color)] hover:border-[var(--accent-color)] focus-within:border-[var(--accent-color)] transition-all duration-200 overflow-hidden"
           >
-            <RiSearchLine className="text-[var(--text-secondary-color)] text-sm flex-shrink-0" />
+            <RiSearchLine className="text-[var(--text-secondary-color)] flex-shrink-0" size={13} />
             <input
               ref={searchInputRef}
               type="text"
               maxLength={30}
               placeholder="Search nodes..."
               aria-label="Search nodes"
-              className="outline-none bg-transparent text-[var(--text-color)] text-sm placeholder:text-[var(--text-secondary-color)] w-full"
+              className="outline-none bg-transparent text-[var(--text-color)] text-xs placeholder:text-[var(--text-secondary-color)] w-full"
               value={searchString}
               onChange={(e) => setSearchString(e.target.value)}
               onKeyDown={handleKeyDown}
@@ -116,10 +116,10 @@ const NavigationBar = () => {
                   }}
                   className="text-[var(--text-secondary-color)] hover:text-[var(--text-color)] cursor-pointer transition-colors"
                 >
-                  <RiCloseLine size={16} />
+                  <RiCloseLine size={14} />
                 </button>
               ) : (
-                <kbd className="text-[var(--text-secondary-color)] text-[10px] border border-[var(--toolbar-border-color)] rounded px-1 py-0.5 font-mono leading-none bg-[var(--bg-color)]">
+                <kbd className="text-[var(--text-secondary-color)] text-[10px] border border-[var(--toolbar-border-color)] rounded w-4 h-4 flex items-center justify-center font-mono flex-shrink-0">
                   /
                 </kbd>
               )}
@@ -132,7 +132,7 @@ const NavigationBar = () => {
           <button
             aria-label="Toggle search"
             onClick={() => setMobileSearchOpen((prev) => !prev)}
-            className="p-2 rounded-lg text-[var(--navigation-text-color)] hover:bg-[var(--view-bg-color)] cursor-pointer transition-colors"
+            className="p-2 rounded-md border border-transparent text-[var(--navigation-text-color)] hover:border-[var(--accent-color)] hover:text-[var(--accent-color)] cursor-pointer transition-all duration-200"
           >
             <RiSearchLine size={18} />
           </button>
@@ -142,7 +142,7 @@ const NavigationBar = () => {
         <li className="flex items-center">
           <button
             aria-label="Toggle theme"
-            className="p-2 rounded-lg text-[var(--navigation-text-color)] hover:bg-[var(--view-bg-color)] cursor-pointer transition-colors"
+            className="p-2 rounded-md border border-transparent text-[var(--navigation-text-color)] hover:border-[var(--accent-color)] hover:text-[var(--accent-color)] cursor-pointer transition-all duration-200"
             onClick={toggleTheme}
             data-tooltip-id="toggle-theme"
           >
@@ -169,7 +169,7 @@ const NavigationBar = () => {
             href="https://github.com/ioflux-org/studio-json-schema"
             target="_blank"
             rel="noopener noreferrer"
-            className="p-2 rounded-lg text-[var(--navigation-text-color)] hover:bg-[var(--view-bg-color)] flex items-center transition-colors"
+            className="p-2 rounded-md border border-transparent text-[var(--navigation-text-color)] hover:border-[var(--accent-color)] hover:text-[var(--accent-color)] flex items-center transition-all duration-200"
             data-tooltip-id="github"
           >
             <BsGithub size={16} />
@@ -189,7 +189,7 @@ const NavigationBar = () => {
             href="https://github.com/ioflux-org/studio-json-schema?tab=readme-ov-file#json-schema-visualizer"
             target="_blank"
             rel="noopener noreferrer"
-            className="p-2 rounded-lg text-[var(--navigation-text-color)] hover:bg-[var(--view-bg-color)] flex items-center transition-colors"
+            className="p-2 rounded-md border border-transparent text-[var(--navigation-text-color)] hover:border-[var(--accent-color)] hover:text-[var(--accent-color)] flex items-center transition-all duration-200"
             data-tooltip-id="learn-keywords"
           >
             <BsBook size={16} />

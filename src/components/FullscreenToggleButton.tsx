@@ -9,7 +9,7 @@ const FullscreenToggleButton = () => {
   return (
     <button
       onClick={toggleFullScreen}
-      className="p-2 rounded-lg text-[var(--navigation-text-color)] hover:bg-[var(--view-bg-color)] cursor-pointer transition-colors"
+      className="p-2 rounded-md border border-transparent text-[var(--navigation-text-color)] hover:border-[var(--accent-color)] hover:text-[var(--accent-color)] cursor-pointer transition-all duration-200"
       title={isFullScreen ? "Exit Fullscreen" : "Enter Fullscreen"}
     >
       {isFullScreen ? (
