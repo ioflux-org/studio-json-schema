@@ -1,0 +1,111 @@
+<svg
+  width="256"
+  height="256"
+  viewBox="0 0 256 256"
+  fill="none"
+  xmlns="http://www.w3.org/2000/svg"
+>
+
+    <style>
+    .node {
+      transform-origin: center;
+      animation: pulse 2.8s ease-in-out infinite;
+    }
+
+    .node.delay-1 { animation-delay: 0.2s; }
+    .node.delay-2 { animation-delay: 0.4s; }
+
+    @keyframes pulse {
+      0% {
+        transform: scale(1);
+        filter: drop-shadow(0 0 0 rgba(255,255,255,0));
+      }
+      50% {
+        transform: scale(1.12);
+        filter: drop-shadow(0 0 6px currentColor);
+      }
+      100% {
+        transform: scale(1);
+        filter: drop-shadow(0 0 0 rgba(255,255,255,0));
+      }
+    }
+
+    svg:hover .node {
+      animation-duration: 1.6s;
+    }
+  </style>
+  <!-- Left Curly Bracket -->
+  <path
+    d="M88 48
+       C72 48, 72 64, 72 80
+       V96
+       C72 112, 56 112, 56 128
+       C56 144, 72 144, 72 160
+       V176
+       C72 192, 72 208, 88 208"
+    stroke="#334155"
+    stroke-width="15"
+    stroke-linecap="square"
+  />
+
+  <!-- Right Curly Bracket -->
+  <path
+    d="M168 48
+       C184 48, 184 64, 184 80
+       V96
+       C184 112, 200 112, 200 128
+       C200 144, 184 144, 184 160
+       V176
+       C184 192, 184 208, 168 208"
+    stroke="#334155"
+    stroke-width="15"
+    stroke-linecap="square"
+    stroke-linejoin="round"
+  />
+
+  <!-- Graph Edges -->
+  <line x1="104" y1="96" x2="128" y2="128" stroke="#64748B" stroke-width="4"/>
+  <line x1="152" y1="96" x2="128" y2="128" stroke="#64748B" stroke-width="4"/>
+  <line x1="128" y1="168" x2="128" y2="128" stroke="#64748B" stroke-width="4"/>
+
+  <!-- Graph Nodes -->
+  <!-- Neon Green -->
+  <circle
+    class="node"
+    cx="104"
+    cy="96"
+    r="8"
+    fill="#12FF4B"
+    style="color:#12FF4B"
+  />
+
+  <!-- Neon Red -->
+  <circle
+    class="node delay-1"
+    cx="152"
+    cy="96"
+    r="8"
+    fill="#FF3B3B"
+    style="color:#FF3B3B"
+  />
+
+  <!-- Neon Blue (Center) -->
+  <circle
+    class="node delay-2"
+    cx="128"
+    cy="128"
+    r="10"
+    fill="#00E5FF"
+    style="color:#00E5FF"
+  />
+
+  <!-- Neon Purple (Bottom) -->
+  <circle
+    class="node delay-1"
+    cx="128"
+    cy="168"
+    r="8"
+    fill="#A259FF"
+    style="color:#A259FF"
+  />
+</svg>
