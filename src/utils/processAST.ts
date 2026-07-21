@@ -27,6 +27,7 @@ export type RFNodeData = {
     isBooleanNode: boolean,
     nodeData: NodeData,
     nodeStyle: Partial<NodeStyle>,
+    isHoveredFromEdge?: boolean,
     sourceHandles: HandleConfig[],
     targetHandles: HandleConfig[]
 }
