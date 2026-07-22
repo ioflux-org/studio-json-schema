@@ -108,7 +108,7 @@ const NavigationBar = () => {
               maxLength={30}
               placeholder="Search node"
               aria-label="Search nodes"
-              className="outline-none bg-transparent text-[var(--navigation-text-color)] text-sm placeholder:text-[var(--navigation-text-color)]"
+              className="outline-none bg-transparent text-[var(--navigation-text-color)] text-sm placeholder:text-[var(--navigation-text-color)] flex-1 min-w-0"
               value={searchString}
               onChange={(e) => setSearchString(e.target.value)}
               onKeyDown={handleKeyDown}
