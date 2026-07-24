@@ -1,16 +1,38 @@
-import { BsX, BsCopy, BsCheck } from "react-icons/bs";
 import { useState } from "react";
+import { BsCheck, BsCopy, BsX } from "react-icons/bs";
+import { MdNavigateBefore, MdNavigateNext } from "react-icons/md";
 import { type NodeData } from "../utils/processAST";
+
+// keywords whose value array items each map to a child node,
+// with source handles of the form `${nodeId}-${item}`
+const CHILD_ARRAY_KEYWORDS = new Set([
+  "properties",
+  "allOf",
+  "anyOf",
+  "oneOf",
+  "prefixItems",
+  "$defs",
+  "patternProperties",
+  "dependentSchemas",
+]);
 
 const NodeDetailsPopup = ({
   nodeId,
   data,
+  hasParent = false,
+  childEdges = [],
+  onSelectParent,
+  onSelectChild,
   onClose,
 }: {
   nodeId: string;
   data: {
     nodeData?: NodeData;
   };
+  hasParent?: boolean;
+  childEdges?: { sourceHandle?: string | null; target: string }[];
+  onSelectParent?: () => void;
+  onSelectChild?: (childEdgeIndex: number) => void;
   onClose: () => void;
 }) => {
   const [copied, setCopied] = useState(false);
@@ -29,14 +51,51 @@ const NodeDetailsPopup = ({
     }
   };
 
-  const formatValue = (value: string | string[]) => {
+  const findChildEdgeIndex = (sourceHandle: string) =>
+    childEdges.findIndex((e) => e.sourceHandle === sourceHandle);
+
+  const childButton = (childEdgeIndex: number) => (
+    <button
+      onClick={() => onSelectChild?.(childEdgeIndex)}
+      className="ml-2 p-0.5 rounded bg-red-600 hover:bg-red-700 text-white transition-colors flex-shrink-0"
+      title="Go to child node"
+      aria-label="Go to child node"
+    >
+      <MdNavigateNext size={14} />
+    </button>
+  );
+
+  const formatValue = (key: string, keyData: NodeData[string]) => {
+    const value = keyData.value;
+
+    if (Array.isArray(value)) {
+      return (
+        <div className="flex flex-col gap-0.5">
+          {value.map((item, index) => {
+            const childEdgeIndex = CHILD_ARRAY_KEYWORDS.has(key)
+              ? findChildEdgeIndex(`${nodeId}-${item}`)
+              : -1;
+            return (
+              <div key={index} className="flex items-center justify-between w-full">
+                <span>{String(item)}</span>
+                {childEdgeIndex !== -1 && childButton(childEdgeIndex)}
+              </div>
+            );
+          })}
+        </div>
+      );
+    }
+
+    // keywords holding a single sub-schema ($ref, items, if, then, ...) are
+    // flagged with an ellipsis and use the keyword itself as the handle key
+    const childEdgeIndex = keyData.ellipsis
+      ? findChildEdgeIndex(`${nodeId}-${key}`)
+      : -1;
+
     return (
-      <div className="flex flex-col">
-        {Array.isArray(value) ? (
-          value.map((item, index) => <div key={index}>{String(item)}</div>)
-        ) : (
-          <div>{String(value)}</div>
-        )}
+      <div className="flex items-center w-full justify-between">
+        <span>{String(value)}</span>
+        {childEdgeIndex !== -1 && childButton(childEdgeIndex)}
       </div>
     );
   };
@@ -55,9 +114,21 @@ const NodeDetailsPopup = ({
         className="relative z-50 w-[90%] sm:w-[60%] min-w-[320px] max-h-[80%] p-4 rounded-lg shadow-xl bg-[var(--popup-bg-color)] overflow-x-hidden overflow-auto"
         onClick={(e) => e.stopPropagation()}
       >
-        <h2 id="node-details-title" className="sr-only">
-          Node Details
-        </h2>
+        <div className="absolute z-50 top-2 left-3 flex items-center gap-2">
+          <h2 id="node-details-title" className="sr-only">
+            Node Details
+          </h2>
+          {hasParent && (
+            <button
+              onClick={onSelectParent}
+              className="p-0.5 rounded bg-green-600 hover:bg-green-700 text-white transition-colors"
+              title="Go to parent node"
+              aria-label="Go to parent node"
+            >
+              <MdNavigateBefore size={16} />
+            </button>
+          )}
+        </div>
 
         <button
           aria-label="Close node details"
@@ -117,7 +188,7 @@ const NodeDetailsPopup = ({
 
                       <td className="p-2 text-[var(--popup-text-color)] max-w-0">
                         <div className="max-h-[150px] overflow-auto pr-1 break-words">
-                          {formatValue(keyData.value as string)}
+                          {formatValue(key, keyData)}
                         </div>
                       </td>
                     </tr>
