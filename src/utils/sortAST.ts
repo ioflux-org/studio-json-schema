@@ -19,10 +19,11 @@ const findDependencies = (
             Object.values(obj).forEach(traverse);
         }
     };
-
-    node.forEach(([, , compiledKeywordValue]) => {
-        traverse(compiledKeywordValue);
-    });
+    if (Array.isArray(node)) {
+        node.forEach(([, , compiledKeywordValue]) => {
+            traverse(compiledKeywordValue);
+        });
+    }
 
     return deps;
 };
