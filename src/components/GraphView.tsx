@@ -101,6 +101,9 @@ const GraphView = ({
     [matchedNodes, matchCount, setCenter, getZoom, setNodes]
   );
 
+  console.log("Nodes",nodes)
+  console.log("Edges",edges)
+
   useEffect(() => {
     registerNavigateMatch(navigateMatch);
   }, [navigateMatch, registerNavigateMatch]);
@@ -126,6 +129,70 @@ const GraphView = ({
       })
     );
   }, [selectedNode, setSelectedNode, setEdges]);
+
+  const selectNodeById = useCallback(
+    (nodeId: string) => {
+      const targetNode = nodes.find((n) => n.id === nodeId);
+      if (!targetNode) return;
+
+      setSelectedNode({ id: targetNode.id, data: targetNode.data });
+      setOpenNodeDetailsPopup(true);
+
+      const x = targetNode.position.x + NODE_WIDTH / 2;
+      const y = targetNode.position.y + NODE_HEIGHT / 2;
+      setCenter(x, y, { zoom: Math.max(getZoom(), 1), duration: 500 });
+
+      setNodes((nds) =>
+        nds.map((n) => ({ ...n, selected: n.id === nodeId }))
+      );
+      setEdges((eds) =>
+        eds.map((edge) => ({
+          ...edge,
+          selected: edge.source === nodeId || edge.target === nodeId,
+        }))
+      );
+    },
+    [nodes, setSelectedNode, setCenter, getZoom, setNodes, setEdges]
+  );
+
+  const selectParent = useCallback(
+    
+    (currentNodeId: string) => {
+      // ignore $ref edges so we follow the structural tree parent
+      const parentEdge = edges.find(
+        (e) => e.target === currentNodeId && !e.targetHandle?.includes("$ref")
+      );
+      if (parentEdge) selectNodeById(parentEdge.source);
+    },
+    [edges, selectNodeById]
+  );
+
+  const selectChild = useCallback(
+    (currentNodeId: string, childIndex = 0) => {
+      const childEdges = edges.filter((e) => e.source === currentNodeId);
+      if (childEdges[childIndex]) selectNodeById(childEdges[childIndex].target);
+    },
+    [edges, selectNodeById]
+  );
+
+  // relations of the currently selected node, used to decide
+  // which navigation buttons the details popup should render
+  const { hasParent, childEdges } = useMemo(() => {
+    const id = selectedNode?.id;
+    if (!id) return { hasParent: false, childEdges: [] as GraphEdge[] };
+
+    const parentEdge = edges.find(
+      (e) => e.target === id && !e.targetHandle?.includes("$ref")
+    );
+
+    return {
+      // the root's incoming edge points to a phantom "root" source, so
+      // only report a parent when its node actually exists in the graph
+      hasParent:
+        !!parentEdge && nodes.some((n) => n.id === parentEdge.source),
+      childEdges: edges.filter((e) => e.source === id),
+    };
+  }, [edges, nodes, selectedNode]);
 
   const generateNodesAndEdges = useCallback(
     (
@@ -468,6 +535,12 @@ const GraphView = ({
         <NodeDetailsPopup
           nodeId={selectedNode.id}
           data={selectedNode.data as { nodeData?: NodeData }}
+          hasParent={hasParent}
+          childEdges={childEdges}
+          onSelectParent={() => selectParent(selectedNode.id)}
+          onSelectChild={(childIndex) =>
+            selectChild(selectedNode.id, childIndex)
+          }
           onClose={() => {
             setOpenNodeDetailsPopup(false);
           }}
