@@ -4,7 +4,6 @@ const LANE_GAP = 15;
 const MAX_LANES = 7;
 
 export default function CustomRoutedEdge({
-  id,
   sourceX,
   sourceY,
   targetX,
