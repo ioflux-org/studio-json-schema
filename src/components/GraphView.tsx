@@ -153,6 +153,13 @@ const GraphView = ({
         nodeTitle: "root",
       });
 
+      const siblingCount = new Map<string, number>();
+      for (const edge of edges) {
+        const count = siblingCount.get(edge.source) ?? 0;
+        edge.data = { ...edge.data, siblingIndex: count };
+        siblingCount.set(edge.source, count + 1);
+      }
+
       return { nodes, edges };
     },
     []

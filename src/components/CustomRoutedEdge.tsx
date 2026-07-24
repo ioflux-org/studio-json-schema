@@ -1,4 +1,8 @@
 import { BaseEdge, getSmoothStepPath, type EdgeProps } from "@xyflow/react";
+
+const LANE_GAP = 15;
+const MAX_LANES = 7;
+
 export default function CustomRoutedEdge({
   id,
   sourceX,
@@ -9,18 +13,16 @@ export default function CustomRoutedEdge({
   targetPosition,
   style = {},
   markerEnd,
+  data,
 }: EdgeProps) {
-  // Simple hash function to generate a pseudo-random number from the edge ID
-  const hash = id.split("").reduce((a, b) => {
-    a = (a << 5) - a + b.charCodeAt(0);
-    return a & a;
-  }, 0);
 
-  // Creates 7 distinct lanes (-3 to 3), each 15px apart
-  const laneIndex = (Math.abs(hash) % 7) - 3;
-  const laneOffset = laneIndex * 15;
+  const siblingIndex = (data as { siblingIndex?: number })?.siblingIndex ?? 0;
 
-  // Calculate the custom X center point for the vertical segment of the edge
+  const wrapped = siblingIndex % MAX_LANES;
+  const half = Math.floor(MAX_LANES / 2);
+  const laneIndex = wrapped <= half ? wrapped : -(MAX_LANES - wrapped);
+
+  const laneOffset = laneIndex * LANE_GAP;
   const customCenterX = (sourceX + targetX) / 2 + laneOffset;
 
   const [edgePath] = getSmoothStepPath({
@@ -34,10 +36,10 @@ export default function CustomRoutedEdge({
   });
 
   return (
-    <BaseEdge 
-      path={edgePath} 
-      markerEnd={markerEnd} 
-      style={style} 
+    <BaseEdge
+      path={edgePath}
+      markerEnd={markerEnd}
+      style={style}
     />
   );
 }

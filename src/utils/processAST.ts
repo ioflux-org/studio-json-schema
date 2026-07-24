@@ -38,6 +38,7 @@ type NodeStyle = {
 export type GraphEdge = RFEdge & {
     data: {
         color: string;
+        siblingIndex?: number;
     }
 };
 
