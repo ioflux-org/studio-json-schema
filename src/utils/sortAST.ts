@@ -3,6 +3,30 @@ import type { AST } from "@hyperjump/json-schema/experimental";
 type KeywordTuple = [string, string, unknown];
 type ASTNodeValue = KeywordTuple[];
 
+const findDependencies = (
+    node: ASTNodeValue,
+    currentKey: string,
+    validKeysSet: Set<string>
+): Set<string> => {
+    const deps = new Set<string>();
+
+    const traverse = (obj: unknown) => {
+        if (typeof obj === "string" && validKeysSet.has(obj) && obj !== currentKey) {
+            deps.add(obj);
+        } else if (Array.isArray(obj)) {
+            obj.forEach(traverse);
+        } else if (obj !== null && typeof obj === "object") {
+            Object.values(obj).forEach(traverse);
+        }
+    };
+
+    node.forEach(([, , compiledKeywordValue]) => {
+        traverse(compiledKeywordValue);
+    });
+
+    return deps;
+};
+
 export const sortAST = (ast: AST) => {
     const DEF_KEY = "https://json-schema.org/keyword/definitions";
 
@@ -17,28 +41,9 @@ export const sortAST = (ast: AST) => {
         inDegree[k] = 0;
     });
 
-    const findDependencies = (node: ASTNodeValue, currentKey: string): string[] => {
-        const deps = new Set<string>();
-        const traverse = (obj: unknown) => {
-            if (typeof obj === "string" && validKeysSet.has(obj) && obj !== currentKey) {
-                deps.add(obj);
-            } else if (Array.isArray(obj)) {
-                obj.forEach(traverse);
-            } else if (obj !== null && typeof obj === "object") {
-                Object.values(obj).forEach(traverse);
-            }
-        };
-        if (Array.isArray(node)) {
-            node.forEach(keywordTuple => {
-                if (keywordTuple.length >= 3) traverse(keywordTuple[2]);
-            });
-        }
-        return Array.from(deps);
-    };
-
     astKeys.forEach(key => {
         const value = (ast as Record<string, ASTNodeValue>)[key];
-        const deps = findDependencies(value, key);
+        const deps = findDependencies(value, key, validKeysSet);
         deps.forEach(dep => {
             if (!adjList[dep].includes(key)) {
                 adjList[dep].push(key);
@@ -93,7 +98,6 @@ export const sortAST = (ast: AST) => {
                 return [keywordUri, keywordLocationUri, compiledKeywordValue];
             })
             .sort((a, b) => {
-                // Keep definitions keyword first within a node's keyword list
                 const aIsDefs = a[0] === DEF_KEY;
                 const bIsDefs = b[0] === DEF_KEY;
                 if (aIsDefs && !bIsDefs) return -1;
