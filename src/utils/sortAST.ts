@@ -3,31 +3,6 @@ import type { AST } from "@hyperjump/json-schema/experimental";
 type KeywordTuple = [string, string, unknown];
 type ASTNodeValue = KeywordTuple[];
 
-const findDependencies = (
-    node: ASTNodeValue,
-    currentKey: string,
-    validKeysSet: Set<string>
-): Set<string> => {
-    const deps = new Set<string>();
-
-    const traverse = (obj: unknown) => {
-        if (typeof obj === "string" && validKeysSet.has(obj) && obj !== currentKey) {
-            deps.add(obj);
-        } else if (Array.isArray(obj)) {
-            obj.forEach(traverse);
-        } else if (obj !== null && typeof obj === "object") {
-            Object.values(obj).forEach(traverse);
-        }
-    };
-    if (Array.isArray(node)) {
-        node.forEach(([, , compiledKeywordValue]) => {
-            traverse(compiledKeywordValue);
-        });
-    }
-
-    return deps;
-};
-
 export const sortAST = (ast: AST) => {
     const DEF_KEY = "https://json-schema.org/keyword/definitions";
 
@@ -109,3 +84,28 @@ export const sortAST = (ast: AST) => {
 
     return sortedAst;
 }
+
+const findDependencies = (
+    node: ASTNodeValue,
+    currentKey: string,
+    validKeysSet: Set<string>
+): Set<string> => {
+    const deps = new Set<string>();
+
+    const traverse = (obj: unknown) => {
+        if (typeof obj === "string" && validKeysSet.has(obj) && obj !== currentKey) {
+            deps.add(obj);
+        } else if (Array.isArray(obj)) {
+            obj.forEach(traverse);
+        } else if (obj !== null && typeof obj === "object") {
+            Object.values(obj).forEach(traverse);
+        }
+    };
+    if (Array.isArray(node)) {
+        node.forEach(([, , compiledKeywordValue]) => {
+            traverse(compiledKeywordValue);
+        });
+    }
+
+    return deps;
+};
