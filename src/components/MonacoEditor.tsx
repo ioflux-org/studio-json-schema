@@ -612,7 +612,11 @@ const MonacoEditor = () => {
   const resizeHandle = (
     <PanelResizeHandle
       className={`${isMobile ? "h-[2px]" : "w-[3px]"} ${
-        isMobile && !editorVisible ? "bg-transparent" : "bg-[var(--toolbar-border-color)]"
+        isMobile && !editorVisible
+          ? "bg-transparent"
+          : isMobile
+            ? "accent-separator-fill"
+            : "bg-[var(--toolbar-border-color)]"
       } relative active:bg-[var(--accent-color)] transition-colors duration-200`}
     >
       {(!isMobile || editorVisible) && (

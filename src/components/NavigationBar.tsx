@@ -59,7 +59,7 @@ const NavigationBar = () => {
   return (
     <nav
       aria-label="Main navigation"
-      className={`flex items-center relative z-10 bg-[var(--nav-bg-color)] border-b border-[var(--toolbar-border-color)] ${
+      className={`flex items-center relative z-10 accent-separator-b bg-[var(--nav-bg-color)] border-b border-[var(--toolbar-border-color)] ${
         isFullScreen
           ? "w-full px-3 py-1.5 justify-end"
           : "h-[56px] justify-between px-1"
@@ -214,7 +214,7 @@ const NavigationBar = () => {
       {/* Mobile Search */}
       {mobileSearchOpen && (
         <div
-          className="absolute top-full left-0 w-full sm:hidden flex items-center gap-2 px-4 py-2.5 border-b border-[var(--toolbar-border-color)] bg-[var(--nav-bg-color)] z-500"
+          className="absolute top-full left-0 w-full sm:hidden flex items-center gap-2 px-4 py-2.5 accent-separator-b border-b border-[var(--toolbar-border-color)] bg-[var(--nav-bg-color)] z-500"
         >
           <RiSearchLine className="text-[var(--text-secondary-color)] flex-shrink-0" size={16} />
 
