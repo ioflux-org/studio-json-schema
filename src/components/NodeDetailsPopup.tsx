@@ -62,7 +62,7 @@ const NodeDetailsPopup = ({
 
         <button
           aria-label="Close node details"
-          className="absolute z-50 top-4 right-4 p-1.5 rounded-lg text-[var(--text-secondary-color)] hover:text-[var(--text-color)] hover:bg-[var(--view-bg-color)] border border-transparent hover:border-[var(--toolbar-border-color)] transition-all"
+          className="absolute z-50 top-4 right-4 p-1.5 rounded-lg text-[var(--text-color)] hover:text-[var(--accent-color)] transition-all"
           onClick={onClose}
         >
           <BsX size={18} />
@@ -79,7 +79,7 @@ const NodeDetailsPopup = ({
 
               <button
                 onClick={copyPathToClipboard}
-                className="ml-2 p-1.5 text-[var(--text-secondary-color)] hover:text-[var(--text-color)] hover:bg-[var(--view-bg-color)] rounded-md transition-colors flex-shrink-0"
+                className="ml-2 p-1.5 text-[var(--text-color)] hover:text-[var(--accent-color)] rounded-md transition-colors flex-shrink-0"
                 title="Copy path to clipboard"
                 aria-label="Copy path to clipboard"
               >

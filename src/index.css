@@ -19,7 +19,6 @@
   --reactflow-bg-sub-pattern-color: #36373a;
   --visualize-bg-color: #f0f2f7;
   --bottom-bg-color: #3d85c6;
-  --view-bg-color: #eef0f5;
   --toolbar-bg-color: #ffffff;
   --toolbar-border-color: #e2e5ef;
 
@@ -68,7 +67,6 @@
   --editor-bg-color: #09090f;
   --visualize-bg-color: #10101a;
   --bottom-bg-color: #111119;
-  --view-bg-color: #13131d;
   --toolbar-bg-color: #0d0d14;
   --toolbar-border-color: #1e1e2e;
 
@@ -149,7 +147,7 @@ body {
 }
 
 .react-flow__controls-button:hover {
-  background-color: var(--view-bg-color) !important;
+  color: var(--accent-color) !important;
 }
 
 /* ====================== Tooltips ====================== */

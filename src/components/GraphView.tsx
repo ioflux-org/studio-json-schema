@@ -491,20 +491,20 @@ const GraphView = ({
         <div className="absolute bottom-3 left-1/2 -translate-x-1/2 flex items-center gap-1 bg-[var(--node-bg-color)] px-2 py-1 rounded-lg border border-[var(--toolbar-border-color)] shadow-md">
           <button
             onClick={() => navigateMatch("prev")}
-            className="hover:bg-[var(--view-bg-color)] rounded p-0.5 transition-colors"
+            className="p-0.5 rounded border border-transparent text-[var(--text-color)] hover:border-[var(--accent-color)] hover:text-[var(--accent-color)] cursor-pointer transition-all duration-200"
             title="Previous match"
           >
-            <MdNavigateBefore size={14} className="text-[var(--text-color)]" />
+            <MdNavigateBefore size={14} />
           </button>
           <span className="text-[11px] text-[var(--text-secondary-color)] min-w-[32px] text-center font-medium">
             {currentMatchIndex + 1}/{matchCount}
           </span>
           <button
             onClick={() => navigateMatch("next")}
-            className="hover:bg-[var(--view-bg-color)] rounded p-0.5 transition-colors"
+            className="p-0.5 rounded border border-transparent text-[var(--text-color)] hover:border-[var(--accent-color)] hover:text-[var(--accent-color)] cursor-pointer transition-all duration-200"
             title="Next match"
           >
-            <MdNavigateNext size={14} className="text-[var(--text-color)]" />
+            <MdNavigateNext size={14} />
           </button>
         </div>
       )}
