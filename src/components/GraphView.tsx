@@ -60,6 +60,8 @@ const GraphView = ({
   const [edges, setEdges, onEdgeChange] = useEdgesState<GraphEdge>([]);
   const [collisionResolved, setCollisionResolved] = useState(false);
   const [isGraphReady, setIsGraphReady] = useState(false);
+  const [minHoldDone, setMinHoldDone] = useState(false);
+  const [showLoader, setShowLoader] = useState(true);
   const [hoveredEdgeId, setHoveredEdgeId] = useState<string | null>(null);
   const [matchedNodes, setMatchedNodes] = useState<GraphNode[]>([]);
   const [currentMatchIndex, setCurrentMatchIndex] = useState(0);
@@ -280,6 +282,22 @@ const GraphView = ({
   }, [nodes, collisionResolved, allNodesMeasured, setNodes, fitView]);
 
   useEffect(() => {
+    const timer = setTimeout(() => setMinHoldDone(true), 1800);
+    return () => clearTimeout(timer);
+  }, []);
+
+  const graphVisible = isGraphReady && minHoldDone;
+
+  useEffect(() => {
+    if (!graphVisible) {
+      setShowLoader(true);
+      return;
+    }
+    const timer = setTimeout(() => setShowLoader(false), 450);
+    return () => clearTimeout(timer);
+  }, [graphVisible]);
+
+  useEffect(() => {
     if (errorMessage) {
       setShowErrorPopup(true);
       const timer = setTimeout(() => {
@@ -425,11 +443,14 @@ const GraphView = ({
       ref={containerRef}
       tabIndex={0}
       className="relative w-full h-full"
-      style={{
-        opacity: isGraphReady ? 1 : 0,
-        transition: isGraphReady ? "opacity 0.4s ease-in" : "none",
-      }}
     >
+      <div
+        className="w-full h-full"
+        style={{
+          opacity: graphVisible ? 1 : 0,
+          transition: graphVisible ? "opacity 0.4s ease-in" : "none",
+        }}
+      >
       <ReactFlow
         nodes={nodes}
         edges={animatedEdges}
@@ -463,6 +484,24 @@ const GraphView = ({
         />
         <Controls />
       </ReactFlow>
+      </div>
+
+      {showLoader && (
+        <div
+          className="absolute inset-0 flex items-center justify-center pointer-events-none"
+          style={{
+            opacity: graphVisible ? 0 : 1,
+            transition: graphVisible ? "opacity 0.4s ease-in" : "none",
+          }}
+        >
+          <img
+            src="logo-mark.svg"
+            alt="Loading visualization"
+            className="w-full h-full"
+            draggable="false"
+          />
+        </div>
+      )}
 
       {openNodeDetailsPopup && selectedNode && (
         <NodeDetailsPopup
