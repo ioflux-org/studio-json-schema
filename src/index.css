@@ -143,6 +143,26 @@ body {
   );
 }
 
+/* ====================== Toolbar Scroll ====================== */
+
+.toolbar-scroll {
+  scrollbar-width: thin;
+  scrollbar-color: var(--toolbar-border-color) transparent;
+}
+
+.toolbar-scroll::-webkit-scrollbar {
+  height: 4px;
+}
+
+.toolbar-scroll::-webkit-scrollbar-thumb {
+  background: var(--toolbar-border-color);
+  border-radius: 2px;
+}
+
+.toolbar-scroll::-webkit-scrollbar-track {
+  background: transparent;
+}
+
 /* ====================== Monaco Editor ====================== */
 
 .monaco-highlight-line {

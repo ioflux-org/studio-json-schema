@@ -531,7 +531,7 @@ const MonacoEditor = () => {
             accept=".json,.yaml,.yml"
             className="hidden"
           />
-          <div className="ml-auto flex items-center gap-2">
+          <div className="ml-auto flex items-center gap-2 overflow-x-auto toolbar-scroll">
             <button
               onClick={() => fileInputRef.current?.click()}
               className="h-[28px] flex items-center gap-1.5 bg-[var(--bg-color)] border border-[var(--toolbar-border-color)] text-[var(--text-color)] text-xs font-medium px-2.5 rounded-md hover:text-[var(--accent-color)] hover:border-[var(--accent-color)] transition-all duration-200 cursor-pointer"
@@ -562,6 +562,7 @@ const MonacoEditor = () => {
               <option value="json">JSON</option>
               <option value="yaml">YAML</option>
             </select>
+          </div>
           {/* Inline validation status indicator */}
           <span
             id="validation-status-icon"
@@ -574,7 +575,6 @@ const MonacoEditor = () => {
             {schemaValidation.status === "warning" && "⚠"}
             {schemaValidation.status === "error" && "✗"}
           </span>
-        </div>
       </div>
       <div className="flex-1 min-h-0">
         <Editor
