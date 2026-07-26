@@ -125,11 +125,11 @@ const MonacoEditor = () => {
       colors: {
         "editor.background": "#0d0d14",
         "editor.foreground": "#eeeef2",
-        "editorLineNumber.foreground": "#3a3d4a",
-        "editorLineNumber.activeForeground": "#818cf8",
+        "editorLineNumber.foreground": "#6c7086",
+        "editorLineNumber.activeForeground": "#00b7ff",
         "editor.lineHighlightBackground": "#13131d",
-        "editor.selectionBackground": "#818cf830",
-        "editorCursor.foreground": "#818cf8",
+        "editor.selectionBackground": "#00b7ff30",
+        "editorCursor.foreground": "#00b7ff",
         "editorWidget.background": "#111119",
         "editorWidget.border": "#1e1e2e",
         "input.background": "#0d0d14",
@@ -146,11 +146,11 @@ const MonacoEditor = () => {
       colors: {
         "editor.background": "#f8f9fc",
         "editor.foreground": "#0f172a",
-        "editorLineNumber.foreground": "#c4c7d4",
-        "editorLineNumber.activeForeground": "#6366f1",
+        "editorLineNumber.foreground": "#7f849c",
+        "editorLineNumber.activeForeground": "#0284c7",
         "editor.lineHighlightBackground": "#f0f2f7",
-        "editor.selectionBackground": "#6366f125",
-        "editorCursor.foreground": "#6366f1",
+        "editor.selectionBackground": "#00b7ff25",
+        "editorCursor.foreground": "#0284c7",
         "editorWidget.background": "#ffffff",
         "editorWidget.border": "#e2e5ef",
         "input.background": "#f5f6fa",
@@ -522,7 +522,7 @@ const MonacoEditor = () => {
       onDragOver={handleDragOver}
       onDrop={handleDrop}
     >
-      <div className="flex items-center gap-2 px-3 py-1.5 bg-[var(--toolbar-bg-color)] border-b border-[var(--toolbar-border-color)] backdrop-blur-sm">
+      <div className="flex items-center gap-2 px-3 py-1.5 bg-[var(--toolbar-bg-color)] border-b border-[var(--toolbar-border-color)]">
           <input
             type="file"
             id="schema-file-input"
@@ -534,7 +534,7 @@ const MonacoEditor = () => {
           <div className="ml-auto flex items-center gap-2">
             <button
               onClick={() => fileInputRef.current?.click()}
-              className="h-[28px] flex items-center gap-1.5 bg-[var(--bg-color)] border border-[var(--toolbar-border-color)] text-[var(--text-secondary-color)] text-xs font-medium px-2.5 rounded-md hover:text-[var(--accent-color)] hover:border-[var(--accent-color)] transition-all duration-200 cursor-pointer"
+              className="h-[28px] flex items-center gap-1.5 bg-[var(--bg-color)] border border-[var(--toolbar-border-color)] text-[var(--text-color)] text-xs font-medium px-2.5 rounded-md hover:text-[var(--accent-color)] hover:border-[var(--accent-color)] transition-all duration-200 cursor-pointer"
               aria-label="Upload JSON/YAML schema file"
               title="Upload JSON/YAML (or drag & drop)"
             >
@@ -543,7 +543,7 @@ const MonacoEditor = () => {
             </button>
             <button
               onClick={triggerExportGraph}
-              className="h-[28px] flex items-center gap-1.5 bg-[var(--bg-color)] border border-[var(--toolbar-border-color)] text-[var(--text-secondary-color)] text-xs font-medium px-2.5 rounded-md hover:text-[var(--accent-color)] hover:border-[var(--accent-color)] transition-all duration-200 cursor-pointer"
+              className="h-[28px] flex items-center gap-1.5 bg-[var(--bg-color)] border border-[var(--toolbar-border-color)] text-[var(--text-color)] text-xs font-medium px-2.5 rounded-md hover:text-[var(--accent-color)] hover:border-[var(--accent-color)] transition-all duration-200 cursor-pointer"
               aria-label="Export graph as image"
               title="Export graph as image"
             >
@@ -557,7 +557,7 @@ const MonacoEditor = () => {
               id="schema-format-select"
               value={schemaFormat}
               onChange={(e) => changeSchemaFormat(e.target.value as SchemaFormat)}
-              className="h-[28px] min-w-[60px] px-2 flex-shrink-0 bg-[var(--bg-color)] text-[var(--text-secondary-color)] text-xs font-medium outline-none cursor-pointer border border-[var(--toolbar-border-color)] rounded-md hover:text-[var(--accent-color)] hover:border-[var(--accent-color)] transition-colors"
+              className="h-[28px] min-w-[60px] px-2 flex-shrink-0 bg-[var(--bg-color)] text-[var(--text-color)] text-xs font-medium outline-none cursor-pointer border border-[var(--toolbar-border-color)] rounded-md hover:text-[var(--accent-color)] hover:border-[var(--accent-color)] transition-colors"
             >
               <option value="json">JSON</option>
               <option value="yaml">YAML</option>

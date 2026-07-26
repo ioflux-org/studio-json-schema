@@ -28,11 +28,11 @@ const SchemaErrorsPopup = ({
   return (
     <div className="absolute inset-0 flex items-center justify-center">
       {/* Blurred backdrop */}
-      <div className="absolute inset-0 bg-black/50 backdrop-blur-lg" />
+      <div className="absolute inset-0 bg-[var(--popup-backdrop-color)] backdrop-blur-sm" />
       {/* Error card */}
       <div
-        className="relative z-50 w-[90%] sm:w-[50%] min-w-[280px] max-h-[80%] p-6 rounded-2xl border border-red-500/20 bg-[var(--popup-bg-color)] overflow-hidden flex flex-col gap-3 ring-1 ring-red-500/10"
-        style={{ boxShadow: "0 0 60px rgba(239, 68, 68, 0.35), 0 0 25px rgba(239, 68, 68, 0.25), 0 25px 50px -12px rgba(0, 0, 0, 0.5)" }}
+        className="relative z-50 w-[90%] sm:w-[50%] min-w-[280px] max-h-[80%] p-6 rounded-2xl border border-red-500/40 bg-[var(--popup-bg-color)] overflow-hidden flex flex-col gap-3"
+        style={{ boxShadow: "0 0 10px rgba(239, 68, 68, 0.35), 0 0 25px rgba(239, 68, 68, 0.25), 0 25px 50px -12px rgba(0, 0, 0, 0.5)" }}
         role="status"
         aria-live="polite"
         aria-label="Schema validation errors"
@@ -48,7 +48,7 @@ const SchemaErrorsPopup = ({
           {!schemaValidation.syntaxError &&
             schemaValidation.schemaErrors &&
             schemaValidation.schemaErrors.length > 0 && (
-              <div className="text-[11px] text-[var(--accent-color)] uppercase font-semibold tracking-widest">
+              <div className="text-[11px] text-[var(--accent-color)] uppercase font-semibold tracking-wider">
                 Documentation
               </div>
             )}

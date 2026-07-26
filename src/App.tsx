@@ -6,7 +6,7 @@ import { AppProvider } from "./contexts/AppProvider";
 function App() {
   return (
     <AppProvider>
-      <div className="flex flex-col overflow-hidden antialiased" style={{ height: "100dvh" }}>
+      <div className="flex flex-col overflow-hidden" style={{ height: "100dvh" }}>
         <NavigationBar />
         <MonacoEditor />
         {/* <BottomBar /> */}

@@ -110,7 +110,7 @@ const CustomNode = ({
   return (
     <div
       className={`
-        rounded-lg
+        rounded-xl
         relative transition-all duration-300 text-sm bg-[var(--node-bg-color)] text-[var(--text-color)]
         min-w-[100px] max-w-[400px]
         ${
@@ -121,9 +121,7 @@ const CustomNode = ({
       `}
       style={{
         ["--color" as string]: color,
-        border: theme === "dark"
-          ? `2px solid ${color}aa`
-          : `2px solid ${color}`,
+        border: `2px solid ${color}`,
         wordBreak: "break-word",
       }}
     >
@@ -139,8 +137,8 @@ const CustomNode = ({
       <div
         className="px-3 py-1.5 font-semibold text-sm tracking-wide rounded-t-lg"
         style={{
-          background: theme === "dark" ? `${color}40` : `${color}50`,
-          borderBottom: theme === "dark" ? `1px solid ${color}80` : `1px solid ${color}`,
+          background: `${color}50`,
+          borderBottom: `1px solid ${color}`,
           color:
             theme === "dark"
               ? color
@@ -164,7 +162,7 @@ const CustomNode = ({
               key={key}
               className="flex"
               style={{
-                borderBottom: `1px solid ${data.nodeStyle.color}35`,
+                borderBottom: `1px solid ${data.nodeStyle.color}4d`,
                 padding: "5px 8px",
               }}
             >
@@ -183,7 +181,7 @@ const CustomNode = ({
                         key={typeName}
                         className="px-2 py-[3px] rounded-md text-center text-xs font-medium"
                         style={{
-                          border: `1px solid ${itemColor}99`,
+                          border: `1px solid ${itemColor}`,
                           backgroundColor: theme === "dark" ? `${itemColor}30` : `${itemColor}28`,
                           color:
                             theme === "dark"

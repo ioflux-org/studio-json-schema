@@ -475,7 +475,7 @@ const GraphView = ({
       )}
       {/*Error Message */}
       {errorMessage && showErrorPopup && (
-        <div className="absolute bottom-[50px] left-[100px] flex items-center gap-2 px-3 py-2 bg-red-500/90 backdrop-blur-sm text-white rounded-lg shadow-lg">
+        <div className="absolute bottom-[50px] left-[100px] flex items-center gap-2 px-3 py-2 bg-red-500 text-white rounded-lg shadow-lg">
           <div className="text-xs font-medium tracking-wide">
             {errorMessage}
           </div>
@@ -488,7 +488,7 @@ const GraphView = ({
         </div>
       )}
       {matchCount > 1 && (
-        <div className="absolute bottom-3 left-1/2 -translate-x-1/2 flex items-center gap-1 bg-[var(--node-bg-color)] px-2 py-1 rounded-lg border border-[var(--toolbar-border-color)] shadow-md backdrop-blur-sm">
+        <div className="absolute bottom-3 left-1/2 -translate-x-1/2 flex items-center gap-1 bg-[var(--node-bg-color)] px-2 py-1 rounded-lg border border-[var(--toolbar-border-color)] shadow-md">
           <button
             onClick={() => navigateMatch("prev")}
             className="hover:bg-[var(--view-bg-color)] rounded p-0.5 transition-colors"
@@ -496,7 +496,7 @@ const GraphView = ({
           >
             <MdNavigateBefore size={14} className="text-[var(--text-color)]" />
           </button>
-          <span className="text-[10px] text-[var(--text-secondary-color)] min-w-[32px] text-center font-medium">
+          <span className="text-[11px] text-[var(--text-secondary-color)] min-w-[32px] text-center font-medium">
             {currentMatchIndex + 1}/{matchCount}
           </span>
           <button
