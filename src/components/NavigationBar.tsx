@@ -114,7 +114,7 @@ const NavigationBar = () => {
               onKeyDown={handleKeyDown}
             />
 
-            <div className="w-[40px] flex justify-end pr-5">
+            <div className="flex justify-end">
               {searchString ? (
                 <button
                   aria-label="Clear search"
