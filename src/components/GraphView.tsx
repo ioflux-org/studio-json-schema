@@ -101,8 +101,6 @@ const GraphView = ({
     [matchedNodes, matchCount, setCenter, getZoom, setNodes]
   );
 
-  
-
   useEffect(() => {
     registerNavigateMatch(navigateMatch);
   }, [navigateMatch, registerNavigateMatch]);
