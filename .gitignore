@@ -26,3 +26,7 @@ dist-ssr
 # Playwright
 playwright-report/
 test-results/
+
+docs/.vitepress/dist
+docs/.vitepress/cache
+docs/node_modules

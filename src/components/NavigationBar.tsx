@@ -194,7 +194,7 @@ const NavigationBar = () => {
         <li className="flex items-center">
           <a
             aria-label="Documentation"
-            href="https://github.com/ioflux-org/studio-json-schema?tab=readme-ov-file#json-schema-visualizer"
+            href="/docs"
             target="_blank"
             rel="noopener noreferrer"
             className="text-xl flex items-center"

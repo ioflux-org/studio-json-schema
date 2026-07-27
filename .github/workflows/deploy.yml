@@ -41,6 +41,15 @@ jobs:
           npm ci
           npm run build
 
+      - name: Build docs
+        run: |
+         cd docs && npm install && npm run build
+
+      - name: Merge docs into app build
+        run: |
+         mkdir -p dist/docs
+         cp -r docs/.vitepress/dist/* dist/docs/
+
       - name: Upload build artifact
         uses: actions/upload-pages-artifact@v3
         with:
