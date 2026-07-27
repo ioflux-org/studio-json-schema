@@ -274,24 +274,22 @@ const keywordHandlerMap: KeywordHandlerMap = {
         return { key: "$ref", data: { value: keywordValue, ellipsis: "{ ... }" } }
     },
     "https://json-schema.org/keyword/comment": createBasicKeywordHandler("$comment"),
+    // draft-07 style: "definitions" keyword — shown in root node, each def directly connected
     "https://json-schema.org/keyword/definitions": (ast, keywordValue, nodes, edges, parentId, nodeDepth, renderedNodes) => {
-        ast["https://json-schema.org/keyword/$defs"] = [
-            [
-                "https://json-schema.org/keyword/$defs",
-                `${parentId}/$defs`,
-                keywordValue
-            ]
-        ];
-        processAST({ ast, schemaUri: "https://json-schema.org/keyword/$defs", nodes, edges, parentId, renderedNodes, childId: "definitions", nodeTitle: "definitions", nodeDepth: nodeDepth - 1 });
-        return { defs: true, data: { value: "definitions" } }
+        const value = keywordValue as Record<string, string>;
+        const shortNames = Object.keys(value);
+        for (const defKey of shortNames) {
+            processAST({ ast, schemaUri: value[defKey], nodes, edges, parentId, renderedNodes, childId: `def-${defKey}`, nodeTitle: `$defs["${defKey}"]`, nodeDepth });
+        }
+        return { key: "$defs", data: { value: shortNames.map(n => `def-${n}`) } }
     },
     "https://json-schema.org/keyword/$defs": (ast, keywordValue, nodes, edges, parentId, nodeDepth, renderedNodes) => {
         const value = keywordValue as string[];
+        const shortNames = value.map(item => item.split("#/$defs/").pop() as string);
         for (const [index, item] of value.entries()) {
-            const defName = `$defs["${item.split("#/$defs/").pop()}"]`;
-            processAST({ ast, schemaUri: item, nodes, edges, parentId, renderedNodes, childId: String(index), nodeTitle: defName, nodeDepth });
+            processAST({ ast, schemaUri: item, nodes, edges, parentId, renderedNodes, childId: `def-${shortNames[index]}`, nodeTitle: `$defs["${shortNames[index]}"]`, nodeDepth });
         }
-        return { key: "$defs", data: { value: getArrayFromNumber(value.length) } }
+        return { key: "$defs", data: { value: shortNames.map(n => `def-${n}`) } }
     },
 
     // Applicator
