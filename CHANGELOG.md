@@ -1,5 +1,16 @@
 # json-schema-studio
 
+## 0.10.0
+
+### Minor Changes
+
+- 29ed020: Implement topological sorting
+
+### Patch Changes
+
+- 5224d46: Fix misplaced search bar and theme toggle icon in Firefox by allowing the search input to shrink within its flex container
+- c613ee8: render subschema name in defs node instead of index
+
 ## 0.9.1
 
 ### Patch Changes
