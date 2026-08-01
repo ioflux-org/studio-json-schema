@@ -27,6 +27,7 @@ import {
 
 import CustomNode from "./CustomReactFlowNode";
 import NodeDetailsPopup from "./NodeDetailsPopup";
+import CustomRoutedEdge from "./CustomRoutedEdge";
 
 import {
   processAST,
@@ -40,7 +41,13 @@ import { MdNavigateBefore, MdNavigateNext } from "react-icons/md";
 import { CgClose } from "react-icons/cg";
 import { extractKeywords } from "../utils/searchNodeHelpers";
 
-const nodeTypes = { customNode: CustomNode };
+const nodeTypes = {
+  customNode: CustomNode,
+};
+
+const edgeTypes = {
+  routed: CustomRoutedEdge,
+};
 
 const NODE_WIDTH = 172;
 const NODE_HEIGHT = 36;
@@ -145,6 +152,13 @@ const GraphView = ({
         childId: null,
         nodeTitle: "root",
       });
+
+      const siblingCount = new Map<string, number>();
+      for (const edge of edges) {
+        const count = siblingCount.get(edge.source) ?? 0;
+        edge.data = { ...edge.data, siblingIndex: count };
+        siblingCount.set(edge.source, count + 1);
+      }
 
       return { nodes, edges };
     },
@@ -438,6 +452,7 @@ const GraphView = ({
         onEdgesChange={onEdgeChange}
         deleteKeyCode={null}
         nodeTypes={nodeTypes}
+        edgeTypes={edgeTypes}
         minZoom={0.05}
         maxZoom={5}
         onEdgeMouseEnter={(_, edge) => setHoveredEdgeId(edge.id)}
