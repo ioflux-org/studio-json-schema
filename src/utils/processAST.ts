@@ -276,11 +276,13 @@ const keywordHandlerMap: KeywordHandlerMap = {
     },
     "https://json-schema.org/keyword/$defs": (ast, keywordValue, nodes, edges, parentId, nodeDepth, renderedNodes) => {
         const value = keywordValue as string[];
-        for (const [index, item] of value.entries()) {
-            const defName = `$defs["${item.split("#/$defs/").pop()}"]`;
-            processAST({ ast, schemaUri: item, nodes, edges, parentId, renderedNodes, childId: String(index), nodeTitle: defName, nodeDepth });
+        const defKeys = [];
+        for (const item of value) {
+            const defKey = item.split("#/$defs/").pop() as string;
+            defKeys.push(defKey);
+            processAST({ ast, schemaUri: item, nodes, edges, parentId, renderedNodes, childId: defKey, nodeTitle: `$defs["${defKey}"]`, nodeDepth });
         }
-        return { key: "$defs", data: { value: getArrayFromNumber(value.length) } }
+        return { key: "$defs", data: { value: defKeys } }
     },
 
     // Applicator
