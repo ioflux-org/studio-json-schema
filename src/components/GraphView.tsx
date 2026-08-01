@@ -217,7 +217,7 @@ const GraphView = ({
         const isHovered = edge.id === hoveredEdgeId;
         const isSelected = edge.selected;
         const isActive = isHovered || isSelected;
-        const strokeColor = isActive ? edge.data.color : "#666";
+        const strokeColor = isActive ? edge.data.color : "var(--color-edge)";
         const strokeWidth = isActive ? 2.5 : 1;
         return {
           ...edge,
@@ -514,12 +514,12 @@ const GraphView = ({
       )}
       {/*Error Message */}
       {errorMessage && showErrorPopup && (
-        <div className="absolute bottom-[50px] left-[100px] flex items-center gap-2 px-3 py-2 bg-red-500 text-white rounded-lg shadow-lg">
+        <div className="absolute bottom-[50px] left-[100px] flex items-center gap-2 px-3 py-2 bg-[var(--color-danger)] text-[var(--color-text-on-accent)] rounded-lg shadow-[var(--shadow-lg)]">
           <div className="text-xs font-medium tracking-wide">
             {errorMessage}
           </div>
           <button
-            className="cursor-pointer hover:bg-white/20 rounded p-0.5 transition-colors"
+            className="cursor-pointer hover:opacity-70 rounded p-0.5 transition-opacity"
             onClick={() => setShowErrorPopup(false)}
           >
             <CgClose size={14} />

@@ -137,7 +137,7 @@ const CustomNode = ({
       <div
         className="px-3 py-1.5 font-semibold text-sm tracking-wide rounded-t-lg"
         style={{
-          background: `${color}50`,
+          background: theme === "dark" ? `${color}66` : `${color}50`,
           borderBottom: `1px solid ${color}`,
           color:
             theme === "dark"

@@ -25,6 +25,7 @@ import {
 import { jsonSchemaErrors } from "@hyperjump/json-schema-errors";
 
 import Editor, { type OnMount } from "@monaco-editor/react";
+import { cssToken } from "../utils/tokens";
 import type { editor } from "monaco-editor";
 import { AppContext, type SchemaFormat } from "../contexts/AppContext";
 import SchemaVisualization from "./SchemaVisualization";
@@ -73,26 +74,20 @@ const JSON_SCHEMA_DIALECTS = [
 ];
 const SUPPORTED_DIALECTS = ["https://json-schema.org/draft/2020-12/schema"];
 
-const getValidationUI = (theme: "light" | "dark") => ({
+const VALIDATION_UI = {
   success: {
     message: "✓ Valid JSON Schema",
-    className: "text-green-400 font-semibold",
+    className: "text-[var(--color-success)] font-semibold",
   },
   warning: {
     message: `⚠ Schema dialect not provided. Using default dialect: ${DEFAULT_SCHEMA_DIALECT}`,
-    className:
-      theme === "dark"
-        ? "text-yellow-400 break-words"
-        : "text-amber-800 break-words",
+    className: "text-[var(--color-warning)] break-words",
   },
   error: {
     message: "✗ ",
-    className:
-      theme === "dark"
-        ? "text-red-400 break-words"
-        : "text-red-700 break-words",
+    className: "text-[var(--color-danger)] break-words",
   },
-});
+};
 
 
 const saveSchemaJSON = (key: string, schema: JSONSchema) => {
@@ -118,24 +113,25 @@ const MonacoEditor = () => {
   const handleEditorDidMount: OnMount = (editor, monaco) => {
     editorRef.current = editor;
 
+    // Colors come from the design-token primitives in src/index.css
     monaco.editor.defineTheme("studio-dark", {
       base: "vs-dark",
       inherit: true,
       rules: [],
       colors: {
-        "editor.background": "#0d0d14",
-        "editor.foreground": "#eeeef2",
-        "editorLineNumber.foreground": "#6c7086",
-        "editorLineNumber.activeForeground": "#00b7ff",
-        "editor.lineHighlightBackground": "#13131d",
-        "editor.selectionBackground": "#00b7ff30",
-        "editorCursor.foreground": "#00b7ff",
-        "editorWidget.background": "#111119",
-        "editorWidget.border": "#1e1e2e",
-        "input.background": "#0d0d14",
-        "input.border": "#1e1e2e",
-        "scrollbarSlider.background": "#1e1e2e80",
-        "scrollbarSlider.hoverBackground": "#2a2a3a",
+        "editor.background": cssToken("--slate-850"),
+        "editor.foreground": cssToken("--frost-100"),
+        "editorLineNumber.foreground": cssToken("--frost-500"),
+        "editorLineNumber.activeForeground": cssToken("--brand-400"),
+        "editor.lineHighlightBackground": cssToken("--slate-800"),
+        "editor.selectionBackground": `${cssToken("--brand-500")}40`,
+        "editorCursor.foreground": cssToken("--brand-400"),
+        "editorWidget.background": cssToken("--slate-800"),
+        "editorWidget.border": cssToken("--slate-700"),
+        "input.background": cssToken("--slate-750"),
+        "input.border": cssToken("--slate-700"),
+        "scrollbarSlider.background": `${cssToken("--slate-700")}80`,
+        "scrollbarSlider.hoverBackground": cssToken("--slate-600"),
       },
     });
 
@@ -144,19 +140,19 @@ const MonacoEditor = () => {
       inherit: true,
       rules: [],
       colors: {
-        "editor.background": "#f8f9fc",
-        "editor.foreground": "#0f172a",
-        "editorLineNumber.foreground": "#7f849c",
-        "editorLineNumber.activeForeground": "#0284c7",
-        "editor.lineHighlightBackground": "#f0f2f7",
-        "editor.selectionBackground": "#00b7ff25",
-        "editorCursor.foreground": "#0284c7",
-        "editorWidget.background": "#ffffff",
-        "editorWidget.border": "#e2e5ef",
-        "input.background": "#f5f6fa",
-        "input.border": "#e2e5ef",
-        "scrollbarSlider.background": "#e2e5ef80",
-        "scrollbarSlider.hoverBackground": "#d1d5db",
+        "editor.background": cssToken("--sand-50"),
+        "editor.foreground": cssToken("--ink-900"),
+        "editorLineNumber.foreground": cssToken("--ink-500"),
+        "editorLineNumber.activeForeground": cssToken("--copper-600"),
+        "editor.lineHighlightBackground": cssToken("--sand-100"),
+        "editor.selectionBackground": `${cssToken("--copper-500")}30`,
+        "editorCursor.foreground": cssToken("--copper-600"),
+        "editorWidget.background": cssToken("--sand-25"),
+        "editorWidget.border": cssToken("--sand-300"),
+        "input.background": cssToken("--sand-100"),
+        "input.border": cssToken("--sand-300"),
+        "scrollbarSlider.background": `${cssToken("--sand-300")}80`,
+        "scrollbarSlider.hoverBackground": cssToken("--sand-400"),
       },
     });
 
@@ -216,8 +212,6 @@ const MonacoEditor = () => {
     if (!["json", "yaml", "yml"].includes(ext ?? "")) return;
     loadFile(file);
   };
-
-  const VALIDATION_UI = getValidationUI(theme);
 
   const [schemaValidation, setSchemaValidation] = useState<ValidationStatus>({
     status: "success",

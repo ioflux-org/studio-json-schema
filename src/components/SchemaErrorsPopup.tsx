@@ -31,14 +31,14 @@ const SchemaErrorsPopup = ({
       <div className="absolute inset-0 bg-[var(--popup-backdrop-color)] backdrop-blur-sm" />
       {/* Error card */}
       <div
-        className="relative z-50 w-[90%] sm:w-[50%] min-w-[280px] max-h-[80%] p-6 rounded-2xl border border-red-500/40 bg-[var(--popup-bg-color)] overflow-hidden flex flex-col gap-3"
-        style={{ boxShadow: "0 0 10px rgba(239, 68, 68, 0.35), 0 0 25px rgba(239, 68, 68, 0.25), 0 25px 50px -12px rgba(0, 0, 0, 0.5)" }}
+        className="relative z-50 w-[90%] sm:w-[50%] min-w-[280px] max-h-[80%] p-6 rounded-2xl border border-[var(--color-danger-soft)] bg-[var(--popup-bg-color)] overflow-hidden flex flex-col gap-3"
+        style={{ boxShadow: "0 0 10px var(--color-danger-glow), 0 0 25px var(--color-danger-glow), var(--shadow-lg)" }}
         role="status"
         aria-live="polite"
         aria-label="Schema validation errors"
       >
         <div className="flex justify-between items-end pb-3 border-b border-[var(--popup-border-color)]">
-          <div className="text-red-500 font-semibold text-sm">
+          <div className="text-[var(--color-danger)] font-semibold text-sm">
             {schemaValidation.syntaxError
               ? "Syntax Error"
               : `Schema Errors (${
@@ -57,7 +57,7 @@ const SchemaErrorsPopup = ({
         <div className="flex-1 overflow-hidden flex flex-col min-h-0">
           {schemaValidation.syntaxError ? (
             <div className="flex flex-col gap-2">
-              <div className="bg-[var(--popup-header-bg-color)] p-3 rounded-xl text-xs text-[var(--popup-text-color)] font-mono whitespace-pre-wrap border border-red-500/20">
+              <div className="bg-[var(--popup-header-bg-color)] p-3 rounded-xl text-xs text-[var(--popup-text-color)] font-mono whitespace-pre-wrap border border-[var(--color-danger-soft)]">
                 {schemaValidation.syntaxError}
               </div>
             </div>

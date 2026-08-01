@@ -53,7 +53,7 @@ const NodeDetailsPopup = ({
         aria-modal="true"
         aria-labelledby="node-details-title"
         className="relative z-50 w-[90%] sm:w-[50%] min-w-[320px] max-h-[80%] p-6 rounded-2xl border border-[var(--accent-color)]/50 bg-[var(--popup-bg-color)] overflow-x-hidden overflow-auto"
-        style={{ boxShadow: "0 0 10px -12px rgba(0, 0, 0, 0.4), 0 0 25px -8px var(--accent-color, rgba(99, 102, 241, 0.15))" }}
+        style={{ boxShadow: "var(--shadow-lg), 0 0 25px -8px var(--accent-color)" }}
         onClick={(e) => e.stopPropagation()}
       >
         <h2 id="node-details-title" className="sr-only">
@@ -84,7 +84,7 @@ const NodeDetailsPopup = ({
                 aria-label="Copy path to clipboard"
               >
                 {copied ? (
-                  <BsCheck size={16} className="text-green-500" />
+                  <BsCheck size={16} className="text-[var(--color-success)]" />
                 ) : (
                   <BsCopy size={14} />
                 )}
