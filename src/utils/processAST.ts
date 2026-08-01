@@ -2,6 +2,7 @@ import type { AST, Node as HJNode } from "@hyperjump/json-schema/experimental";
 import { toAbsoluteIri } from "@hyperjump/uri";
 import { Position, type Node as RFNode, type Edge as RFEdge } from "@xyflow/react";
 import { inferSchemaType } from "./inferSchemaType";
+import { graphPalette } from "./tokens";
 
 export type GraphNode = RFNode & {
     data: RFNodeData;
@@ -80,27 +81,14 @@ type GenerateSourceHandles = (key: string | undefined, value: unknown, nodeId: s
 type UpdateNode = (node: UnpositionedGraphNode, update: UpdateNodeOptionalParameters) => void;
 
 
-const neonColors = {
-    string: "#FF6EFF", // neon magenta
-    number: "#00FF95", // neon mint
-    integer: "#00FF95", // neon mint
-    boolean: "#FFEA00", // neon yellow
-    array: "#FF8F00", // neon amber
-    object: "#00E5FF", // neon cyan
-    null: "#A259FF", // neon purple
-    booleanSchemaTrue: "#12FF4B", // neon green
-    booleanSchemaFalse: "#FF3B3B", // neon red 
-    reference: "#FFE1BD", // soft neon cream
-    multiType: "#FF007F", // neon rose 
-    others: "#CCCCCC", // soft gray
-};
+const nodeColors = () => graphPalette();
 
 export const processAST: ProcessAST = ({ ast, schemaUri, nodes, edges, parentId, childId, renderedNodes = new Map(), nodeTitle, nodeDepth = 0 }) => {
     if (renderedNodes.has(schemaUri)) {
         const sourceHandle = getSourceHandle(parentId, childId);
         const targetHandle = `${sourceHandle}-target`;
         const targetNode = renderedNodes.get(schemaUri);
-        const backEdgeColor = targetNode.data.nodeStyle.color ?? "#CCCCCC";
+        const backEdgeColor = targetNode.data.nodeStyle.color ?? nodeColors().others;
 
         edges.push({
             id: `${parentId}--${sourceHandle}--${schemaUri}--${targetHandle}`,
@@ -159,7 +147,8 @@ export const processAST: ProcessAST = ({ ast, schemaUri, nodes, edges, parentId,
 
     const getColor = (nodeData: NodeData) => {
         const colorKey = inferSchemaType(nodeData);
-        return neonColors[colorKey as keyof typeof neonColors] ?? neonColors.others;
+        const colors = nodeColors();
+        return colors[colorKey as keyof typeof colors] ?? colors.others;
     };
 
     const color = getColor(nodeData);
@@ -388,10 +377,11 @@ const keywordHandlerMap: KeywordHandlerMap = {
     // Validation
     "https://json-schema.org/keyword/type": (_ast, keywordValue) => {
         if (Array.isArray(keywordValue)) {
+            const colors = nodeColors();
             const typeColorMap = Object.fromEntries(
                 (keywordValue as string[]).map((t) => [
                     t,
-                    neonColors[t as keyof typeof neonColors] ?? neonColors.others,
+                    colors[t as keyof typeof colors] ?? colors.others,
                 ])
             );
             return { key: "type", data: { value: typeColorMap }, leafNode: true };

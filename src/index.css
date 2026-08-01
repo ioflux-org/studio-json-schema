@@ -1,1 +1,355 @@
 @import "tailwindcss";
+
+@theme {
+  --font-sans: "Inter", ui-sans-serif, system-ui, -apple-system, "Segoe UI", sans-serif;
+  --font-mono: "JetBrains Mono", ui-monospace, "SF Mono", monospace;
+}
+
+/* ==========================================================================
+   DESIGN TOKENS — the single source of truth for every color in the app.
+
+   Tiers (change colors here, never in components):
+
+     1. PRIMITIVES  (:root)          Raw palette scales. Components never
+                                     reference these directly.
+     2. SEMANTIC    ([data-theme])   Role tokens (--color-*): what a color
+                                     MEANS. Each theme maps roles onto
+                                     primitives. This is the layer to tune
+                                     when adjusting a theme.
+     3. ALIASES     (:root)          Established component-facing names,
+                                     each mapped onto a role.
+
+   JS consumers (Monaco themes, the graph's categorical palette) read
+   PRIMITIVES through src/utils/tokens.ts, so they stay in sync with this
+   file automatically.
+
+   Brand: light mode is soft warm cream with a copper accent; dark mode
+   follows json-schema.org's identity — slate surfaces with the royal
+   blue #002CC4 / #5468FF pair and its signature gradient. Inter +
+   JetBrains Mono throughout; both modes stage the neon graph palette
+   (--graph-*).
+   ========================================================================== */
+
+:root {
+  /* -- Sand scale (light surfaces — soft warm cream) ----------------------- */
+  --sand-25: #fdfaf3;
+  --sand-50: #f9f4e8;
+  --sand-100: #f5eee0;
+  --sand-150: #efe7d4;
+  --sand-200: #e6dbc2;
+  --sand-300: #d9ccac;
+  --sand-400: #c3b28c;
+
+  /* -- Ink scale (light text — warm) --------------------------------------- */
+  --ink-900: #3a2e1e;
+  --ink-600: #6a5a40;
+  --ink-500: #8b7c5e;
+
+  /* -- Copper (light-mode accent) ------------------------------------------ */
+  --copper-700: #8f3d0e;
+  --copper-600: #a34a12;
+  --copper-500: #b8571b;
+  --copper-400: #d9803f;
+
+  /* -- Slate scale (dark surfaces) ---------------------------------------- */
+  --slate-900: #0f172a;
+  --slate-850: #131c31;
+  --slate-800: #1e293b;
+  --slate-750: #283548;
+  --slate-700: #334155;
+  --slate-600: #475569;
+
+  /* -- Frost scale (dark text) -------------------------------------------- */
+  --frost-100: #f1f5f9;
+  --frost-300: #cbd5e1;
+  --frost-500: #94a3b8;
+
+  /* -- Brand blues (json-schema.org) --------------------------------------- */
+  --brand-700: #002cc4; /* primary / startBlue */
+  --brand-500: #5468ff; /* endBlue */
+  --brand-400: #7b8cff;
+  --brand-link: #3b82f6; /* linkBlue */
+
+  /* -- Status hues (600 = light mode, 400 = dark mode) -------------------- */
+  --green-600: #47823d;
+  --green-400: #4ade80;
+  --amber-600: #96660f;
+  --amber-400: #fbbf24;
+  --red-600: #b0432f;
+  --red-400: #f87171;
+  --blue-600: #2563eb;
+  --blue-400: #60a5fa;
+
+  /* -- Graph categorical palette (neon, theme-shared) ---------------------- */
+  --graph-object: #00e5ff;
+  --graph-string: #ff6eff;
+  --graph-array: #ff8f00;
+  --graph-number: #00ff95;
+  --graph-boolean: #ffea00;
+  --graph-reference: #ffe1bd;
+  --graph-null: #a259ff;
+  --graph-multi: #ff007f;
+  /* auxiliaries (not categorical slots) */
+  --graph-true: #12ff4b;
+  --graph-false: #ff3b3b;
+  --graph-neutral: #cccccc;
+}
+
+/* ====================== 2. Semantic roles ====================== */
+
+[data-theme="light"] {
+  color-scheme: light;
+
+  /* surfaces — elevation: surface (panels/cards) > canvas > inset wells */
+  --color-bg-surface: var(--sand-25);
+  --color-bg-canvas: var(--sand-100);
+  --color-bg-inset: var(--sand-150);
+  --color-bg-editor: var(--sand-50);
+  --color-bg-node: var(--sand-25);
+
+  /* lines */
+  --color-border: var(--sand-300);
+  --color-border-strong: var(--sand-400);
+  --color-edge: var(--sand-400);
+  --color-grid-major: var(--ink-500);
+  --color-grid-minor: var(--sand-400);
+
+  /* text */
+  --color-text: var(--ink-900);
+  --color-text-secondary: var(--ink-500);
+  --color-text-nav: var(--ink-600);
+  --color-text-accent: var(--copper-600);
+  --color-text-logo: var(--copper-600);
+  --color-text-on-accent: var(--sand-25);
+
+  /* accent */
+  --color-accent: var(--copper-500);
+  --color-accent-hover: var(--copper-700);
+
+  /* separator hairline — warm gradient to match the copper accent */
+  --separator-start: color-mix(in srgb, var(--copper-600) 45%, transparent);
+  --separator-end: color-mix(in srgb, var(--copper-400) 45%, transparent);
+
+  /* status */
+  --color-success: var(--green-600);
+  --color-warning: var(--amber-600);
+  --color-danger: var(--red-600);
+  --color-danger-soft: color-mix(in srgb, var(--red-600) 25%, transparent);
+  --color-danger-glow: color-mix(in srgb, var(--red-600) 28%, transparent);
+  --color-info: var(--blue-600);
+
+  /* effects */
+  --shadow-sm: 0 1px 2px rgba(84, 60, 28, 0.08);
+  --shadow-md: 0 4px 16px rgba(84, 60, 28, 0.1);
+  --shadow-lg: 0 12px 32px rgba(84, 60, 28, 0.16);
+  --color-backdrop: rgba(245, 238, 224, 0.65);
+}
+
+[data-theme="dark"] {
+  color-scheme: dark;
+
+  /* surfaces — elevation: canvas (deepest) < editor < surface < inset */
+  --color-bg-surface: var(--slate-800);
+  --color-bg-canvas: var(--slate-900);
+  --color-bg-inset: var(--slate-750);
+  --color-bg-editor: var(--slate-850);
+  /* nodes stay on the deepest surface so the neon palette keeps contrast */
+  --color-bg-node: var(--slate-900);
+
+  /* lines */
+  --color-border: var(--slate-700);
+  --color-border-strong: var(--slate-600);
+  --color-edge: var(--slate-600);
+  --color-grid-major: var(--frost-500);
+  --color-grid-minor: var(--slate-600);
+
+  /* text */
+  --color-text: var(--frost-100);
+  --color-text-secondary: var(--frost-500);
+  --color-text-nav: var(--frost-300);
+  --color-text-accent: var(--brand-400);
+  /* wordmark reads white in dark mode, like json-schema.org's dark logo */
+  --color-text-logo: var(--frost-100);
+  --color-text-on-accent: var(--slate-900);
+
+  /* accent */
+  --color-accent: var(--brand-500);
+  --color-accent-hover: var(--brand-400);
+
+  /* separator hairline — the json-schema.org startBlue → endBlue gradient */
+  --separator-start: color-mix(in srgb, var(--brand-700) 55%, transparent);
+  --separator-end: color-mix(in srgb, var(--brand-500) 55%, transparent);
+
+  /* status */
+  --color-success: var(--green-400);
+  --color-warning: var(--amber-400);
+  --color-danger: var(--red-400);
+  --color-danger-soft: color-mix(in srgb, var(--red-400) 28%, transparent);
+  --color-danger-glow: color-mix(in srgb, var(--red-400) 30%, transparent);
+  --color-info: var(--blue-400);
+
+  /* effects */
+  --shadow-sm: 0 1px 2px rgba(0, 0, 0, 0.35);
+  --shadow-md: 0 4px 16px rgba(0, 0, 0, 0.45);
+  --shadow-lg: 0 12px 32px rgba(0, 0, 0, 0.55);
+  --color-backdrop: rgba(2, 6, 23, 0.7);
+}
+
+/* ====================== 3. Component-facing aliases ====================== */
+
+:root {
+  /* Backgrounds */
+  --bg-color: var(--color-bg-canvas);
+  --nav-bg-color: var(--color-bg-surface);
+  --editor-panel-bg-color: var(--color-bg-surface);
+  --node-bg-color: var(--color-bg-node);
+  --node-key-color: var(--color-text-accent);
+  --node-value-bg-color: var(--color-bg-inset);
+  --reactflow-bg-main-pattern-color: var(--color-grid-major);
+  --reactflow-bg-sub-pattern-color: var(--color-grid-minor);
+  --visualize-bg-color: var(--color-bg-canvas);
+  --bottom-bg-color: var(--color-accent);
+  --toolbar-bg-color: var(--color-bg-surface);
+  --toolbar-border-color: var(--color-border);
+
+  /* Text color */
+  --text-color: var(--color-text);
+  --text-secondary-color: var(--color-text-secondary);
+  --bottom-text-color: var(--color-text-on-accent);
+  --tool-name-color: var(--color-text-logo);
+  --navigation-text-color: var(--color-text-nav);
+
+  /* Accent */
+  --accent-color: var(--color-accent);
+
+  /* Monaco Editor Highlight */
+  --monaco-highlight-bg: color-mix(in srgb, var(--color-accent) 16%, transparent);
+  --monaco-highlight-border: color-mix(in srgb, var(--color-accent) 55%, transparent);
+
+  /* Popup */
+  --popup-bg-color: var(--color-bg-surface);
+  --popup-text-color: var(--color-text);
+  --popup-border-color: var(--color-border);
+  --popup-header-bg-color: var(--color-bg-inset);
+  --popup-backdrop-color: var(--color-backdrop);
+
+  /* Boolean node */
+  --bool-true-color: var(--color-success);
+  --bool-false-color: var(--color-danger);
+
+  /* Border radius */
+  --radius-md: 8px;
+}
+
+/* ====================== Global Styles ====================== */
+
+body {
+  background-color: var(--bg-color);
+}
+
+.react-flow__panel.react-flow__attribution.bottom.right {
+  display: none;
+}
+
+/* ====================== Accent Separators ====================== */
+.accent-separator-b::after {
+  content: "";
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: -1px;
+  height: 1px;
+  pointer-events: none;
+  background: linear-gradient(
+    90deg,
+    transparent 0%,
+    var(--separator-start) 15%,
+    var(--separator-end) 85%,
+    transparent 100%
+  );
+}
+
+/* For elements that are themselves the separator line (mobile resize handle) */
+.accent-separator-fill {
+  background-image: linear-gradient(
+    90deg,
+    transparent 0%,
+    var(--separator-start) 15%,
+    var(--separator-end) 85%,
+    transparent 100%
+  );
+}
+
+/* ====================== Toolbar Scroll ====================== */
+
+.toolbar-scroll {
+  scrollbar-width: thin;
+  scrollbar-color: var(--toolbar-border-color) transparent;
+}
+
+.toolbar-scroll::-webkit-scrollbar {
+  height: 4px;
+}
+
+.toolbar-scroll::-webkit-scrollbar-thumb {
+  background: var(--toolbar-border-color);
+  border-radius: 2px;
+}
+
+.toolbar-scroll::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+/* ====================== Monaco Editor ====================== */
+
+.monaco-highlight-line {
+  background-color: var(--monaco-highlight-bg);
+  border-left: 3px solid var(--monaco-highlight-border);
+  width: 100% !important;
+}
+
+/* ====================== Panel Transitions ====================== */
+
+.panel-animating [data-panel] {
+  transition: flex-basis 300ms ease, flex-grow 300ms ease;
+}
+
+/* ====================== React Flow ====================== */
+
+.react-flow__pane {
+  cursor: default !important;
+}
+
+.react-flow__controls {
+  border-radius: var(--radius-md) !important;
+  border: 1px solid var(--toolbar-border-color) !important;
+  box-shadow: var(--shadow-md) !important;
+  overflow: hidden !important;
+}
+
+.react-flow__controls-button {
+  background-color: var(--toolbar-bg-color) !important;
+  border-color: var(--toolbar-border-color) !important;
+  color: var(--navigation-text-color) !important;
+  fill: var(--navigation-text-color) !important;
+}
+
+.react-flow__controls-button:hover {
+  color: var(--accent-color) !important;
+}
+
+/* ====================== Tooltips ====================== */
+
+.react-tooltip {
+  background-color: var(--node-bg-color) !important;
+  color: var(--text-color) !important;
+  border: 1px solid var(--toolbar-border-color) !important;
+  border-radius: 6px !important;
+  padding: 6px 10px !important;
+  font-size: 11px !important;
+  font-weight: 500 !important;
+  box-shadow: var(--shadow-md) !important;
+  opacity: 1 !important;
+  z-index: 9999 !important;
+  transition: opacity 0.15s ease, visibility 0.15s ease !important;
+}

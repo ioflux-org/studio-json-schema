@@ -25,6 +25,7 @@ import {
 import { jsonSchemaErrors } from "@hyperjump/json-schema-errors";
 
 import Editor, { type OnMount } from "@monaco-editor/react";
+import { cssToken } from "../utils/tokens";
 import type { editor } from "monaco-editor";
 import { AppContext, type SchemaFormat } from "../contexts/AppContext";
 import SchemaVisualization from "./SchemaVisualization";
@@ -73,26 +74,20 @@ const JSON_SCHEMA_DIALECTS = [
 ];
 const SUPPORTED_DIALECTS = ["https://json-schema.org/draft/2020-12/schema"];
 
-const getValidationUI = (theme: "light" | "dark") => ({
+const VALIDATION_UI = {
   success: {
     message: "✓ Valid JSON Schema",
-    className: "text-green-400 font-semibold",
+    className: "text-[var(--color-success)] font-semibold",
   },
   warning: {
     message: `⚠ Schema dialect not provided. Using default dialect: ${DEFAULT_SCHEMA_DIALECT}`,
-    className:
-      theme === "dark"
-        ? "text-yellow-400 break-words"
-        : "text-amber-800 break-words",
+    className: "text-[var(--color-warning)] break-words",
   },
   error: {
     message: "✗ ",
-    className:
-      theme === "dark"
-        ? "text-red-400 break-words"
-        : "text-red-700 break-words",
+    className: "text-[var(--color-danger)] break-words",
   },
-});
+};
 
 
 const saveSchemaJSON = (key: string, schema: JSONSchema) => {
@@ -115,8 +110,53 @@ const MonacoEditor = () => {
   const editorRef = useRef<editor.IStandaloneCodeEditor | null>(null);
   const editorPanelRef = useRef<ImperativePanelHandle>(null);
 
-  const handleEditorDidMount: OnMount = (editor) => {
+  const handleEditorDidMount: OnMount = (editor, monaco) => {
     editorRef.current = editor;
+
+    // Colors come from the design-token primitives in src/index.css
+    monaco.editor.defineTheme("studio-dark", {
+      base: "vs-dark",
+      inherit: true,
+      rules: [],
+      colors: {
+        "editor.background": cssToken("--slate-850"),
+        "editor.foreground": cssToken("--frost-100"),
+        "editorLineNumber.foreground": cssToken("--frost-500"),
+        "editorLineNumber.activeForeground": cssToken("--brand-400"),
+        "editor.lineHighlightBackground": cssToken("--slate-800"),
+        "editor.selectionBackground": `${cssToken("--brand-500")}40`,
+        "editorCursor.foreground": cssToken("--brand-400"),
+        "editorWidget.background": cssToken("--slate-800"),
+        "editorWidget.border": cssToken("--slate-700"),
+        "input.background": cssToken("--slate-750"),
+        "input.border": cssToken("--slate-700"),
+        "scrollbarSlider.background": `${cssToken("--slate-700")}80`,
+        "scrollbarSlider.hoverBackground": cssToken("--slate-600"),
+      },
+    });
+
+    monaco.editor.defineTheme("studio-light", {
+      base: "vs",
+      inherit: true,
+      rules: [],
+      colors: {
+        "editor.background": cssToken("--sand-50"),
+        "editor.foreground": cssToken("--ink-900"),
+        "editorLineNumber.foreground": cssToken("--ink-500"),
+        "editorLineNumber.activeForeground": cssToken("--copper-600"),
+        "editor.lineHighlightBackground": cssToken("--sand-100"),
+        "editor.selectionBackground": `${cssToken("--copper-500")}30`,
+        "editorCursor.foreground": cssToken("--copper-600"),
+        "editorWidget.background": cssToken("--sand-25"),
+        "editorWidget.border": cssToken("--sand-300"),
+        "input.background": cssToken("--sand-100"),
+        "input.border": cssToken("--sand-300"),
+        "scrollbarSlider.background": `${cssToken("--sand-300")}80`,
+        "scrollbarSlider.hoverBackground": cssToken("--sand-400"),
+      },
+    });
+
+    monaco.editor.setTheme(theme === "dark" ? "studio-dark" : "studio-light");
   };
 
   const [compiledSchema, setCompiledSchema] = useState<CompiledSchema | null>(
@@ -172,8 +212,6 @@ const MonacoEditor = () => {
     if (!["json", "yaml", "yml"].includes(ext ?? "")) return;
     loadFile(file);
   };
-
-  const VALIDATION_UI = getValidationUI(theme);
 
   const [schemaValidation, setSchemaValidation] = useState<ValidationStatus>({
     status: "success",
@@ -471,14 +509,14 @@ const MonacoEditor = () => {
 
   const editorPanel = (
     <Panel
-      className="flex flex-col h-full w-full relative"
+      className="flex flex-col h-full w-full relative bg-[var(--editor-panel-bg-color)]"
       defaultSize={isMobile ? 40 : DEFAULT_EDITOR_PANEL_WIDTH}
       ref={editorPanelRef}
       collapsible
       onDragOver={handleDragOver}
       onDrop={handleDrop}
     >
-      <div className="flex items-center gap-2 px-2 py-1 bg-[var(--validation-bg-color)] border-b border-[var(--popup-border-color)]">
+      <div className="flex items-center gap-2 px-3 py-1.5 bg-[var(--toolbar-bg-color)] border-b border-[var(--toolbar-border-color)]">
           <input
             type="file"
             id="schema-file-input"
@@ -487,23 +525,23 @@ const MonacoEditor = () => {
             accept=".json,.yaml,.yml"
             className="hidden"
           />
-          <div className="ml-auto flex items-center gap-3">
+          <div className="ml-auto flex items-center gap-2 overflow-x-auto toolbar-scroll">
             <button
               onClick={() => fileInputRef.current?.click()}
-              className="h-[26px] flex items-center gap-1.5 bg-[var(--bg-color)] border border-[var(--popup-border-color)] text-[var(--text-color)] text-sm px-1.5 rounded-sm hover:opacity-75 transition-opacity cursor-pointer"
+              className="h-[28px] flex items-center gap-1.5 bg-[var(--bg-color)] border border-[var(--toolbar-border-color)] text-[var(--text-color)] text-xs font-medium px-2.5 rounded-md hover:text-[var(--accent-color)] hover:border-[var(--accent-color)] transition-all duration-200 cursor-pointer"
               aria-label="Upload JSON/YAML schema file"
               title="Upload JSON/YAML (or drag & drop)"
             >
-              <BsUpload size={12} />
+              <BsUpload size={11} />
               <span>Upload</span>
             </button>
             <button
               onClick={triggerExportGraph}
-              className="h-[26px] flex items-center gap-1.5 bg-[var(--bg-color)] border border-[var(--popup-border-color)] text-[var(--text-color)] text-sm px-1.5 rounded-sm hover:opacity-75 transition-opacity cursor-pointer"
+              className="h-[28px] flex items-center gap-1.5 bg-[var(--bg-color)] border border-[var(--toolbar-border-color)] text-[var(--text-color)] text-xs font-medium px-2.5 rounded-md hover:text-[var(--accent-color)] hover:border-[var(--accent-color)] transition-all duration-200 cursor-pointer"
               aria-label="Export graph as image"
               title="Export graph as image"
             >
-              <BsDownload size={12} />
+              <BsDownload size={11} />
               <span>Export</span>
             </button>
             <label htmlFor="schema-format-select" className="sr-only">
@@ -513,24 +551,24 @@ const MonacoEditor = () => {
               id="schema-format-select"
               value={schemaFormat}
               onChange={(e) => changeSchemaFormat(e.target.value as SchemaFormat)}
-              className="h-[26px] min-w-[60px] px-1 flex-shrink-0 bg-[var(--bg-color)] text-[var(--text-color)] text-sm outline-none cursor-pointer border border-[var(--popup-border-color)] rounded-sm"
+              className="h-[28px] min-w-[60px] px-2 flex-shrink-0 bg-[var(--bg-color)] text-[var(--text-color)] text-xs font-medium outline-none cursor-pointer border border-[var(--toolbar-border-color)] rounded-md hover:text-[var(--accent-color)] hover:border-[var(--accent-color)] transition-colors"
             >
               <option value="json">JSON</option>
               <option value="yaml">YAML</option>
             </select>
+          </div>
           {/* Inline validation status indicator */}
           <span
             id="validation-status-icon"
             aria-label={schemaValidation.message}
             title={schemaValidation.message}
-            className={`text-base leading-none ${VALIDATION_UI[schemaValidation.status].className.replace("break-words", "")}`}
+            className={`text-sm leading-none ${VALIDATION_UI[schemaValidation.status].className.replace("break-words", "")}`}
             aria-hidden
           >
             {schemaValidation.status === "success" && "✓"}
             {schemaValidation.status === "warning" && "⚠"}
             {schemaValidation.status === "error" && "✗"}
           </span>
-        </div>
       </div>
       <div className="flex-1 min-h-0">
         <Editor
@@ -538,7 +576,7 @@ const MonacoEditor = () => {
           width="100%"
           language={schemaFormat}
           value={schemaText}
-          theme={theme === "light" ? "vs-light" : "vs-dark"}
+          theme={theme === "light" ? "studio-light" : "studio-dark"}
           options={{
             minimap: { enabled: false },
             occurrencesHighlight: "off",
@@ -567,9 +605,13 @@ const MonacoEditor = () => {
 
   const resizeHandle = (
     <PanelResizeHandle
-      className={`${isMobile ? "h-[1px]" : "w-[1px]"} ${
-        isMobile && !editorVisible ? "bg-transparent" : "bg-gray-400"
-      } relative`}
+      className={`${isMobile ? "h-[2px]" : "w-[3px]"} ${
+        isMobile && !editorVisible
+          ? "bg-transparent"
+          : isMobile
+            ? "accent-separator-fill"
+            : "bg-[var(--toolbar-border-color)]"
+      } relative active:bg-[var(--accent-color)] transition-colors duration-200`}
     >
       {(!isMobile || editorVisible) && (
         <div>
