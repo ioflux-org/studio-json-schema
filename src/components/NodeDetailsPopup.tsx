@@ -16,6 +16,10 @@ const CHILD_ARRAY_KEYWORDS = new Set([
   "dependentSchemas",
 ]);
 
+// nav buttons follow the popup palette so they stay in sync with the theme
+const NAV_BUTTON_CLASS =
+  "rounded border border-[var(--popup-border-color)] bg-[var(--popup-header-bg-color)] text-[var(--popup-text-color)] hover:text-[var(--popup-close-btn-hover-color)] transition-colors";
+
 const NodeDetailsPopup = ({
   nodeId,
   data,
@@ -57,7 +61,7 @@ const NodeDetailsPopup = ({
   const childButton = (childEdgeIndex: number) => (
     <button
       onClick={() => onSelectChild?.(childEdgeIndex)}
-      className="ml-2 p-0.5 rounded bg-red-600 hover:bg-red-700 text-white transition-colors flex-shrink-0"
+      className={`ml-2 p-0.5 ${NAV_BUTTON_CLASS} flex-shrink-0`}
       title="Go to child node"
       aria-label="Go to child node"
     >
@@ -121,7 +125,7 @@ const NodeDetailsPopup = ({
           {hasParent && (
             <button
               onClick={onSelectParent}
-              className="p-0.5 rounded bg-green-600 hover:bg-green-700 text-white transition-colors"
+              className={`p-0.5 ${NAV_BUTTON_CLASS}`}
               title="Go to parent node"
               aria-label="Go to parent node"
             >
