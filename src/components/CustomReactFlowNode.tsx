@@ -2,6 +2,7 @@ import { Handle, useUpdateNodeInternals } from "@xyflow/react";
 import type { RFNodeData } from "../utils/processAST";
 import { useContext, useEffect, useLayoutEffect, useRef, useState } from "react";
 import { AppContext } from "../contexts/AppContext";
+import { DIFF_COLORS, DIFF_LABELS } from "../utils/schemaDiff";
 
 const CustomNode = ({
   data,
@@ -38,6 +39,11 @@ const CustomNode = ({
   }, [data.nodeData]);
 
   const { color } = data.nodeStyle;
+  const diffStatus = data.diffStatus;
+  const diffColor =
+    diffStatus && diffStatus !== "unchanged"
+      ? DIFF_COLORS[diffStatus]
+      : undefined;
 
   return (
     <div
@@ -54,13 +60,19 @@ const CustomNode = ({
             ? "shadow-[0_0_15px_var(--color)] ring-2 ring-[var(--color)]"
             : ""
         }
+        ${diffStatus === "removed" ? "opacity-80" : ""}
       `}
       style={{
-        ["--color" as string]: color,
-        border:
-          theme === "dark"
+        ["--color" as string]: diffColor ?? color,
+        border: diffColor
+          ? `3px solid ${diffColor}`
+          : theme === "dark"
             ? `1px solid ${color}`
             : `1px solid color-mix(in srgb, ${color} 80%, black)`,
+        boxShadow: diffColor
+          ? `0 0 0 3px ${diffColor}55, 0 0 18px ${diffColor}88`
+          : undefined,
+        background: diffColor ? `${diffColor}18` : undefined,
         wordBreak: "break-word",
       }}
     >
@@ -74,17 +86,32 @@ const CustomNode = ({
       ))}
 
       <div
-        className="px-2 font-semibold"
+        className="px-2 font-semibold flex items-center justify-between gap-2"
         style={{
-          background: `${color}50`,
-          borderBottom: `1px solid ${color}`,
-          color:
-            theme === "dark"
+          background: diffColor ? `${diffColor}55` : `${color}50`,
+          borderBottom: `1px solid ${diffColor ?? color}`,
+          color: diffColor
+            ? theme === "dark"
+              ? "#fff"
+              : `color-mix(in srgb, ${diffColor} 45%, black)`
+            : theme === "dark"
               ? color
               : `color-mix(in srgb, ${color} 60%, black)`,
         }}
       >
-        {data.nodeLabel}
+        <span className="min-w-0 truncate">{data.nodeLabel}</span>
+        {diffColor && diffStatus && diffStatus !== "unchanged" && (
+          <span
+            className="shrink-0 text-[9px] font-bold tracking-wide px-1.5 py-0.5 rounded"
+            style={{
+              backgroundColor: diffColor,
+              color: "#111",
+            }}
+            aria-label={`Diff status: ${DIFF_LABELS[diffStatus]}`}
+          >
+            {DIFF_LABELS[diffStatus]}
+          </span>
+        )}
       </div>
 
       <div className="flex flex-col">
