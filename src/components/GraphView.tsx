@@ -15,6 +15,7 @@ import {
   ReactFlow,
   Background,
   Controls,
+  ControlButton,
   useNodesState,
   useEdgesState,
   Position,
@@ -36,7 +37,7 @@ import {
 } from "../utils/processAST";
 import { sortAST } from "../utils/sortAST";
 import { resolveCollisions } from "../utils/resolveCollisions";
-import { MdNavigateBefore, MdNavigateNext } from "react-icons/md";
+import { MdNavigateBefore, MdNavigateNext, MdAlignHorizontalLeft, MdAlignVerticalTop } from "react-icons/md";
 import { CgClose } from "react-icons/cg";
 import { extractKeywords } from "../utils/searchNodeHelpers";
 
@@ -52,8 +53,16 @@ const GraphView = ({
   compiledSchema: CompiledSchema | null;
 }) => {
   const { setCenter, getZoom, fitView, getNodes } = useReactFlow();
-  const { theme, selectedNode, setSelectedNode, searchString, registerNavigateMatch, registerExportGraph } =
-    useContext(AppContext);
+  const {
+    theme,
+    selectedNode,
+    setSelectedNode,
+    searchString,
+    registerNavigateMatch,
+    registerExportGraph,
+    layoutOrientation,
+    setLayoutOrientation,
+  } = useContext(AppContext);
   const containerRef = useRef<HTMLDivElement>(null);
 
   const [nodes, setNodes, onNodeChange] = useNodesState<GraphNode>([]);
@@ -162,16 +171,51 @@ const GraphView = ({
       const isHorizontal = direction === "LR";
       dagreGraph.setGraph({ rankdir: direction });
 
+      // Calculate estimated heights and widths for all nodes based on properties count
+      const estimatedHeights: Record<string, number> = {};
+      const estimatedWidths: Record<string, number> = {};
       nodes.forEach((node) => {
-        dagreGraph.setNode(node.id, { width: NODE_WIDTH, height: NODE_HEIGHT });
+        const rowCount = Object.keys(node.data.nodeData || {}).length;
+        const estHeight = node.data.isBooleanNode ? 36 : 30 + rowCount * 28;
+        estimatedHeights[node.id] = estHeight;
+
+        let maxCharLength = node.data.nodeLabel.length;
+        Object.entries(node.data.nodeData || {}).forEach(([key, val]) => {
+          const valStr = typeof val.value === "object" ? "" : String(val.value);
+          maxCharLength = Math.max(maxCharLength, key.length + valStr.length + 3);
+        });
+        const estWidth = Math.max(172, Math.min(400, 40 + maxCharLength * 7.5));
+        estimatedWidths[node.id] = estWidth;
+
+        dagreGraph.setNode(node.id, { width: estWidth, height: estHeight });
       });
+
       edges.forEach((edge) => {
         dagreGraph.setEdge(edge.source, edge.target);
       });
       dagre.layout(dagreGraph);
 
+      // Compute Y layer bounds for vertical layout to prevent vertical overlaps
+      const depthMaxHeights: Record<number, number> = {};
+      nodes.forEach((node) => {
+        const d = node.depth || 0;
+        const h = estimatedHeights[node.id] || NODE_HEIGHT;
+        depthMaxHeights[d] = Math.max(depthMaxHeights[d] || 0, h);
+      });
+
+      const depthYPositions: Record<number, number> = {};
+      let currentY = 0;
+      const VERTICAL_GAP = 120;
+      const maxDepth = Math.max(...nodes.map((n) => n.depth || 0), 0);
+      for (let d = 0; d <= maxDepth; d++) {
+        depthYPositions[d] = currentY;
+        currentY += (depthMaxHeights[d] || NODE_HEIGHT) + VERTICAL_GAP;
+      }
+
       const newNodes = nodes.map((node) => {
         const nodeWithPosition = dagreGraph.node(node.id);
+        const estWidth = estimatedWidths[node.id] || NODE_WIDTH;
+        const estHeight = estimatedHeights[node.id] || NODE_HEIGHT;
         const newNode: GraphNode = {
           ...node,
           targetPosition: isHorizontal ? Position.Left : Position.Top,
@@ -179,16 +223,65 @@ const GraphView = ({
           // We are shifting the dagre node position (anchor=center center) to the top left
           // so it matches the React Flow node anchor point (top left).
           position: {
-            x:
-              nodeWithPosition.x -
-              NODE_WIDTH / 2 +
-              (NODE_WIDTH + HORIZONTAL_GAP) * node.depth,
-            y: nodeWithPosition.y - NODE_HEIGHT / 2,
+            x: isHorizontal
+              ? nodeWithPosition.x -
+                estWidth / 2 +
+                (estWidth + HORIZONTAL_GAP) * node.depth
+              : nodeWithPosition.x - estWidth / 2,
+            y: isHorizontal
+              ? nodeWithPosition.y - estHeight / 2
+              : depthYPositions[node.depth || 0],
           },
         };
 
         return newNode;
       });
+
+      // Adjust handle positions dynamically based on layout orientation and relative X positions
+      const nodeXPositions: Record<string, number> = {};
+      newNodes.forEach((node) => {
+        nodeXPositions[node.id] = node.position.x;
+      });
+
+      if (!isHorizontal) {
+        newNodes.forEach((node) => {
+          node.data.targetHandles.forEach((h) => {
+            h.position = Position.Top;
+          });
+        });
+
+        edges.forEach((edge) => {
+          const sourceNode = newNodes.find((n) => n.id === edge.source);
+          const sourceX = nodeXPositions[edge.source];
+          const targetX = nodeXPositions[edge.target];
+
+          if (sourceNode && sourceX !== undefined && targetX !== undefined) {
+            const handle = sourceNode.data.sourceHandles.find(
+              (h) => h.handleId === edge.sourceHandle
+            );
+            if (handle) {
+              if (handle.handleId.endsWith("-definitions") || sourceNode.data.nodeLabel === "definitions") {
+                handle.position = Position.Bottom;
+              } else {
+                handle.position = targetX < sourceX ? Position.Left : Position.Right;
+              }
+            }
+          }
+        });
+      } else {
+        newNodes.forEach((node) => {
+          node.data.targetHandles.forEach((h) => {
+            h.position = Position.Left;
+          });
+          node.data.sourceHandles.forEach((h) => {
+            if (h.handleId.endsWith("-definitions")) {
+              h.position = Position.Bottom;
+            } else {
+              h.position = Position.Right;
+            }
+          });
+        });
+      }
 
       return { nodes: newNodes, edges };
     },
@@ -237,7 +330,7 @@ const GraphView = ({
 
       const { nodes: rawNodes, edges: rawEdges } = result;
       const { nodes: layoutedNodes, edges: layoutedEdges } =
-        getLayoutedElements(rawNodes, rawEdges);
+        getLayoutedElements(rawNodes, rawEdges, layoutOrientation);
 
       setNodes(layoutedNodes);
       setEdges(layoutedEdges);
@@ -249,6 +342,7 @@ const GraphView = ({
     }
   }, [
     compiledSchema,
+    layoutOrientation,
     generateNodesAndEdges,
     getLayoutedElements,
     setEdges,
@@ -266,9 +360,10 @@ const GraphView = ({
     if (collisionResolved) return;
     if (!allNodesMeasured(nodes)) return;
     const resolved = resolveCollisions(nodes, {
-      maxIterations: 500,
+      maxIterations: 50,
       overlapThreshold: 0.5,
       margin: 20,
+      direction: layoutOrientation,
     });
     setNodes(resolved);
     setCollisionResolved(true);
@@ -277,7 +372,7 @@ const GraphView = ({
       fitView({ duration: isGraphReady ? 800 : 0, padding: 0.05 });
       setIsGraphReady(true);
     }, 300);
-  }, [nodes, collisionResolved, allNodesMeasured, setNodes, fitView]);
+  }, [nodes, collisionResolved, allNodesMeasured, setNodes, fitView, layoutOrientation]);
 
   useEffect(() => {
     if (errorMessage) {
@@ -461,7 +556,20 @@ const GraphView = ({
           gap={20}
           color="var(--reactflow-bg-sub-pattern-color)"
         />
-        <Controls />
+        <Controls>
+          <ControlButton
+            onClick={() => setLayoutOrientation(layoutOrientation === "LR" ? "TB" : "LR")}
+            title={layoutOrientation === "LR" ? "Switch to Vertical Layout" : "Switch to Horizontal Layout"}
+            aria-label="Toggle Layout Orientation"
+            className="flex items-center justify-center"
+          >
+            {layoutOrientation === "LR" ? (
+              <MdAlignVerticalTop size={16} />
+            ) : (
+              <MdAlignHorizontalLeft size={16} />
+            )}
+          </ControlButton>
+        </Controls>
       </ReactFlow>
 
       {openNodeDetailsPopup && selectedNode && (
