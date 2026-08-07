@@ -10,6 +10,7 @@ import {
   type NavigationDirection,
   type SchemaFormat,
   type SelectedNode,
+  type LayoutOrientation,
 } from "./AppContext";
 
 import defaultSchema from "../data/defaultJSONSchema.json";
@@ -42,6 +43,15 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
   const [schemaFormat, setSchemaFormat] = useState<SchemaFormat>(
     (window.sessionStorage.getItem(SESSION_FORMAT_KEY) as SchemaFormat) ?? "json"
   );
+
+  const [layoutOrientation, setLayoutOrientationState] = useState<LayoutOrientation>(
+    (window.sessionStorage.getItem("layout_orientation") as LayoutOrientation) ?? "LR"
+  );
+
+  const setLayoutOrientation = useCallback((orientation: LayoutOrientation) => {
+    sessionStorage.setItem("layout_orientation", orientation);
+    setLayoutOrientationState(orientation);
+  }, []);
 
   const initialSchemaJSON = loadSchemaJSON(SESSION_SCHEMA_KEY);
 
@@ -166,6 +176,8 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
     triggerNavigateMatch,
     registerExportGraph,
     triggerExportGraph,
+    layoutOrientation,
+    setLayoutOrientation,
   };
 
   return <AppContext.Provider value={value}>{children}</AppContext.Provider>;

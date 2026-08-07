@@ -1,4 +1,4 @@
-import { Handle, useUpdateNodeInternals } from "@xyflow/react";
+import { Handle, useUpdateNodeInternals, Position } from "@xyflow/react";
 import type { RFNodeData } from "../utils/processAST";
 import { useContext, useEffect, useLayoutEffect, useRef, useState } from "react";
 import { AppContext } from "../contexts/AppContext";
@@ -12,7 +12,8 @@ const CustomNode = ({
   id: string;
   selected: boolean;
 }) => {
-  const { theme } = useContext(AppContext);
+  const { theme, layoutOrientation } = useContext(AppContext);
+  const isHorizontal = layoutOrientation === "LR";
 
   const rowRefs = useRef<
     Record<string, HTMLDivElement | HTMLSpanElement | null>
@@ -68,7 +69,7 @@ const CustomNode = ({
         <Handle
           key={handleId}
           type="target"
-          position={position}
+          position={isHorizontal ? position : Position.Top}
           id={handleId}
         />
       ))}
