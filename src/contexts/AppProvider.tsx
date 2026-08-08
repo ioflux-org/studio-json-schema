@@ -10,10 +10,13 @@ import {
   type NavigationDirection,
   type SchemaFormat,
   type SelectedNode,
+  type LayoutOrientation,
 } from "./AppContext";
 
 import defaultSchema from "../data/defaultJSONSchema.json";
 import YAML from "js-yaml";
+import { modify, applyEdits, parseTree, findNodeAtLocation } from "jsonc-parser";
+import { parseDocument } from "yaml";
 
 import { SESSION_SCHEMA_KEY, SESSION_FORMAT_KEY } from "../constants";
 
@@ -81,6 +84,7 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
 
   const [selectedNode, setSelectedNode] = useState<SelectedNode | null>(null);
   const [searchString, setSearchString] = useState("");
+  const [layoutOrientation, setLayoutOrientation] = useState<LayoutOrientation>("LR");
 
   const navigateMatchRef = useRef<((dir: NavigationDirection) => void) | null>(
     null
@@ -148,6 +152,69 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
     document.documentElement.setAttribute("data-theme", theme);
   }, [theme]);
 
+  const updateSchemaAtPath = useCallback(
+    (
+      path: (string | number)[],
+      newValue: any,
+      isKeyChange: boolean
+    ) => {
+      try {
+        let updatedText = schemaText;
+        if (schemaFormat === "yaml") {
+          const doc = parseDocument(schemaText);
+          if (isKeyChange) {
+            const parentPath = path.slice(0, -1);
+            const oldKey = path[path.length - 1];
+            const parentMap = doc.getIn(parentPath) as any;
+            if (parentMap && typeof parentMap.set === "function") {
+              const value = parentMap.get(oldKey);
+              parentMap.delete(oldKey);
+              parentMap.set(newValue, value);
+              updatedText = doc.toString();
+            }
+          } else {
+            doc.setIn(path, newValue);
+            updatedText = doc.toString();
+          }
+        } else {
+          // JSON format
+          if (isKeyChange) {
+            const tree = parseTree(schemaText);
+            if (tree) {
+              const parentPath = path.slice(0, -1);
+              const parentNode = findNodeAtLocation(tree, parentPath);
+              if (parentNode && parentNode.type === "object" && parentNode.children) {
+                const oldKey = path[path.length - 1];
+                const propNode = parentNode.children.find(
+                  (child) => child.children && child.children[0].value === oldKey
+                );
+                if (propNode && propNode.children) {
+                  const keyNode = propNode.children[0];
+                  const start = keyNode.offset;
+                  const end = keyNode.offset + keyNode.length;
+                  const newKeyStr = JSON.stringify(newValue);
+                  updatedText = schemaText.slice(0, start) + newKeyStr + schemaText.slice(end);
+                }
+              }
+            }
+          } else {
+            const edits = modify(schemaText, path, newValue, {
+              formattingOptions: {
+                insertSpaces: true,
+                tabSize: 2,
+              },
+            });
+            updatedText = applyEdits(schemaText, edits);
+          }
+        }
+        setSchemaText(updatedText);
+      } catch (err) {
+        console.error("Failed to update schema at path:", path, err);
+      }
+    },
+    [schemaText, schemaFormat]
+  );
+
   const value = {
     containerRef,
     isFullScreen,
@@ -166,6 +233,9 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
     triggerNavigateMatch,
     registerExportGraph,
     triggerExportGraph,
+    layoutOrientation,
+    setLayoutOrientation,
+    updateSchemaAtPath,
   };
 
   return <AppContext.Provider value={value}>{children}</AppContext.Provider>;

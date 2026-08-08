@@ -12,7 +12,7 @@ const CustomNode = ({
   id: string;
   selected: boolean;
 }) => {
-  const { theme } = useContext(AppContext);
+  const { theme, updateSchemaAtPath } = useContext(AppContext);
 
   const rowRefs = useRef<
     Record<string, HTMLDivElement | HTMLSpanElement | null>
@@ -20,6 +20,14 @@ const CustomNode = ({
   const [handleOffsets, setHandleOffsets] = useState<Record<string, number>>(
     {}
   );
+
+  const [editingField, setEditingField] = useState<{
+    type: "key" | "value";
+    rowKey: string;
+    item?: string;
+    index?: number;
+  } | null>(null);
+  const [editValue, setEditValue] = useState("");
 
   const updateNodeInternals = useUpdateNodeInternals();
   useEffect(() => {
@@ -36,6 +44,60 @@ const CustomNode = ({
 
     setHandleOffsets(offsets);
   }, [data.nodeData]);
+
+  const getPathFromNodeId = (nodeId: string): (string | number)[] => {
+    const uriParts = nodeId.split("#");
+    const fragment = uriParts.length > 1 ? uriParts[1] : "";
+    return fragment
+      .split("/")
+      .filter((segment) => segment !== "")
+      .map((segment) => {
+        const decoded = decodeURIComponent(segment);
+        return /^\d+$/.test(decoded) ? parseInt(decoded, 10) : decoded;
+      });
+  };
+
+  const parseInputValue = (val: string) => {
+    if (val === "true") return true;
+    if (val === "false") return false;
+    if (val === "null") return null;
+    if (!isNaN(Number(val)) && val.trim() !== "") return Number(val);
+    if (val.startsWith('"') && val.endsWith('"')) {
+      return val.slice(1, -1);
+    }
+    return val;
+  };
+
+  const handleStartEdit = (type: "key" | "value", rowKey: string, currentVal: string, item?: string, index?: number) => {
+    setEditingField({ type, rowKey, item, index });
+    setEditValue(currentVal);
+  };
+
+  const handleSaveEdit = () => {
+    if (!editingField) return;
+    const basePath = getPathFromNodeId(id);
+    const parsedVal = parseInputValue(editValue);
+
+    if (editingField.rowKey === "properties" && editingField.item) {
+      const fullPath = [...basePath, "properties", editingField.item];
+      updateSchemaAtPath(fullPath, parsedVal, true);
+    } else if (editingField.rowKey === "required" && editingField.index !== undefined) {
+      const fullPath = [...basePath, "required", editingField.index];
+      updateSchemaAtPath(fullPath, parsedVal, false);
+    } else {
+      const fullPath = [...basePath, editingField.rowKey];
+      updateSchemaAtPath(fullPath, parsedVal, false);
+    }
+    setEditingField(null);
+  };
+
+  const handleKeyDown = (e: React.KeyboardEvent) => {
+    if (e.key === "Enter") {
+      handleSaveEdit();
+    } else if (e.key === "Escape") {
+      setEditingField(null);
+    }
+  };
 
   const { color } = data.nodeStyle;
 
@@ -87,7 +149,11 @@ const CustomNode = ({
         {data.nodeLabel}
       </div>
 
-      <div className="flex flex-col">
+      <div 
+        className="flex flex-col animate-fadeIn"
+        onClick={(e) => e.stopPropagation()}
+        onDoubleClick={(e) => e.stopPropagation()}
+      >
         {Object.entries(data.nodeData).map(([key, keyData]) => {
           const isTypeColorMap =
             key === "type" &&
@@ -99,7 +165,7 @@ const CustomNode = ({
           return (
             <div
               key={key}
-              className={`${data.isBooleanNode && "text-center"} flex`}
+              className={`${data.isBooleanNode && "text-center"} flex items-center justify-between`}
               style={{
                 border: `1px solid ${data.nodeStyle.color}40`,
                 padding: "4px",
@@ -138,27 +204,72 @@ const CustomNode = ({
                 </div>
               ) : isArray ? (
                 <div className="flex-col w-full gap-1 flex py-1">
-                  {(keyData.value as string[]).map((item, index) => (
-                    <div
-                      ref={(el) => {
-                        rowRefs.current[`${id}-${item}`] = el;
-                      }}
-                      key={index}
-                      className="px-2 py-[2px] bg-[var(--node-value-bg-color)]"
-                      style={{ border: `1px solid ${color}30` }}
-                    >
-                      {item}
-                    </div>
-                  ))}
+                   {(keyData.value as string[]).map((item, index) => {
+                    const isEditableArray = key === "properties" || key === "required";
+                    const isEditingThis =
+                      isEditableArray &&
+                      editingField?.rowKey === key &&
+                      editingField?.index === index;
+
+                    return isEditingThis ? (
+                      <input
+                        key={index}
+                        value={editValue}
+                        onChange={(e) => setEditValue(e.target.value)}
+                        onBlur={handleSaveEdit}
+                        onKeyDown={handleKeyDown}
+                        className="px-1 py-[2px] text-xs bg-[var(--node-value-bg-color)] border border-blue-500 rounded text-foreground w-full focus:outline-none"
+                        autoFocus
+                      />
+                    ) : (
+                      <div
+                        ref={(el) => {
+                          rowRefs.current[`${id}-${item}`] = el;
+                        }}
+                        key={index}
+                        onDoubleClick={() => {
+                          if (isEditableArray) {
+                            handleStartEdit(key === "properties" ? "key" : "value", key, item, item, index);
+                          }
+                        }}
+                        className={`px-2 py-[2px] bg-[var(--node-value-bg-color)] ${isEditableArray ? "cursor-text select-text" : ""}`}
+                        style={{ border: `1px solid ${color}30` }}
+                        title={isEditableArray ? "Double click to edit" : undefined}
+                      >
+                        {item}
+                      </div>
+                    );
+                  })}
                 </div>
               ) : (
-                <span
-                  ref={(el) => {
-                    rowRefs.current[`${id}-${key}`] = el;
-                  }}
-                >
-                  {keyData.ellipsis ?? String(keyData.value)}
-                </span>
+                (() => {
+                  const isEditingThis =
+                    editingField?.rowKey === key &&
+                    editingField?.type === "value";
+                  const currentStr = String(keyData.value);
+
+                  return isEditingThis ? (
+                    <input
+                      value={editValue}
+                      onChange={(e) => setEditValue(e.target.value)}
+                      onBlur={handleSaveEdit}
+                      onKeyDown={handleKeyDown}
+                      className="px-1 py-[2px] text-xs bg-[var(--node-value-bg-color)] border border-blue-500 rounded text-foreground w-full focus:outline-none"
+                      autoFocus
+                    />
+                  ) : (
+                    <span
+                      ref={(el) => {
+                        rowRefs.current[`${id}-${key}`] = el;
+                      }}
+                      onDoubleClick={() => handleStartEdit("value", key, currentStr)}
+                      className="cursor-text select-text"
+                      title="Double click to edit value"
+                    >
+                      {keyData.ellipsis ?? currentStr}
+                    </span>
+                  );
+                })()
               )}
             </div>
           );
