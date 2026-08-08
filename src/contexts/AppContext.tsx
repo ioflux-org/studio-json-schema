@@ -9,6 +9,8 @@ export type SelectedNode = {
 
 export type NavigationDirection = "next" | "prev";
 
+export type LayoutOrientation = "TB" | "LR";
+
 type AppContextType = {
   containerRef: Ref<HTMLDivElement>;
   isFullScreen: boolean;
@@ -34,6 +36,15 @@ type AppContextType = {
 
   registerExportGraph: (fn: () => void) => void;
   triggerExportGraph: () => void;
+
+  layoutOrientation: LayoutOrientation;
+  setLayoutOrientation: (orientation: LayoutOrientation) => void;
+
+  updateSchemaAtPath: (
+    path: (string | number)[],
+    newValue: any,
+    isKeyChange: boolean
+  ) => void;
 };
 
 export const AppContext = createContext<AppContextType>({} as AppContextType);
