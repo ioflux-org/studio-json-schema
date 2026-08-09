@@ -132,7 +132,7 @@ const NavigationBar = () => {
           <button
             aria-label="Toggle search"
             onClick={() => setMobileSearchOpen((prev) => !prev)}
-            className="p-2 rounded-md border border-transparent text-[var(--navigation-text-color)] hover:border-[var(--accent-color)] hover:text-[var(--accent-color)] cursor-pointer transition-all duration-200"
+            className="p-2 rounded-md border border-transparent text-[var(--navigation-text-color)] hover:bg-[var(--bg-color)] hover:border-[var(--accent-color)] hover:text-[var(--accent-color)] cursor-pointer transition-all duration-200"
           >
             <RiSearchLine size={18} />
           </button>
@@ -142,7 +142,7 @@ const NavigationBar = () => {
         <li className="flex items-center">
           <button
             aria-label="Toggle theme"
-            className="p-2 rounded-md border border-transparent text-[var(--navigation-text-color)] hover:border-[var(--accent-color)] hover:text-[var(--accent-color)] cursor-pointer transition-all duration-200"
+            className="p-2 rounded-md border border-transparent text-[var(--navigation-text-color)] hover:bg-[var(--bg-color)] hover:border-[var(--accent-color)] hover:text-[var(--accent-color)] cursor-pointer transition-all duration-200"
             onClick={toggleTheme}
             data-tooltip-id="toggle-theme"
           >
@@ -170,7 +170,7 @@ const NavigationBar = () => {
             href="https://github.com/ioflux-org/studio-json-schema"
             target="_blank"
             rel="noopener noreferrer"
-            className="p-2 rounded-md border border-transparent text-[var(--navigation-text-color)] hover:border-[var(--accent-color)] hover:text-[var(--accent-color)] flex items-center transition-all duration-200"
+            className="p-2 rounded-md border border-transparent text-[var(--navigation-text-color)] hover:bg-[var(--bg-color)] hover:border-[var(--accent-color)] hover:text-[var(--accent-color)] flex items-center transition-all duration-200"
             data-tooltip-id="github"
           >
             <BsGithub size={16} />
@@ -191,7 +191,7 @@ const NavigationBar = () => {
             href="https://github.com/ioflux-org/studio-json-schema?tab=readme-ov-file#json-schema-visualizer"
             target="_blank"
             rel="noopener noreferrer"
-            className="p-2 rounded-md border border-transparent text-[var(--navigation-text-color)] hover:border-[var(--accent-color)] hover:text-[var(--accent-color)] flex items-center transition-all duration-200"
+            className="p-2 rounded-md border border-transparent text-[var(--navigation-text-color)] hover:bg-[var(--bg-color)] hover:border-[var(--accent-color)] hover:text-[var(--accent-color)] flex items-center transition-all duration-200"
             data-tooltip-id="learn-keywords"
           >
             <BsBook size={16} />
