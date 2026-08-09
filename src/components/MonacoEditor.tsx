@@ -599,6 +599,7 @@ const MonacoEditor = () => {
           options={{
             minimap: { enabled: false },
             occurrencesHighlight: "off",
+            renderLineHighlightOnlyWhenFocus: true,
           }}
           onChange={(value) => setSchemaText(value ?? "")}
           onMount={handleEditorDidMount}
