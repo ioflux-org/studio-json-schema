@@ -87,15 +87,16 @@ test.describe("YAML Format Support", () => {
     await waitForGraph(page);
   });
 
-  test("switching editor to YAML mode changes the format select value", async ({ page }) => {
-    const formatSelect = page.locator("select");
-    await formatSelect.selectOption("yaml");
-    await expect(formatSelect).toHaveValue("yaml");
+  test("switching editor to YAML mode flips the format toggle", async ({ page }) => {
+    const formatToggle = page.locator("#schema-format-toggle");
+    await expect(formatToggle).toHaveAttribute("aria-checked", "false");
+    await formatToggle.click();
+    await expect(formatToggle).toHaveAttribute("aria-checked", "true");
+    await expect(formatToggle).toContainText("YAML");
   });
 
   test("pasting a valid YAML schema renders graph nodes", async ({ page }) => {
-    const formatSelect = page.locator("select");
-    await formatSelect.selectOption("yaml");
+    await page.locator("#schema-format-toggle").click();
     await fillMonacoEditor(page, VALID_YAML_SCHEMA);
     const nodes = page.locator(".react-flow__node");
     await expect(nodes.first()).toBeVisible({ timeout: 15_000 });
@@ -104,20 +105,19 @@ test.describe("YAML Format Support", () => {
   });
 
   test("valid YAML schema shows success validation", async ({ page }) => {
-    const formatSelect = page.locator("select");
-    await formatSelect.selectOption("yaml");
+    await page.locator("#schema-format-toggle").click();
     await fillMonacoEditor(page, VALID_YAML_SCHEMA);
     await waitForValidationStatus(page, "✓");
     await expect(page.locator(".text-green-400")).toBeVisible({ timeout: 10_000 });
   });
 
   test("switching back from YAML to JSON preserves graph", async ({ page }) => {
-    const formatSelect = page.locator("select");
-    await formatSelect.selectOption("yaml");
+    const formatToggle = page.locator("#schema-format-toggle");
+    await formatToggle.click();
     await fillMonacoEditor(page, VALID_YAML_SCHEMA);
     await page.locator(".react-flow__node").first().waitFor({ timeout: 15_000 });
 
-    await formatSelect.selectOption("json");
+    await formatToggle.click();
     const nodes = page.locator(".react-flow__node");
     await expect(nodes.first()).toBeVisible({ timeout: 10_000 });
   });

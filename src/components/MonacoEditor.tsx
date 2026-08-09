@@ -27,7 +27,7 @@ import { jsonSchemaErrors } from "@hyperjump/json-schema-errors";
 import Editor, { type OnMount } from "@monaco-editor/react";
 import { cssToken } from "../utils/tokens";
 import type { editor } from "monaco-editor";
-import { AppContext, type SchemaFormat } from "../contexts/AppContext";
+import { AppContext } from "../contexts/AppContext";
 import SchemaVisualization from "./SchemaVisualization";
 import NavigationBar from "./NavigationBar";
 import EditorToggleButton from "./EditorToggleButton";
@@ -551,18 +551,33 @@ const MonacoEditor = () => {
               <BsDownload size={11} />
               <span>Export</span>
             </button>
-            <label htmlFor="schema-format-select" className="sr-only">
-              Schema format
-            </label>
-            <select
-              id="schema-format-select"
-              value={schemaFormat}
-              onChange={(e) => changeSchemaFormat(e.target.value as SchemaFormat)}
-              className="h-[28px] min-w-[60px] px-2 flex-shrink-0 bg-[var(--bg-color)] text-[var(--text-color)] text-xs font-medium outline-none cursor-pointer border border-[var(--toolbar-border-color)] rounded-md hover:text-[var(--accent-color)] hover:border-[var(--accent-color)] transition-colors"
+            <button
+              id="schema-format-toggle"
+              type="button"
+              role="switch"
+              aria-checked={schemaFormat === "yaml"}
+              aria-label={`Schema format: ${schemaFormat.toUpperCase()}`}
+              title={`Switch to ${schemaFormat === "json" ? "YAML" : "JSON"}`}
+              onClick={() =>
+                changeSchemaFormat(schemaFormat === "json" ? "yaml" : "json")
+              }
+              className="relative h-[28px] w-[68px] flex-shrink-0 rounded-full bg-[var(--bg-color)] border border-[var(--toolbar-border-color)] cursor-pointer hover:border-[var(--accent-color)] transition-colors duration-200"
             >
-              <option value="json">JSON</option>
-              <option value="yaml">YAML</option>
-            </select>
+              <span
+                aria-hidden
+                className={`absolute top-1/2 -translate-y-1/2 h-[20px] w-[20px] rounded-full bg-[var(--accent-color)] transition-all duration-200 ${
+                  schemaFormat === "json" ? "left-[3px]" : "left-[calc(100%-23px)]"
+                }`}
+              />
+              <span
+                aria-hidden
+                className={`absolute top-1/2 -translate-y-1/2 text-[10px] font-semibold tracking-wide text-[var(--text-color)] ${
+                  schemaFormat === "json" ? "right-2.5" : "left-2.5"
+                }`}
+              >
+                {schemaFormat.toUpperCase()}
+              </span>
+            </button>
           </div>
           {/* Inline validation status indicator */}
           {schemaValidation.status === "warning" ? (
