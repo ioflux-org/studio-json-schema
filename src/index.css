@@ -133,6 +133,8 @@
   /* status */
   --color-success: var(--green-600);
   --color-warning: var(--amber-600);
+  --color-warning-soft: color-mix(in srgb, var(--amber-600) 25%, transparent);
+  --color-warning-glow: color-mix(in srgb, var(--amber-600) 28%, transparent);
   --color-danger: var(--red-600);
   --color-danger-soft: color-mix(in srgb, var(--red-600) 25%, transparent);
   --color-danger-glow: color-mix(in srgb, var(--red-600) 28%, transparent);
@@ -183,6 +185,8 @@
   /* status */
   --color-success: var(--green-400);
   --color-warning: var(--amber-400);
+  --color-warning-soft: color-mix(in srgb, var(--amber-400) 28%, transparent);
+  --color-warning-glow: color-mix(in srgb, var(--amber-400) 30%, transparent);
   --color-danger: var(--red-400);
   --color-danger-soft: color-mix(in srgb, var(--red-400) 28%, transparent);
   --color-danger-glow: color-mix(in srgb, var(--red-400) 30%, transparent);
