@@ -33,12 +33,19 @@ import {
   type GraphEdge,
   type GraphNode,
   type NodeData,
+  type RFNodeData,
 } from "../utils/processAST";
 import { sortAST } from "../utils/sortAST";
 import { resolveCollisions } from "../utils/resolveCollisions";
 import { MdNavigateBefore, MdNavigateNext } from "react-icons/md";
 import { CgClose } from "react-icons/cg";
 import { extractKeywords } from "../utils/searchNodeHelpers";
+import {
+  computeNodeDiffMap,
+  mergeDiffGraphs,
+  type DiffStatus,
+} from "../utils/schemaDiff";
+import DiffLegend from "./DiffLegend";
 
 const nodeTypes = { customNode: CustomNode };
 
@@ -46,11 +53,19 @@ const NODE_WIDTH = 172;
 const NODE_HEIGHT = 36;
 const HORIZONTAL_GAP = 150;
 
+type GraphViewProps = {
+  compiledSchema: CompiledSchema | null;
+  diffCompiledSchema?: CompiledSchema | null;
+  isDiffMode?: boolean;
+  onDiffNodeSelect?: (identity: string, status: DiffStatus) => void;
+};
+
 const GraphView = ({
   compiledSchema,
-}: {
-  compiledSchema: CompiledSchema | null;
-}) => {
+  diffCompiledSchema = null,
+  isDiffMode = false,
+  onDiffNodeSelect,
+}: GraphViewProps) => {
   const { setCenter, getZoom, fitView, getNodes } = useReactFlow();
   const { theme, selectedNode, setSelectedNode, searchString, registerNavigateMatch, registerExportGraph } =
     useContext(AppContext);
@@ -115,6 +130,12 @@ const GraphView = ({
       });
       setOpenNodeDetailsPopup(false);
     }
+
+    const status = (node.data as RFNodeData).diffStatus;
+    if (isDiffMode && status && status !== "unchanged" && onDiffNodeSelect) {
+      onDiffNodeSelect(node.id, status);
+    }
+
     // Select connected edges programmatically to allow native selection handling
     setEdges((eds) =>
       eds.map((edge) => {
@@ -125,7 +146,7 @@ const GraphView = ({
         };
       })
     );
-  }, [selectedNode, setSelectedNode, setEdges]);
+  }, [selectedNode, setSelectedNode, setEdges, isDiffMode, onDiffNodeSelect]);
 
   const generateNodesAndEdges = useCallback(
     (
@@ -235,7 +256,25 @@ const GraphView = ({
       const result = generateNodesAndEdges(compiledSchema);
       if (!result) return;
 
-      const { nodes: rawNodes, edges: rawEdges } = result;
+      let rawNodes = result.nodes;
+      let rawEdges = result.edges;
+
+      if (isDiffMode && diffCompiledSchema) {
+        const compare = generateNodesAndEdges(diffCompiledSchema);
+        if (compare) {
+          const diffMap = computeNodeDiffMap(result.nodes, compare.nodes);
+          const merged = mergeDiffGraphs(
+            result.nodes,
+            result.edges,
+            compare.nodes,
+            compare.edges,
+            diffMap
+          );
+          rawNodes = merged.nodes;
+          rawEdges = merged.edges;
+        }
+      }
+
       const { nodes: layoutedNodes, edges: layoutedEdges } =
         getLayoutedElements(rawNodes, rawEdges);
 
@@ -249,6 +288,8 @@ const GraphView = ({
     }
   }, [
     compiledSchema,
+    diffCompiledSchema,
+    isDiffMode,
     generateNodesAndEdges,
     getLayoutedElements,
     setEdges,
@@ -463,6 +504,8 @@ const GraphView = ({
         />
         <Controls />
       </ReactFlow>
+
+      {isDiffMode && <DiffLegend />}
 
       {openNodeDetailsPopup && selectedNode && (
         <NodeDetailsPopup

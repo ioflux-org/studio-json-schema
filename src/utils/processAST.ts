@@ -28,7 +28,9 @@ export type RFNodeData = {
     nodeData: NodeData,
     nodeStyle: Partial<NodeStyle>,
     sourceHandles: HandleConfig[],
-    targetHandles: HandleConfig[]
+    targetHandles: HandleConfig[],
+
+    diffStatus?: "added" | "removed" | "modified" | "unchanged",
 }
 
 type NodeStyle = {

@@ -1,6 +1,7 @@
 import { useContext, useState, useEffect, useRef, useMemo } from "react";
 import { BsUpload, BsDownload } from "react-icons/bs";
 import { SESSION_SCHEMA_KEY } from "../constants";
+import YAML from "js-yaml";
 
 import {
   Panel,
@@ -24,7 +25,7 @@ import {
 } from "@hyperjump/json-schema/experimental";
 import { jsonSchemaErrors } from "@hyperjump/json-schema-errors";
 
-import Editor, { type OnMount } from "@monaco-editor/react";
+import Editor, { DiffEditor, type OnMount, type DiffOnMount } from "@monaco-editor/react";
 import type { editor } from "monaco-editor";
 import { AppContext, type SchemaFormat } from "../contexts/AppContext";
 import SchemaVisualization from "./SchemaVisualization";
@@ -38,6 +39,11 @@ import {
 import { pointerSegments } from "@hyperjump/json-pointer";
 import { getKeywordDocLink } from "../utils/keywordDocs";
 import SchemaErrorsPopup from "./SchemaErrorsPopup";
+import { compileSchemaForGraph } from "../utils/compileSchemaForGraph";
+import {
+  identityToPath,
+  type DiffStatus,
+} from "../utils/schemaDiff";
 
 export type ValidationStatus = {
   status: "success" | "warning" | "error";
@@ -63,6 +69,8 @@ type CreateBrowser = (
 const DEFAULT_SCHEMA_ID = "https://studio.ioflux.org/schema";
 const DEFAULT_SCHEMA_DIALECT = "https://json-schema.org/draft/2020-12/schema";
 const DEFAULT_EDITOR_PANEL_WIDTH = 25; // in percentage
+const DIFF_EDITOR_PANEL_WIDTH = 45; 
+
 
 const JSON_SCHEMA_DIALECTS = [
   "https://json-schema.org/draft/2020-12/schema",
@@ -113,6 +121,9 @@ const MonacoEditor = () => {
   } = useContext(AppContext);
 
   const editorRef = useRef<editor.IStandaloneCodeEditor | null>(null);
+  const diffEditorRef = useRef<editor.IStandaloneDiffEditor | null>(null);
+  const diffContainerRef = useRef<HTMLDivElement | null>(null);
+  const diffResizeObserverRef = useRef<ResizeObserver | null>(null);
   const editorPanelRef = useRef<ImperativePanelHandle>(null);
 
   const handleEditorDidMount: OnMount = (editor) => {
@@ -122,6 +133,13 @@ const MonacoEditor = () => {
   const [compiledSchema, setCompiledSchema] = useState<CompiledSchema | null>(
     null
   );
+  const [diffCompiledSchema, setDiffCompiledSchema] =
+    useState<CompiledSchema | null>(null);
+
+  const [isDiffMode, setIsDiffMode] = useState(false);
+  const [compareSchemaText, setCompareSchemaText] = useState("");
+  const [diffEditorReady, setDiffEditorReady] = useState(false);
+  const [compareError, setCompareError] = useState<string | null>(null);
 
   const fileInputRef = useRef<HTMLInputElement>(null);
 
@@ -246,7 +264,13 @@ const MonacoEditor = () => {
     if (editorVisible) {
       editorPanelRef.current.collapse();
     } else {
-      editorPanelRef.current.resize(isMobile ? 40 : DEFAULT_EDITOR_PANEL_WIDTH);
+      editorPanelRef.current.resize(
+        isMobile
+          ? 40
+          : isDiffMode
+            ? DIFF_EDITOR_PANEL_WIDTH
+            : DEFAULT_EDITOR_PANEL_WIDTH
+      );
     }
 
     setEditorVisible((prev) => !prev);
@@ -256,20 +280,62 @@ const MonacoEditor = () => {
     }, 300);
   };
 
-  const highlightPathInEditor = (path: (string | number)[]) => {
-    if (!editorRef.current) return;
-    const model = editorRef.current.getModel();
+const toggleDiffMode = () => {
+  if (isDiffMode) {
+    // Turning Diff mode OFF.
+    // Dispose Monaco's diff editor + its models BEFORE React unmounts
+    // the <DiffEditor> component — this is the actual race condition fix.
+    const diffEditor = diffEditorRef.current;
+    if (diffEditor) {
+      const model = diffEditor.getModel(); // { original, modified }
+      diffEditor.setModel(null);           // detach models first
+      model?.original?.dispose();
+      model?.modified?.dispose();
+      diffEditor.dispose();                // now dispose the widget itself
+    }
+    diffEditorRef.current = null;
+
+    diffResizeObserverRef.current?.disconnect();
+    diffResizeObserverRef.current = null;
+
+    setDiffEditorReady(false);
+    setDiffCompiledSchema(null);
+    if (editorVisible && !isMobile) {
+      editorPanelRef.current?.resize(DEFAULT_EDITOR_PANEL_WIDTH);
+    }
+    setIsDiffMode(false);
+  } else {
+    // Turning Diff mode ON.
+    setCompareSchemaText(schemaText);
+    if (editorVisible && !isMobile) {
+      setDiffEditorReady(false);
+      editorPanelRef.current?.resize(DIFF_EDITOR_PANEL_WIDTH);
+      window.setTimeout(() => {
+        setDiffEditorReady(true);
+      }, 320);
+    } else {
+      setDiffEditorReady(true);
+    }
+    setIsDiffMode(true);
+  }
+};
+
+  const highlightInStandaloneEditor = (
+    target: editor.IStandaloneCodeEditor,
+    text: string,
+    path: (string | number)[]
+  ) => {
+    const model = target.getModel();
     if (!model) return;
 
-    const text = model.getValue();
     const range = getHighlightedNodeRangeFromPath(text, path, schemaFormat);
     if (!range) return;
 
     const startPos = model.getPositionAt(range.start);
     const endPos = model.getPositionAt(range.end);
 
-    editorRef.current.revealPositionInCenter(startPos);
-    editorRef.current.setPosition(startPos);
+    target.revealPositionInCenter(startPos);
+    target.setPosition(startPos);
 
     const decoration = {
       range: new (window as any).monaco.Range(
@@ -289,19 +355,105 @@ const MonacoEditor = () => {
     model.deltaDecorations(oldDecorations, [decoration]);
   };
 
-  useEffect(() => {
+  const highlightPathInEditor = (path: (string | number)[]) => {
+    if (isDiffMode && diffEditorRef.current) {
+      const modified = diffEditorRef.current.getModifiedEditor();
+      const modifiedText = modified.getModel()?.getValue() ?? compareSchemaText;
+      highlightInStandaloneEditor(modified, modifiedText, path);
+      return;
+    }
     if (!editorRef.current) return;
-    const model = editorRef.current.getModel();
-    if (!model) return;
+    const currentText = editorRef.current.getModel()?.getValue() ?? schemaText;
+    highlightInStandaloneEditor(editorRef.current, currentText, path);
+  };
 
-    if (!selectedNode?.id) {
+  const handleDiffNodeSelect = (identity: string, status: DiffStatus) => {
+    if (!diffEditorRef.current) return;
+    const path = identityToPath(identity);
+    const useOriginal = status === "removed";
+    const target = useOriginal
+      ? diffEditorRef.current.getOriginalEditor()
+      : diffEditorRef.current.getModifiedEditor();
+    const text = useOriginal ? schemaText : compareSchemaText;
+    highlightInStandaloneEditor(target, text, path);
+  };
+
+  const layoutDiffEditor = () => {
+    const diffEditor = diffEditorRef.current;
+    const container = diffContainerRef.current;
+    if (!diffEditor || !container) return;
+    diffEditor.layout({
+      width: container.clientWidth,
+      height: container.clientHeight,
+    });
+  };
+
+  const handleDiffEditorMount: DiffOnMount = (diffEditor) => {
+    diffEditorRef.current = diffEditor;
+
+    const modified = diffEditor.getModifiedEditor();
+
+    modified.onDidChangeModelContent(() => {
+      setCompareSchemaText(modified.getValue());
+    });
+
+    diffResizeObserverRef.current?.disconnect();
+    const container = diffContainerRef.current;
+    if (container) {
+      const observer = new ResizeObserver(() => {
+        layoutDiffEditor();
+      });
+      observer.observe(container);
+      diffResizeObserverRef.current = observer;
+    }
+
+    requestAnimationFrame(() => {
+      layoutDiffEditor();
+    });
+  };
+
+  const handleSchemaFormatChange = (format: SchemaFormat) => {
+    if (isDiffMode && format !== schemaFormat) {
+      try {
+        if (format === "yaml") {
+          const parsed = JSON.parse(compareSchemaText);
+          setCompareSchemaText(YAML.dump(parsed));
+        } else {
+          const parsed = YAML.load(compareSchemaText) as object;
+          setCompareSchemaText(JSON.stringify(parsed, null, 2));
+        }
+      } catch {
+        // Keep existing compare text if conversion fails
+        return;
+      }
+    }
+    changeSchemaFormat(format);
+  };
+
+  useEffect(() => {
+    const clearHighlights = (target: editor.IStandaloneCodeEditor | null) => {
+      const model = target?.getModel();
+      if (!model) return;
       const oldDecorations = model
         .getAllDecorations()
         .filter((d: any) => d.options.className === "monaco-highlight-line")
         .map((d: any) => d.id);
       model.deltaDecorations(oldDecorations, []);
+    };
+
+    if (!selectedNode?.id) {
+      if (isDiffMode && diffEditorRef.current) {
+        clearHighlights(diffEditorRef.current.getOriginalEditor());
+        clearHighlights(diffEditorRef.current.getModifiedEditor());
+      } else {
+        clearHighlights(editorRef.current);
+      }
       return;
     }
+
+    if (isDiffMode) return;
+
+    if (!editorRef.current) return;
 
     const uriParts = selectedNode.id.split("#");
     const fragment = uriParts.length > 1 ? uriParts[1] : "";
@@ -315,9 +467,32 @@ const MonacoEditor = () => {
       });
 
     highlightPathInEditor(path);
-  }, [selectedNode?.id, schemaFormat, schemaText]);
+  }, [selectedNode?.id, schemaFormat, schemaText, isDiffMode]);
 
   const instanceId = useMemo(() => Math.random().toString(36).slice(2), []);
+  const diffInstanceId = useMemo(
+    () => `diff-${Math.random().toString(36).slice(2)}`,
+    []
+  );
+
+  useEffect(() => {
+  if (!isDiffMode) {
+    setDiffCompiledSchema(null);
+    setCompareError(null);
+    return;
+  }
+  let cancelled = false;
+  const timeout = setTimeout(async () => {
+    const { compiled, error } = await compileSchemaForGraph(compareSchemaText, schemaFormat, diffInstanceId);
+    if (cancelled) return;
+    setDiffCompiledSchema(compiled);
+    setCompareError(error);
+  }, 300);
+  return () => {
+    cancelled = true;
+    clearTimeout(timeout);
+  };
+}, [isDiffMode, compareSchemaText, schemaFormat, diffInstanceId]);
 
   useEffect(() => {
     if (!schemaText.trim()) return;
@@ -496,6 +671,24 @@ const MonacoEditor = () => {
           />
           <div className="ml-auto flex items-center gap-3">
             <button
+              type="button"
+              onClick={toggleDiffMode}
+              className={`h-[26px] flex items-center gap-1.5 border text-sm px-1.5 rounded-sm transition-opacity cursor-pointer ${
+                isDiffMode
+                  ? "bg-blue-600 text-white border-blue-600 opacity-100"
+                  : "bg-[var(--bg-color)] border-[var(--popup-border-color)] text-[var(--text-color)] hover:opacity-75"
+              }`}
+              aria-label={isDiffMode ? "Exit Diff mode" : "Enter Diff mode"}
+              aria-pressed={isDiffMode}
+              title={
+                isDiffMode
+                  ? "Exit Diff mode"
+                  : "Compare two schemas (Diff mode)"
+              }
+            >
+              <span>Diff</span>
+            </button>
+            <button
               onClick={() => fileInputRef.current?.click()}
               className="h-[26px] flex items-center gap-1.5 bg-[var(--bg-color)] border border-[var(--popup-border-color)] text-[var(--text-color)] text-sm px-1.5 rounded-sm hover:opacity-75 transition-opacity cursor-pointer"
               aria-label="Upload JSON/YAML schema file"
@@ -519,7 +712,9 @@ const MonacoEditor = () => {
             <select
               id="schema-format-select"
               value={schemaFormat}
-              onChange={(e) => changeSchemaFormat(e.target.value as SchemaFormat)}
+              onChange={(e) =>
+                handleSchemaFormatChange(e.target.value as SchemaFormat)
+              }
               className="h-[26px] min-w-[60px] px-1 flex-shrink-0 bg-[var(--bg-color)] text-[var(--text-color)] text-sm outline-none cursor-pointer border border-[var(--popup-border-color)] rounded-sm"
             >
               <option value="json">JSON</option>
@@ -551,30 +746,79 @@ const MonacoEditor = () => {
           )}
         </div>
       </div>
-      <div className="flex-1 min-h-0">
-        <Editor
-          height="100%"
-          width="100%"
-          language={schemaFormat}
-          value={schemaText}
-          theme={theme === "light" ? "vs-light" : "vs-dark"}
-          options={{
-            minimap: { enabled: false },
-            occurrencesHighlight: "off",
-          }}
-          onChange={(value) => setSchemaText(value ?? "")}
-          onMount={handleEditorDidMount}
-        />
+      <div className="flex-1 min-h-0 flex flex-col">
+        {isDiffMode ? (
+          <>
+            <div className="flex text-[10px] uppercase tracking-wide ...">
+              <span className="flex-1 px-2 py-0.5">Current (read-only)</span>
+              <span className="flex-1 px-2 py-0.5 flex items-center gap-1">
+                Compare
+                {compareError && (
+                  <span className="text-red-500 normal-case font-normal truncate" title={compareError}>
+                    — {compareError}
+                  </span>
+                )}
+              </span>
+            </div>
+            <div ref={diffContainerRef} className="flex-1 min-h-0 relative">
+              {diffEditorReady ? (
+                <DiffEditor
+                  height="100%"
+                  width="100%"
+                  language={schemaFormat}
+                  original={schemaText}
+                  modified={compareSchemaText}
+                  theme={theme === "light" ? "vs-light" : "vs-dark"}
+                  options={{
+                    minimap: { enabled: false },
+                    renderSideBySide: true,
+                    // Monaco defaults this to 900px — below that it collapses to inline
+                    // (original pane ~38px). Keep true side-by-side in our panel.
+                    renderSideBySideInlineBreakpoint: 0,
+                    // Git-style: left (Current) locked; right (Compare) editable
+                    originalEditable: false,
+                    readOnly: false,
+                    automaticLayout: true,
+                  }}
+                  onMount={handleDiffEditorMount}
+                />
+              ) : (
+                <div className="absolute inset-0 flex items-center justify-center text-sm text-[var(--validation-heading-color)]">
+                  Preparing diff…
+                </div>
+              )}
+            </div>
+          </>
+        ) : (
+          <Editor
+            height="100%"
+            width="100%"
+            language={schemaFormat}
+            value={schemaText}
+            theme={theme === "light" ? "vs-light" : "vs-dark"}
+            options={{
+              minimap: { enabled: false },
+              occurrencesHighlight: "off",
+            }}
+            onChange={(value) => setSchemaText(value ?? "")}
+            onMount={handleEditorDidMount}
+          />
+        )}
       </div>
     </Panel>
   );
 
   const visualizationPanel = (
     <Panel
-      minSize={isMobile ? undefined : 60}
+      minSize={isMobile ? undefined : isDiffMode ? 40 : 60}
       className="flex flex-col relative bg-[var(--visualize-bg-color)]"
     >
-      <SchemaVisualization compiledSchema={compiledSchema} />
+      <SchemaVisualization
+        compiledSchema={compiledSchema}
+        diffCompiledSchema={diffCompiledSchema}
+        isDiffMode={isDiffMode}
+        onDiffNodeSelect={handleDiffNodeSelect}
+      />
       <SchemaErrorsPopup
         schemaValidation={schemaValidation}
         activeErrorIndex={activeErrorIndex}

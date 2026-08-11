@@ -2,16 +2,32 @@ import GraphView from "./GraphView";
 import { type CompiledSchema } from "@hyperjump/json-schema/experimental";
 import { ReactFlowProvider } from "@xyflow/react";
 import { Tooltip } from "react-tooltip";
+import type { DiffStatus } from "../utils/schemaDiff";
+
+type SchemaVisualizationProps = {
+  compiledSchema: CompiledSchema | null;
+  /** When set, graph shows both schemas with diff coloring */
+  diffCompiledSchema?: CompiledSchema | null;
+  isDiffMode?: boolean;
+  /** Scroll the DiffEditor to the node path when a highlighted node is clicked */
+  onDiffNodeSelect?: (identity: string, status: DiffStatus) => void;
+};
 
 const SchemaVisualization = ({
   compiledSchema,
-}: {
-  compiledSchema: CompiledSchema | null;
-}) => {
+  diffCompiledSchema = null,
+  isDiffMode = false,
+  onDiffNodeSelect,
+}: SchemaVisualizationProps) => {
   return (
     <>
       <ReactFlowProvider>
-        <GraphView compiledSchema={compiledSchema} />
+        <GraphView
+          compiledSchema={compiledSchema}
+          diffCompiledSchema={diffCompiledSchema}
+          isDiffMode={isDiffMode}
+          onDiffNodeSelect={onDiffNodeSelect}
+        />
       </ReactFlowProvider>
       <div className="absolute bottom-[10px] right-[10px] z-10">
         <img
