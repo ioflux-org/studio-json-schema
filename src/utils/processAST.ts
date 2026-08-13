@@ -47,7 +47,7 @@ type ProcessASTParams = {
     schemaUri: string,
     nodes: UnpositionedGraphNode[],
     edges: GraphEdge[],
-    parentId: string,
+    parentId: string | null,
     nodeTitle: string,
     renderedNodes?: Map<string, UnpositionedGraphNode>,
     childId: string | null,
@@ -85,6 +85,7 @@ const nodeColors = () => graphPalette();
 
 export const processAST: ProcessAST = ({ ast, schemaUri, nodes, edges, parentId, childId, renderedNodes = new Map(), nodeTitle, nodeDepth = 0 }) => {
     if (renderedNodes.has(schemaUri)) {
+        if (parentId === null) return;
         const sourceHandle = getSourceHandle(parentId, childId);
         const targetHandle = `${sourceHandle}-target`;
         const targetNode = renderedNodes.get(schemaUri);
@@ -152,6 +153,12 @@ export const processAST: ProcessAST = ({ ast, schemaUri, nodes, edges, parentId,
     };
 
     const color = getColor(nodeData);
+
+    if (parentId === null) {
+        updateNode(newNode, { nodeData, nodeStyle: { color } });
+        return;
+    }
+
     const sourceHandle = getSourceHandle(parentId, childId);
     const targetHandle = `${sourceHandle}-target`;
 

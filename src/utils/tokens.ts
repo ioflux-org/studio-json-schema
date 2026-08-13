@@ -8,10 +8,17 @@
 
 const cache = new Map<string, string>();
 
+const expandHexShorthand = (value: string): string => {
+    if (!/^#[0-9a-fA-F]{3,4}$/.test(value)) return value;
+    return `#${[...value.slice(1)].map((c) => c + c).join("")}`;
+};
+
 export const cssToken = (name: string): string => {
     let value = cache.get(name);
     if (value === undefined) {
-        value = getComputedStyle(document.documentElement).getPropertyValue(name).trim();
+        value = expandHexShorthand(
+            getComputedStyle(document.documentElement).getPropertyValue(name).trim()
+        );
         cache.set(name, value);
     }
     return value;

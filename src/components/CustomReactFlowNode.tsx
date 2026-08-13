@@ -137,7 +137,7 @@ const CustomNode = ({
       ))}
 
       <div
-        className="px-3 py-1.5 font-semibold text-sm tracking-wide rounded-t-lg"
+        className="px-3 py-1.5 font-semibold text-sm tracking-wide rounded-t-[10px]"
         style={{
           background: theme === "dark" ? `${color}4d` : `${color}40`,
           borderBottom: `1px solid ${color}`,
@@ -151,7 +151,7 @@ const CustomNode = ({
       </div>
 
       <div className="flex flex-col">
-        {Object.entries(data.nodeData).map(([key, keyData]) => {
+        {Object.entries(data.nodeData).map(([key, keyData], rowIndex, rows) => {
           const isTypeColorMap =
             key === "type" &&
             typeof keyData.value === "object" &&
@@ -164,7 +164,10 @@ const CustomNode = ({
               key={key}
               className="flex"
               style={{
-                borderBottom: `1px solid ${color}4d`,
+                borderBottom:
+                  rowIndex === rows.length - 1
+                    ? undefined
+                    : `1px solid ${color}4d`,
                 padding: "5px 8px",
               }}
             >

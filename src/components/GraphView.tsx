@@ -143,7 +143,7 @@ const GraphView = ({
         schemaUri,
         nodes,
         edges,
-        parentId: "root",
+        parentId: null,
         childId: null,
         nodeTitle: "root",
       });
