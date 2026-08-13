@@ -52,6 +52,7 @@
   --copper-400: #d9803f;
 
   /* -- Slate scale (dark surfaces) ---------------------------------------- */
+  --slate-950: #060a14;
   --slate-900: #0f172a;
   --slate-850: #131c31;
   --slate-800: #1e293b;
@@ -84,7 +85,7 @@
   --graph-object: #00e5ff;
   --graph-string: #ff6eff;
   --graph-array: #ff8f00;
-  --graph-number: #00ff95;
+  --graph-number: #00ff6a;
   --graph-boolean: #ffea00;
   --graph-reference: #ffe1bd;
   --graph-null: #a259ff;
@@ -110,6 +111,9 @@
   /* lines */
   --color-border: var(--sand-300);
   --color-border-strong: var(--sand-400);
+  /* pale node hues blend into cream — an ink hairline outside the colored
+     border keeps every card defined */
+  --color-node-rim: color-mix(in srgb, var(--ink-900) 18%, transparent);
   --color-edge: var(--sand-400);
   --color-grid-major: var(--ink-500);
   --color-grid-minor: var(--sand-400);
@@ -144,6 +148,7 @@
   --shadow-sm: 0 1px 2px rgba(84, 60, 28, 0.08);
   --shadow-md: 0 4px 16px rgba(84, 60, 28, 0.1);
   --shadow-lg: 0 12px 32px rgba(84, 60, 28, 0.16);
+  --shadow-node-lift: drop-shadow(0 3px 12px rgba(84, 60, 28, 0.28));
   --color-backdrop: rgba(245, 238, 224, 0.65);
 }
 
@@ -155,12 +160,14 @@
   --color-bg-canvas: var(--slate-900);
   --color-bg-inset: var(--slate-750);
   --color-bg-editor: var(--slate-850);
-  /* nodes stay on the deepest surface so the neon palette keeps contrast */
-  --color-bg-node: var(--slate-900);
+  /* nodes drop below the canvas — near-black so the neon palette pops */
+  --color-bg-node: var(--slate-950);
 
   /* lines */
   --color-border: var(--slate-700);
   --color-border-strong: var(--slate-600);
+  /* neon borders already pop on near-black cards — no rim needed */
+  --color-node-rim: transparent;
   --color-edge: var(--slate-600);
   --color-grid-major: var(--frost-500);
   --color-grid-minor: var(--slate-600);
@@ -196,6 +203,7 @@
   --shadow-sm: 0 1px 2px rgba(0, 0, 0, 0.35);
   --shadow-md: 0 4px 16px rgba(0, 0, 0, 0.45);
   --shadow-lg: 0 12px 32px rgba(0, 0, 0, 0.55);
+  --shadow-node-lift: drop-shadow(0 3px 12px rgba(0, 0, 0, 0.6));
   --color-backdrop: rgba(2, 6, 23, 0.7);
 }
 
@@ -207,6 +215,7 @@
   --nav-bg-color: var(--color-bg-surface);
   --editor-panel-bg-color: var(--color-bg-surface);
   --node-bg-color: var(--color-bg-node);
+  --node-rim-color: var(--color-node-rim);
   --node-key-color: var(--color-text-accent);
   --node-value-bg-color: var(--color-bg-inset);
   --reactflow-bg-main-pattern-color: var(--color-grid-major);
@@ -253,6 +262,12 @@ body {
 
 .react-flow__panel.react-flow__attribution.bottom.right {
   display: none;
+}
+
+/* Lift node cards off the canvas. Lives on the wrapper as a filter so it
+   follows the rounded card shape and never fights the glow box-shadows. */
+.react-flow__node {
+  filter: var(--shadow-node-lift);
 }
 
 /* ====================== Accent Separators ====================== */

@@ -57,6 +57,7 @@ const CustomNode = ({
         style={{
           ["--color" as string]: color,
           border: `2px solid ${color}`,
+          outline: "1px solid var(--node-rim-color)",
           background: theme === "dark"
             ? `${color}30`
             : `${color}20`,
@@ -122,6 +123,7 @@ const CustomNode = ({
       style={{
         ["--color" as string]: color,
         border: `2px solid ${color}`,
+        outline: "1px solid var(--node-rim-color)",
         wordBreak: "break-word",
       }}
     >
@@ -137,7 +139,7 @@ const CustomNode = ({
       <div
         className="px-3 py-1.5 font-semibold text-sm tracking-wide rounded-t-lg"
         style={{
-          background: theme === "dark" ? `${color}66` : `${color}50`,
+          background: theme === "dark" ? `${color}4d` : `${color}40`,
           borderBottom: `1px solid ${color}`,
           color:
             theme === "dark"
@@ -162,7 +164,7 @@ const CustomNode = ({
               key={key}
               className="flex"
               style={{
-                borderBottom: `1px solid ${data.nodeStyle.color}4d`,
+                borderBottom: `1px solid ${color}4d`,
                 padding: "5px 8px",
               }}
             >
