@@ -23,11 +23,10 @@
    PRIMITIVES through src/utils/tokens.ts, so they stay in sync with this
    file automatically.
 
-   Brand: light mode is soft warm cream with a copper accent; dark mode
-   follows json-schema.org's identity — slate surfaces with the royal
-   blue #002CC4 / #5468FF pair and its signature gradient. Inter +
-   JetBrains Mono throughout; both modes stage the neon graph palette
-   (--graph-*).
+   Brand: light mode is soft warm cream with a copper accent; dark mode is
+   its candle-lit counterpart — warm charcoal (umber) surfaces with the
+   same copper metal glowing amber (--copper-300/200). Inter + JetBrains
+   Mono throughout; both modes stage the neon graph palette (--graph-*).
    ========================================================================== */
 
 :root {
@@ -50,26 +49,22 @@
   --copper-600: #a34a12;
   --copper-500: #b8571b;
   --copper-400: #d9803f;
+  --copper-300: #e8963e; /* dark-mode accent — copper glowing amber */
+  --copper-200: #f2ad5c;
 
-  /* -- Slate scale (dark surfaces) ---------------------------------------- */
-  --slate-950: #060a14;
-  --slate-900: #0f172a;
-  --slate-850: #131c31;
-  --slate-800: #1e293b;
-  --slate-750: #283548;
-  --slate-700: #334155;
-  --slate-600: #475569;
+  /* -- Umber scale (dark surfaces — warm charcoal) ------------------------- */
+  --umber-950: #0d0a06;
+  --umber-900: #16130e;
+  --umber-850: #1d1915;
+  --umber-800: #262019;
+  --umber-750: #2f2820;
+  --umber-700: #3b3227;
+  --umber-600: #4f4433;
 
-  /* -- Frost scale (dark text) -------------------------------------------- */
-  --frost-100: #f1f5f9;
-  --frost-300: #cbd5e1;
-  --frost-500: #94a3b8;
-
-  /* -- Brand blues (json-schema.org) --------------------------------------- */
-  --brand-700: #002cc4; /* primary / startBlue */
-  --brand-500: #5468ff; /* endBlue */
-  --brand-400: #7b8cff;
-  --brand-link: #3b82f6; /* linkBlue */
+  /* -- Parchment scale (dark text — warm) ---------------------------------- */
+  --parchment-100: #f3ede2;
+  --parchment-300: #d5cbb8;
+  --parchment-500: #9c8f77;
 
   /* -- Status hues (600 = light mode, 400 = dark mode) -------------------- */
   --green-600: #47823d;
@@ -107,6 +102,9 @@
   --color-bg-inset: var(--sand-150);
   --color-bg-editor: var(--sand-50);
   --color-bg-node: var(--sand-25);
+  /* popups float above everything: brightest surface, wells a step down */
+  --color-bg-popup: var(--sand-25);
+  --color-bg-popup-well: var(--sand-150);
 
   /* lines */
   --color-border: var(--sand-300);
@@ -122,7 +120,7 @@
   --color-text: var(--ink-900);
   --color-text-secondary: var(--ink-500);
   --color-text-nav: var(--ink-600);
-  --color-text-accent: var(--copper-600);
+  --color-node-key: var(--copper-600);
   --color-text-logo: var(--copper-600);
   --color-text-on-accent: var(--sand-25);
 
@@ -156,38 +154,44 @@
   color-scheme: dark;
 
   /* surfaces — elevation: canvas (deepest) < editor < surface < inset */
-  --color-bg-surface: var(--slate-800);
-  --color-bg-canvas: var(--slate-900);
-  --color-bg-inset: var(--slate-750);
-  --color-bg-editor: var(--slate-850);
+  --color-bg-surface: var(--umber-800);
+  --color-bg-canvas: var(--umber-900);
+  --color-bg-inset: var(--umber-750);
+  --color-bg-editor: var(--umber-850);
   /* nodes drop below the canvas — near-black so the neon palette pops */
-  --color-bg-node: var(--slate-950);
+  --color-bg-node: var(--umber-950);
+  /* popups float above everything — one step brighter than the surface —
+     while their wells (headers, table stripes) sink back to canvas depth */
+  --color-bg-popup: var(--umber-750);
+  --color-bg-popup-well: var(--umber-900);
 
   /* lines */
-  --color-border: var(--slate-700);
-  --color-border-strong: var(--slate-600);
+  --color-border: var(--umber-700);
+  --color-border-strong: var(--umber-600);
   /* neon borders already pop on near-black cards — no rim needed */
   --color-node-rim: transparent;
-  --color-edge: var(--slate-600);
-  --color-grid-major: var(--frost-500);
-  --color-grid-minor: var(--slate-600);
+  --color-edge: var(--umber-600);
+  --color-grid-major: var(--parchment-500);
+  --color-grid-minor: var(--umber-600);
 
   /* text */
-  --color-text: var(--frost-100);
-  --color-text-secondary: var(--frost-500);
-  --color-text-nav: var(--frost-300);
-  --color-text-accent: var(--brand-400);
-  /* wordmark reads white in dark mode, like json-schema.org's dark logo */
-  --color-text-logo: var(--frost-100);
-  --color-text-on-accent: var(--slate-900);
+  --color-text: var(--parchment-100);
+  --color-text-secondary: var(--parchment-500);
+  --color-text-nav: var(--parchment-300);
+  /* keys stay muted so values and the neon type colors carry the cards —
+     amber keys read as too much amber across the whole graph */
+  --color-node-key: var(--parchment-500);
+  /* wordmark reads warm white in dark mode */
+  --color-text-logo: var(--parchment-100);
+  --color-text-on-accent: var(--umber-900);
 
   /* accent */
-  --color-accent: var(--brand-500);
-  --color-accent-hover: var(--brand-400);
+  --color-accent: var(--copper-300);
+  --color-accent-hover: var(--copper-200);
 
-  /* separator hairline — the json-schema.org startBlue → endBlue gradient */
-  --separator-start: color-mix(in srgb, var(--brand-700) 55%, transparent);
-  --separator-end: color-mix(in srgb, var(--brand-500) 55%, transparent);
+  /* separator hairline — the same copper family, glowing a step brighter */
+  --separator-start: color-mix(in srgb, var(--copper-400) 55%, transparent);
+  --separator-end: color-mix(in srgb, var(--copper-200) 55%, transparent);
 
   /* status */
   --color-success: var(--green-400);
@@ -203,8 +207,10 @@
   --shadow-sm: 0 1px 2px rgba(0, 0, 0, 0.35);
   --shadow-md: 0 4px 16px rgba(0, 0, 0, 0.45);
   --shadow-lg: 0 12px 32px rgba(0, 0, 0, 0.55);
-  --shadow-node-lift: drop-shadow(0 3px 12px rgba(0, 0, 0, 0.6));
-  --color-backdrop: rgba(2, 6, 23, 0.7);
+  --shadow-node-lift: drop-shadow(
+    0 3px 12px color-mix(in srgb, var(--copper-300) 10%, transparent)
+  );
+  --color-backdrop: rgba(8, 6, 3, 0.8);
 }
 
 /* ====================== 3. Component-facing aliases ====================== */
@@ -216,7 +222,7 @@
   --editor-panel-bg-color: var(--color-bg-surface);
   --node-bg-color: var(--color-bg-node);
   --node-rim-color: var(--color-node-rim);
-  --node-key-color: var(--color-text-accent);
+  --node-key-color: var(--color-node-key);
   --node-value-bg-color: var(--color-bg-inset);
   --reactflow-bg-main-pattern-color: var(--color-grid-major);
   --reactflow-bg-sub-pattern-color: var(--color-grid-minor);
@@ -240,10 +246,10 @@
   --monaco-highlight-border: color-mix(in srgb, var(--color-accent) 55%, transparent);
 
   /* Popup */
-  --popup-bg-color: var(--color-bg-surface);
+  --popup-bg-color: var(--color-bg-popup);
   --popup-text-color: var(--color-text);
-  --popup-border-color: var(--color-border);
-  --popup-header-bg-color: var(--color-bg-inset);
+  --popup-border-color: var(--color-border-strong);
+  --popup-header-bg-color: var(--color-bg-popup-well);
   --popup-backdrop-color: var(--color-backdrop);
 
   /* Boolean node */

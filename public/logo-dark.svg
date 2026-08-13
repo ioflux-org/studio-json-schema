@@ -43,7 +43,7 @@
        C56 144, 72 144, 72 160
        V176
        C72 192, 72 208, 88 208"
-    stroke="#E5E7EB"
+    stroke="#F3EDE2"
     stroke-width="15"
     stroke-linecap="square"
   />
@@ -57,15 +57,15 @@
        C200 144, 184 144, 184 160
        V176
        C184 192, 184 208, 168 208"
-    stroke="#E5E7EB"
+    stroke="#F3EDE2"
     stroke-width="15"
     stroke-linecap="square"
   />
 
   <!-- Graph Edges -->
-  <line x1="104" y1="96" x2="128" y2="128" stroke="#CBD5E1" stroke-width="4"/>
-  <line x1="152" y1="96" x2="128" y2="128" stroke="#CBD5E1" stroke-width="4"/>
-  <line x1="128" y1="168" x2="128" y2="128" stroke="#CBD5E1" stroke-width="4"/>
+  <line x1="104" y1="96" x2="128" y2="128" stroke="#9C8F77" stroke-width="4"/>
+  <line x1="152" y1="96" x2="128" y2="128" stroke="#9C8F77" stroke-width="4"/>
+  <line x1="128" y1="168" x2="128" y2="128" stroke="#9C8F77" stroke-width="4"/>
 
   <!-- Graph Nodes -->
   <circle class="node" cx="104" cy="96" r="8" fill="#12FF4B" style="color:#12FF4B"/>
