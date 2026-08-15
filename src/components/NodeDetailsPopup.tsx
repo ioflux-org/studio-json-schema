@@ -29,7 +29,10 @@ const NodeDetailsPopup = ({
     }
   };
 
-  const formatValue = (value: string | string[]) => {
+  const formatValue = (value: unknown) => {
+    if (value && typeof value === "object" && !Array.isArray(value)) {
+      return <div>{Object.keys(value).join(" | ")}</div>;
+    }
     return (
       <div className="flex flex-col">
         {Array.isArray(value) ? (
