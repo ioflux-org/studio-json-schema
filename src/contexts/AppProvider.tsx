@@ -59,21 +59,23 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
     });
   };
 
-  const changeSchemaFormat = useCallback(
+const changeSchemaFormat = useCallback(
     (format: SchemaFormat) => {
-      sessionStorage.setItem(SESSION_FORMAT_KEY, format);
-      setSchemaFormat(format);
       if (format === schemaFormat) return;
       try {
+        let convertedText: string;
         if (format === "yaml") {
           const parsed = JSON.parse(schemaText);
-          setSchemaText(YAML.dump(parsed));
+          convertedText = YAML.dump(parsed);
         } else {
           const parsed = YAML.load(schemaText) as object;
-          setSchemaText(JSON.stringify(parsed, null, 2));
+          convertedText = JSON.stringify(parsed, null, 2);
         }
+        setSchemaText(convertedText);
+        setSchemaFormat(format);
+        sessionStorage.setItem(SESSION_FORMAT_KEY, format);
       } catch {
-        // If conversion fails, keep existing text as-is
+        // Schema has an error, so don't switch format, keep everything as it is
       }
     },
     [schemaFormat, schemaText]
