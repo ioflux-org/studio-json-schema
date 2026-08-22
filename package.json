@@ -15,11 +15,11 @@
   },
   "dependencies": {
     "@dagrejs/dagre": "^3.1.0",
-    "@hyperjump/json-schema": "^1.17.7",
+    "@hyperjump/json-schema": "^1.17.8",
     "@hyperjump/json-schema-errors": "github:hyperjump-io/json-schema-errors",
     "@monaco-editor/react": "^4.7.0",
     "@tailwindcss/vite": "^4.3.3",
-    "@xyflow/react": "^12.11.2",
+    "@xyflow/react": "^12.11.3",
     "html-to-image": "^1.11.13",
     "js-yaml": "^4.1.1",
     "jsonc-parser": "^3.3.1",
@@ -28,7 +28,7 @@
     "react-dom": "^19.2.8",
     "react-icons": "^5.7.0",
     "react-resizable-panels": "^3.0.3",
-    "react-tooltip": "^5.29.1",
+    "react-tooltip": "^6.0.8",
     "tailwindcss": "^4.1.10",
     "yaml": "^2.8.3"
   },
@@ -43,10 +43,10 @@
     "@vitejs/plugin-react": "^6.0.5",
     "eslint": "^10.8.1",
     "eslint-plugin-react-hooks": "^7.1.1",
-    "eslint-plugin-react-refresh": "^0.5.3",
-    "globals": "^16.0.0",
+    "eslint-plugin-react-refresh": "^0.5.4",
+    "globals": "^17.11.0",
     "typescript": "~6.0.3",
-    "typescript-eslint": "^8.65.0",
+    "typescript-eslint": "^8.67.0",
     "vite": "^8.2.0"
   }
 }
