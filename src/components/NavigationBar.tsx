@@ -91,7 +91,7 @@ const NavigationBar = () => {
         {/* Desktop Search */}
         <li className="hidden sm:flex">
           <div
-            className="flex items-center gap-1.5 px-2 h-[28px] rounded-md w-[180px] max-w-[40vw] bg-[var(--bg-color)] border border-[var(--toolbar-border-color)] hover:border-[var(--accent-color)] focus-within:border-[var(--accent-color)] transition-all duration-200 overflow-hidden"
+            className="relative flex items-center gap-1.5 pl-2 pr-8 h-[28px] rounded-md w-[180px] max-w-[40vw] bg-[var(--bg-color)] border border-[var(--toolbar-border-color)] hover:border-[var(--accent-color)] focus-within:border-[var(--accent-color)] transition-all duration-200 overflow-hidden"
           >
             <RiSearchLine className="text-[var(--text-secondary-color)] flex-shrink-0" size={13} />
             <input
@@ -106,7 +106,7 @@ const NavigationBar = () => {
               onKeyDown={handleKeyDown}
             />
 
-            <div className="flex-shrink-0">
+            <div className="absolute right-2 top-1/2 -translate-y-1/2 flex items-center shrink-0">
               {searchString ? (
                 <button
                   aria-label="Clear search"
@@ -119,7 +119,7 @@ const NavigationBar = () => {
                   <RiCloseLine size={14} />
                 </button>
               ) : (
-                <kbd className="text-[var(--text-secondary-color)] text-[10px] border border-[var(--toolbar-border-color)] rounded w-4 h-4 flex items-center justify-center font-mono flex-shrink-0">
+                <kbd className="pointer-events-none text-[var(--text-secondary-color)] text-[10px] border border-[var(--toolbar-border-color)] rounded w-4 h-4 flex items-center justify-center font-mono shrink-0">
                   /
                 </kbd>
               )}
