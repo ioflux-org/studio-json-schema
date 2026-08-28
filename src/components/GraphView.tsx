@@ -153,12 +153,8 @@ const GraphView = ({
   );
 
   const selectParent = useCallback(
-    
     (currentNodeId: string) => {
-      // ignore $ref edges so we follow the structural tree parent
-      const parentEdge = edges.find(
-        (e) => e.target === currentNodeId && !e.targetHandle?.includes("$ref")
-      );
+      const parentEdge = edges.find((e) => e.target === currentNodeId);
       if (parentEdge) selectNodeById(parentEdge.source);
     },
     [edges, selectNodeById]
