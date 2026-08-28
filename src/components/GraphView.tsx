@@ -85,6 +85,7 @@ const GraphView = ({
 
         setSelectedNode({
           id: foundNode.id,
+          data: foundNode.data,
         });
         setCenter(x, y, { zoom: Math.max(getZoom(), 1), duration: 500 });
 
@@ -415,6 +416,7 @@ const GraphView = ({
 
         setSelectedNode({
           id: firstNode.id,
+          data: firstNode.data,
         });
 
         setCenter(x, y, { zoom: Math.max(getZoom(), 1), duration: 500 });
