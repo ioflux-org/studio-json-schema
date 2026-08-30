@@ -25,7 +25,6 @@ const SchemaVisualization = ({
       <Tooltip
         id="local-only-tooltip"
         content="Your data never leaves your device. All processing happens locally."
-        style={{ fontSize: "10px" }}
       />
     </>
   );

@@ -60,6 +60,8 @@ const GraphView = ({
   const [edges, setEdges, onEdgeChange] = useEdgesState<GraphEdge>([]);
   const [collisionResolved, setCollisionResolved] = useState(false);
   const [isGraphReady, setIsGraphReady] = useState(false);
+  const [minHoldDone, setMinHoldDone] = useState(false);
+  const [showLoader, setShowLoader] = useState(true);
   const [hoveredEdgeId, setHoveredEdgeId] = useState<string | null>(null);
   const [matchedNodes, setMatchedNodes] = useState<GraphNode[]>([]);
   const [currentMatchIndex, setCurrentMatchIndex] = useState(0);
@@ -202,7 +204,7 @@ const GraphView = ({
         schemaUri,
         nodes,
         edges,
-        parentId: "root",
+        parentId: null,
         childId: null,
         nodeTitle: "root",
       });
@@ -276,7 +278,7 @@ const GraphView = ({
         const isHovered = edge.id === hoveredEdgeId;
         const isSelected = edge.selected;
         const isActive = isHovered || isSelected;
-        const strokeColor = isActive ? edge.data.color : "#666";
+        const strokeColor = isActive ? edge.data.color : "var(--color-edge)";
         const strokeWidth = isActive ? 2.5 : 1;
         return {
           ...edge,
@@ -339,6 +341,22 @@ const GraphView = ({
       setIsGraphReady(true);
     }, 300);
   }, [nodes, collisionResolved, allNodesMeasured, setNodes, fitView]);
+
+  useEffect(() => {
+    const timer = setTimeout(() => setMinHoldDone(true), 1800);
+    return () => clearTimeout(timer);
+  }, []);
+
+  const graphVisible = isGraphReady && minHoldDone;
+
+  useEffect(() => {
+    if (!graphVisible) {
+      setShowLoader(true);
+      return;
+    }
+    const timer = setTimeout(() => setShowLoader(false), 450);
+    return () => clearTimeout(timer);
+  }, [graphVisible]);
 
   useEffect(() => {
     if (errorMessage) {
@@ -487,11 +505,14 @@ const GraphView = ({
       ref={containerRef}
       tabIndex={0}
       className="relative w-full h-full"
-      style={{
-        opacity: isGraphReady ? 1 : 0,
-        transition: isGraphReady ? "opacity 0.4s ease-in" : "none",
-      }}
     >
+      <div
+        className="w-full h-full"
+        style={{
+          opacity: graphVisible ? 1 : 0,
+          transition: graphVisible ? "opacity 0.4s ease-in" : "none",
+        }}
+      >
       <ReactFlow
         nodes={nodes}
         edges={animatedEdges}
@@ -512,19 +533,37 @@ const GraphView = ({
         <Background
           id="main-grid"
           variant={BackgroundVariant.Lines}
-          lineWidth={0.05}
-          gap={100}
+          lineWidth={0.02}
+          gap={40}
           color="var(--reactflow-bg-main-pattern-color)"
         />
         <Background
           id="sub-grid"
-          variant={BackgroundVariant.Lines}
-          lineWidth={0.02}
-          gap={20}
+          variant={BackgroundVariant.Cross}
+          lineWidth={0.1}
+          gap={80}
           color="var(--reactflow-bg-sub-pattern-color)"
         />
         <Controls />
       </ReactFlow>
+      </div>
+
+      {showLoader && (
+        <div
+          className="absolute inset-0 flex items-center justify-center pointer-events-none"
+          style={{
+            opacity: graphVisible ? 0 : 1,
+            transition: graphVisible ? "opacity 0.4s ease-in" : "none",
+          }}
+        >
+          <img
+            src="logo-mark.svg"
+            alt="Loading visualization"
+            className="w-full h-full"
+            draggable="false"
+          />
+        </div>
+      )}
 
       {openNodeDetailsPopup && selectedNode && (
         <NodeDetailsPopup
@@ -543,36 +582,36 @@ const GraphView = ({
       )}
       {/*Error Message */}
       {errorMessage && showErrorPopup && (
-        <div className="absolute bottom-[50px] left-[100px] flex gap-2 px-2 py-1 bg-red-500 text-white rounded-md shadow-lg">
-          <div className="text-sm font-medium tracking-wide font-roboto">
+        <div className="absolute bottom-[50px] left-[100px] flex items-center gap-2 px-3 py-2 bg-[var(--color-danger)] text-[var(--color-text-on-accent)] rounded-lg shadow-[var(--shadow-lg)]">
+          <div className="text-xs font-medium tracking-wide">
             {errorMessage}
           </div>
           <button
-            className="cursor-pointer"
+            className="cursor-pointer hover:opacity-70 rounded p-0.5 transition-opacity"
             onClick={() => setShowErrorPopup(false)}
           >
-            <CgClose size={18} />
+            <CgClose size={14} />
           </button>
         </div>
       )}
       {matchCount > 1 && (
-        <div className="absolute bottom-3 left-1/2 -translate-x-1/2 flex items-center gap-0.5 bg-[var(--node-bg-color)] px-1.5 py-0.5 rounded border border-[var(--popup-border-color)] opacity-80 shadow-sm">
+        <div className="absolute bottom-3 left-1/2 -translate-x-1/2 flex items-center gap-1 bg-[var(--node-bg-color)] px-2 py-1 rounded-lg border border-[var(--toolbar-border-color)] shadow-md">
           <button
             onClick={() => navigateMatch("prev")}
-            className="hover:bg-[var(--text-color)] hover:bg-opacity-20 rounded p-0.5 transition-colors"
+            className="p-0.5 rounded border border-transparent text-[var(--text-color)] hover:border-[var(--accent-color)] hover:text-[var(--accent-color)] cursor-pointer transition-all duration-200"
             title="Previous match"
           >
-            <MdNavigateBefore size={14} className="text-[var(--text-color)]" />
+            <MdNavigateBefore size={14} />
           </button>
-          <span className="text-[10px] text-[var(--text-color)] min-w-[32px] text-center">
+          <span className="text-[11px] text-[var(--text-secondary-color)] min-w-[32px] text-center font-medium">
             {currentMatchIndex + 1}/{matchCount}
           </span>
           <button
             onClick={() => navigateMatch("next")}
-            className="hover:bg-[var(--text-color)] hover:bg-opacity-20 rounded p-0.5 transition-colors"
+            className="p-0.5 rounded border border-transparent text-[var(--text-color)] hover:border-[var(--accent-color)] hover:text-[var(--accent-color)] cursor-pointer transition-all duration-200"
             title="Next match"
           >
-            <MdNavigateNext size={14} className="text-[var(--text-color)]" />
+            <MdNavigateNext size={14} />
           </button>
         </div>
       )}
