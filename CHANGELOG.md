@@ -1,5 +1,21 @@
 # json-schema-studio
 
+## 0.10.0
+
+### Minor Changes
+
+- 29ed020: Implement topological sorting
+- 25cf19a: feat: add child/parent navigation in node popup
+- update the UI to give it more premium feel
+- 7ff1eeb: make warning icon clickable with closable popup
+
+### Patch Changes
+
+- 5224d46: Fix misplaced search bar and theme toggle icon in Firefox by allowing the search input to shrink within its flex container
+- 9556dc5: Fix format switch corruption and disable dropdown on invalid schema
+- 1cac5c5: Fix details popup showing [object Object] for multi-type schemas and empty data after search navigation
+- c613ee8: render subschema name in defs node instead of index
+
 ## 0.9.1
 
 ### Patch Changes
