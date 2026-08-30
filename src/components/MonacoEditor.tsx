@@ -1,5 +1,5 @@
 import { useContext, useState, useEffect, useRef, useMemo } from "react";
-import { BsUpload, BsDownload } from "react-icons/bs";
+import { BsUpload, BsDownload, BsLink45Deg } from "react-icons/bs";
 import { SESSION_SCHEMA_KEY } from "../constants";
 
 import {
@@ -23,6 +23,7 @@ import {
   type SchemaDocument,
 } from "@hyperjump/json-schema/experimental";
 import { jsonSchemaErrors } from "@hyperjump/json-schema-errors";
+import { addMediaTypePlugin } from "@hyperjump/browser";
 
 import Editor, { type OnMount } from "@monaco-editor/react";
 import type { editor } from "monaco-editor";
@@ -59,6 +60,12 @@ type CreateBrowser = (
 ) => {
   _cache: Record<string, SchemaDocument>;
 };
+
+addMediaTypePlugin("text/plain", {
+  parse: async (response: Response) =>
+    buildSchemaDocument(await response.json(), response.url, undefined),
+  fileMatcher: async (path: string) => /\.(json|yaml|yml)$/.test(path),
+});
 
 const DEFAULT_SCHEMA_ID = "https://studio.ioflux.org/schema";
 const DEFAULT_SCHEMA_DIALECT = "https://json-schema.org/draft/2020-12/schema";
@@ -99,6 +106,28 @@ const saveSchemaJSON = (key: string, schema: JSONSchema) => {
   sessionStorage.setItem(key, JSON.stringify(schema, null, 2));
 };
 
+const toFetchableUrl = (rawUrl: string): string => {
+  try {
+    const url = new URL(rawUrl);
+    if (url.hostname === "github.com") {
+      const [, owner, repo, blob, branch, ...rest] = url.pathname.split("/");
+      if (blob === "blob" && owner && repo && branch && rest.length > 0) {
+        return `https://raw.githubusercontent.com/${owner}/${repo}/${branch}/${rest.join("/")}`;
+      }
+    }
+    return rawUrl;
+  } catch {
+    return rawUrl;
+  }
+};
+
+const inferFormatFromUrl = (url: string): SchemaFormat | null => {
+  const path = url.split(/[?#]/)[0].toLowerCase();
+  if (path.endsWith(".yaml") || path.endsWith(".yml")) return "yaml";
+  if (path.endsWith(".json")) return "json";
+  return null;
+};
+
 const MonacoEditor = () => {
   const {
     theme,
@@ -109,6 +138,8 @@ const MonacoEditor = () => {
     selectedNode,
     schemaText,
     setSchemaText,
+    loadedSchemaUrl,
+    setLoadedSchemaUrl,
     triggerExportGraph,
   } = useContext(AppContext);
 
@@ -136,6 +167,7 @@ const MonacoEditor = () => {
       } else if (file.name.endsWith(".yaml") || file.name.endsWith(".yml")) {
         changeSchemaFormat("yaml");
       }
+      setLoadedSchemaUrl(null);
       setSchemaText(content);
     };
     reader.readAsText(file);
@@ -146,6 +178,47 @@ const MonacoEditor = () => {
     if (file) loadFile(file);
     event.target.value = "";
   };
+
+  const [urlPopoverOpen, setUrlPopoverOpen] = useState(false);
+  const [urlInput, setUrlInput] = useState("");
+  const [urlLoading, setUrlLoading] = useState(false);
+  const [urlLoadError, setUrlLoadError] = useState<string | null>(null);
+  const urlInputRef = useRef<HTMLInputElement>(null);
+
+  const loadFromUrl = async (rawUrl: string) => {
+    const trimmed = rawUrl.trim();
+    if (!trimmed) return;
+
+    setUrlLoading(true);
+    setUrlLoadError(null);
+
+    try {
+      const fetchableUrl = toFetchableUrl(trimmed);
+      const response = await fetch(fetchableUrl);
+      if (!response.ok) {
+        throw new Error(`Server responded with ${response.status} ${response.statusText}`);
+      }
+
+      const content = await response.text();
+      const format = inferFormatFromUrl(fetchableUrl);
+      if (format) changeSchemaFormat(format);
+      setLoadedSchemaUrl(fetchableUrl);
+      setSchemaText(content);
+      setUrlPopoverOpen(false);
+      setUrlInput("");
+    } catch (err) {
+      const detail = err instanceof Error ? err.message : String(err);
+      setUrlLoadError(
+        `Could not load schema from this URL (${detail}). The server hosting it may not allow cross-origin requests.`
+      );
+    } finally {
+      setUrlLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    if (urlPopoverOpen) urlInputRef.current?.focus();
+  }, [urlPopoverOpen]);
 
   useEffect(() => {
     const blockBrowser = (e: DragEvent) => e.preventDefault();
@@ -331,8 +404,8 @@ const MonacoEditor = () => {
 
         const dialect = typeof parsedSchema !== "boolean" ? parsedSchema.$schema : undefined;
         const dialectVersion = dialect ?? DEFAULT_SCHEMA_DIALECT;
-        // Use per-instance suffix so multiple instances never share the same registry key.
         const schemaId = (typeof parsedSchema !== "boolean" ? parsedSchema.$id : undefined)
+          ?? loadedSchemaUrl
           ?? `${DEFAULT_SCHEMA_ID}/${instanceId}`;
 
         if (
@@ -504,6 +577,55 @@ const MonacoEditor = () => {
               <BsUpload size={12} />
               <span>Upload</span>
             </button>
+            <div className="relative">
+              <button
+                onClick={() => {
+                  setUrlLoadError(null);
+                  setUrlPopoverOpen((open) => !open);
+                }}
+                className="h-[26px] flex items-center gap-1.5 bg-[var(--bg-color)] border border-[var(--popup-border-color)] text-[var(--text-color)] text-sm px-1.5 rounded-sm hover:opacity-75 transition-opacity cursor-pointer"
+                aria-label="Load JSON/YAML schema from a URL"
+                title="Load schema from a URL"
+              >
+                <BsLink45Deg size={12} />
+                <span>URL</span>
+              </button>
+              {urlPopoverOpen && (
+                <div className="absolute top-[32px] left-0 z-50 w-[320px] bg-[var(--bg-color)] border border-[var(--popup-border-color)] rounded-sm shadow-lg p-2 flex flex-col gap-2">
+                  <form
+                    onSubmit={(e) => {
+                      e.preventDefault();
+                      loadFromUrl(urlInput);
+                    }}
+                    className="flex items-center gap-1.5"
+                  >
+                    <input
+                      ref={urlInputRef}
+                      type="url"
+                      value={urlInput}
+                      onChange={(e) => setUrlInput(e.target.value)}
+                      onKeyDown={(e) => {
+                        if (e.key === "Escape") setUrlPopoverOpen(false);
+                      }}
+                      placeholder="https://raw.githubusercontent.com/.../schema.json"
+                      className="flex-1 min-w-0 h-[26px] px-1.5 text-sm outline-none border border-[var(--popup-border-color)] rounded-sm bg-[var(--bg-color)] text-[var(--text-color)]"
+                    />
+                    <button
+                      type="submit"
+                      disabled={urlLoading || !urlInput.trim()}
+                      className="h-[26px] px-2 text-sm bg-[var(--bg-color)] border border-[var(--popup-border-color)] text-[var(--text-color)] rounded-sm hover:opacity-75 transition-opacity cursor-pointer disabled:opacity-40 disabled:cursor-not-allowed"
+                    >
+                      {urlLoading ? "..." : "Load"}
+                    </button>
+                  </form>
+                  {urlLoadError && (
+                    <p className="text-xs text-red-500 break-words m-0">
+                      {urlLoadError}
+                    </p>
+                  )}
+                </div>
+              )}
+            </div>
             <button
               onClick={triggerExportGraph}
               className="h-[26px] flex items-center gap-1.5 bg-[var(--bg-color)] border border-[var(--popup-border-color)] text-[var(--text-color)] text-sm px-1.5 rounded-sm hover:opacity-75 transition-opacity cursor-pointer"
