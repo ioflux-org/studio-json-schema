@@ -39,6 +39,7 @@ type NodeStyle = {
 export type GraphEdge = RFEdge & {
     data: {
         color: string;
+        siblingIndex?: number;
     }
 };
 
@@ -93,7 +94,7 @@ export const processAST: ProcessAST = ({ ast, schemaUri, nodes, edges, parentId,
 
         edges.push({
             id: `${parentId}--${sourceHandle}--${schemaUri}--${targetHandle}`,
-            type: "smoothstep",
+            type: "routed",
             data: { color: backEdgeColor },
             source: parentId,
             target: schemaUri,
@@ -164,7 +165,7 @@ export const processAST: ProcessAST = ({ ast, schemaUri, nodes, edges, parentId,
 
     edges.push({
         id: `${parentId}--${sourceHandle}--${schemaUri}--${targetHandle}`,
-        type: "smoothstep",
+        type: "routed",
         data: { color },
         source: parentId,
         target: schemaUri,
