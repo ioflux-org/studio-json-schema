@@ -23,6 +23,9 @@ type AppContextType = {
   schemaText: string;
   setSchemaText: (text: string) => void;
 
+  loadedSchemaUrl: string | null;
+  setLoadedSchemaUrl: (url: string | null) => void;
+
   selectedNode: SelectedNode | null;
   setSelectedNode: (selectedNode: SelectedNode | null) => void;
 

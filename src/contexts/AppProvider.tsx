@@ -81,6 +81,8 @@ const changeSchemaFormat = useCallback(
     [schemaFormat, schemaText]
   );
 
+  const [loadedSchemaUrl, setLoadedSchemaUrl] = useState<string | null>(null);
+
   const [selectedNode, setSelectedNode] = useState<SelectedNode | null>(null);
   const [searchString, setSearchString] = useState("");
 
@@ -160,6 +162,8 @@ const changeSchemaFormat = useCallback(
     changeSchemaFormat,
     schemaText,
     setSchemaText,
+    loadedSchemaUrl,
+    setLoadedSchemaUrl,
     selectedNode,
     setSelectedNode,
     searchString,
