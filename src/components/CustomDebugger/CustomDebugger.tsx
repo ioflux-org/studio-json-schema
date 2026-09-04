@@ -1,7 +1,8 @@
 import { useCallback, useContext, useMemo, useRef, useState, useEffect } from "react";
 import Editor, { type Monaco } from "@monaco-editor/react";
 import type { editor as MonacoEditorNS } from "monaco-editor";
-import { AppContext } from "../../contexts/AppContext";
+import YAML from "js-yaml";
+import { AppContext, type SchemaFormat } from "../../contexts/AppContext";
 import { cssToken } from "../../utils/tokens";
 import { traceCustom, type TraceResult, type TraceStep } from "../../lib/blaze";
 import { getOpenFrames } from "./traceStack";
@@ -15,13 +16,29 @@ const DEFAULT_SCHEMA = `{
   "$schema": "https://json-schema.org/draft/2020-12/schema",
   "type": "object",
   "properties": {
-    "age": { "type": "integer", "minimum": 0 }
+    "engineer": { "type": "string", "minLength": 1 },
+    "project": { "type": "string", "enum": ["one-ui", "studio-json-schema", "blaze"] },
+    "task": { "type": "string" },
+    "date": { "type": "string", "format": "date" },
+    "planet": { "const": "Earth" },
+    "company": { "type": "string" },
+    "tags": {
+      "type": "array",
+      "items": { "type": "string" },
+      "minItems": 1
+    }
   },
-  "required": ["age"]
+  "required": ["engineer", "project", "task", "date", "planet", "company"]
 }`;
 
 const DEFAULT_INSTANCE = `{
-  "age": "thirty"
+  "engineer": "Sumit",
+  "project": "one-ui",
+  "task": "Blaze integration",
+  "date": "2026-09-04",
+  "planet": "Earth",
+  "company": "Sourcemeta",
+  "tags": ["wasm", "browser", "debugger"]
 }`;
 
 const toMonacoRange = (position: [number, number, number, number]) => ({
@@ -84,10 +101,25 @@ const defineDebuggerThemes = (monaco: Monaco) => {
   });
 };
 
-const CustomDebugger = ({ onClose }: { onClose: () => void }) => {
-  const { theme } = useContext(AppContext);
+// Seeds the debugger's schema editor with whatever is currently open in
+// Studio's main editor (converting from YAML if that's the active format,
+// since the debugger always works in JSON), falling back to the sample
+// schema if the main editor is empty or doesn't parse.
+const initialSchemaFromEditor = (mainSchemaText: string, schemaFormat: SchemaFormat): string => {
+  try {
+    const parsed = schemaFormat === "yaml" ? YAML.load(mainSchemaText) : JSON.parse(mainSchemaText);
+    return JSON.stringify(parsed, null, 2);
+  } catch {
+    return DEFAULT_SCHEMA;
+  }
+};
 
-  const [schemaText, setSchemaText] = useState(DEFAULT_SCHEMA);
+const CustomDebugger = ({ onClose }: { onClose: () => void }) => {
+  const { theme, schemaText: mainSchemaText, schemaFormat } = useContext(AppContext);
+
+  const [schemaText, setSchemaText] = useState(() =>
+    initialSchemaFromEditor(mainSchemaText, schemaFormat)
+  );
   const [instanceText, setInstanceText] = useState(DEFAULT_INSTANCE);
   const [traceResult, setTraceResult] = useState<TraceResult | null>(null);
   const [loading, setLoading] = useState(false);
