@@ -1,0 +1,4246 @@
+import {
+  ANNOTATION_EMIT, ANNOTATION_EMIT_WRAPPED, ANNOTATION_TO_PARENT, ANNOTATION_BASENAME_TO_PARENT,
+  isWrappedAnnotationOpcode,
+  ASSERTION_EQUALS_ANY,
+  CONTROL_GROUP as CONTROL_GROUP_START,
+  CONTROL_EVALUATE as CONTROL_EVALUATE_END,
+  CONTROL_JUMP, CONTROL_DYNAMIC_ANCHOR_JUMP
+} from './opcodes.mjs';
+
+const JSON_VERSION = 7;
+const DEPTH_LIMIT = 300;
+const URI_REGEX = /^[a-zA-Z][a-zA-Z0-9+\-.]*:[^\s]*$/;
+
+function buildJsonPointer(tokens, length) {
+  if (length === 0) return '';
+  let result = '';
+  for (let index = 0; index < length; index++) {
+    const token = String(tokens[index]);
+    result += '/' + token.replaceAll('~', '~0').replaceAll('/', '~1');
+  }
+  return result;
+}
+
+const Type = {
+  Null: 0,
+  Boolean: 1,
+  Integer: 2,
+  Real: 3,
+  String: 4,
+  Array: 5,
+  Object: 6,
+  Decimal: 7
+};
+
+function jsonTypeOf(value) {
+  if (value === null) return Type.Null;
+  switch (typeof value) {
+    case 'boolean': return Type.Boolean;
+    case 'number': return Number.isInteger(value) ? Type.Integer : Type.Real;
+    case 'bigint': return Type.Integer;
+    case 'string': return Type.String;
+    case 'object': return Array.isArray(value) ? Type.Array : Type.Object;
+    default: return Type.Null;
+  }
+}
+
+function isIntegral(value) {
+  return typeof value === 'bigint' ||
+    (typeof value === 'number' && Number.isFinite(value) && Math.floor(value) === value);
+}
+
+function resolveInstance(instance, relativeInstanceLocation) {
+  const length = relativeInstanceLocation.length;
+  if (length === 0) return instance;
+  if (length === 1) {
+    if (instance === undefined || instance === null) return undefined;
+    return instance[relativeInstanceLocation[0]];
+  }
+  let current = instance;
+  for (let index = 0; index < length; index++) {
+    if (current === undefined || current === null) return undefined;
+    current = current[relativeInstanceLocation[index]];
+  }
+  return current;
+}
+
+function prepareInstruction(instruction) {
+  const wrapper = instruction[6];
+  if (wrapper === undefined || wrapper === null) {
+    instruction[6] = null;
+  } else {
+    const typeIndex = wrapper[0];
+    if (typeIndex === 0 || wrapper.length === 1) {
+      instruction[6] = null;
+    } else {
+      const payload = wrapper[1];
+      switch (typeIndex) {
+        case 4:
+          instruction[6] = payload[0];
+          break;
+        case 9:
+          try { instruction[6] = new RegExp(payload, 'u'); }
+          catch { instruction[6] = new RegExp(payload); }
+          break;
+        case 13: {
+          if (Array.isArray(payload)) {
+            const object = Object.create(null);
+            for (let index = 0; index < payload.length; index++) {
+              object[payload[index][0]] = payload[index][1];
+            }
+            instruction[6] = object;
+          } else {
+            instruction[6] = payload;
+          }
+          break;
+        }
+        case 15: {
+          if (Array.isArray(payload)) {
+            const object = Object.create(null);
+            for (let index = 0; index < payload.length; index++) {
+              object[payload[index][0]] = payload[index][1];
+            }
+            instruction[6] = object;
+          } else {
+            instruction[6] = payload;
+          }
+          break;
+        }
+        case 16: {
+          payload[0] = new Set(payload[0]);
+          const regexes = payload[2];
+          for (let index = 0; index < regexes.length; index++) {
+            try { regexes[index] = new RegExp(regexes[index], 'u'); }
+            catch { regexes[index] = new RegExp(regexes[index]); }
+          }
+          instruction[6] = payload;
+          break;
+        }
+        default:
+          instruction[6] = payload;
+          break;
+      }
+    }
+  }
+
+  const opcode = instruction[0];
+  if (opcode === ASSERTION_EQUALS_ANY && Array.isArray(instruction[6])) {
+    const values = instruction[6];
+    let allPrimitive = true;
+    for (let index = 0; index < values.length; index++) {
+      const element = values[index];
+      if (element !== null && typeof element === 'object') {
+        allPrimitive = false;
+        break;
+      }
+    }
+    if (allPrimitive) {
+      instruction[6] = { set: new Set(values), values, primitive: true };
+    }
+  }
+
+  if (instruction.length < 8) {
+    instruction.push(undefined);
+  }
+
+  instruction.push(handlers[opcode] || null);
+
+  const children = instruction[7];
+  if (children) {
+    for (let index = 0; index < children.length; index++) {
+      prepareInstruction(children[index]);
+    }
+  }
+}
+
+function resolveJumpTargets(instructions, targets) {
+  for (let index = 0; index < instructions.length; index++) {
+    const instruction = instructions[index];
+    if (instruction[0] === CONTROL_JUMP) {
+      const targetIndex = instruction[6];
+      if (targetIndex < targets.length) {
+        instruction[6] = targets[targetIndex];
+      }
+    }
+    const children = instruction[7];
+    if (children) {
+      resolveJumpTargets(children, targets);
+    }
+  }
+}
+
+const FNV_OFFSET = 14695981039346656037n;
+const FNV_PRIME = 1099511628211n;
+const MASK_53 = (1n << 53n) - 1n;
+
+function blazeHash(resource, fragment) {
+  let result = FNV_OFFSET & MASK_53;
+  for (let index = 0; index < fragment.length; index++) {
+    result ^= BigInt(fragment.charCodeAt(index));
+    result = (result * FNV_PRIME) & MASK_53;
+  }
+  return Number((BigInt(resource) + result) & MASK_53);
+}
+
+function collectAnchorNames(targets, result) {
+  for (let targetIndex = 0; targetIndex < targets.length; targetIndex++) {
+    collectAnchorNamesFromInstructions(targets[targetIndex], result);
+  }
+}
+
+function collectAnchorNamesFromInstructions(instructions, result) {
+  for (let index = 0; index < instructions.length; index++) {
+    const instruction = instructions[index];
+    if (instruction[0] === CONTROL_DYNAMIC_ANCHOR_JUMP && typeof instruction[6] === 'string') {
+      result.add(instruction[6]);
+    }
+    if (instruction[7]) {
+      collectAnchorNamesFromInstructions(instruction[7], result);
+    }
+  }
+}
+
+function compile(template) {
+  const targets = template[3];
+  for (let targetIndex = 0; targetIndex < targets.length; targetIndex++) {
+    const target = targets[targetIndex];
+    for (let index = 0; index < target.length; index++) {
+      prepareInstruction(target[index]);
+    }
+  }
+
+  for (let targetIndex = 0; targetIndex < targets.length; targetIndex++) {
+    resolveJumpTargets(targets[targetIndex], targets);
+  }
+
+  const labels = new Map();
+  const rawLabels = template[4];
+  for (let index = 0; index < rawLabels.length; index++) {
+    const pair = rawLabels[index];
+    labels.set(pair[0], pair[1]);
+  }
+
+  const anchors = new Map();
+  if (template[1]) {
+    const anchorNames = new Set();
+    collectAnchorNames(targets, anchorNames);
+    const resourceCount = targets.length;
+    for (const anchor of anchorNames) {
+      for (let resource = 0; resource <= resourceCount; resource++) {
+        const hash = blazeHash(resource, anchor);
+        const targetIndex = labels.get(hash);
+        if (targetIndex !== undefined) {
+          anchors.set(resource + ':' + anchor, targets[targetIndex]);
+        }
+      }
+    }
+  }
+
+  template[4] = labels;
+  template[6] = anchors;
+  return template;
+}
+
+function emitResolve(varName, instanceExpr, relInstance) {
+  if (relInstance.length === 0) return `var ${varName}=${instanceExpr};`;
+  if (relInstance.length === 1) return `var ${varName}=${instanceExpr}==null?void 0:${instanceExpr}[${JSON.stringify(relInstance[0])}];`;
+  return null;
+}
+
+function compileInstructionToCode(instruction, captures, visited, budget) {
+  if (budget[0] <= 0) { var ci = captures.length; captures.push(instruction); return 'return _fh['+instruction[0]+'](_c['+ci+'],i,d,_t,_v);'; }
+  var opcode = instruction[0], ri = instruction[2], value = instruction[6], children = instruction[7];
+  function R(v) { return emitResolve(v, 'i', ri); }
+  function inlineCondition(child, tv) {
+    var op = child[0], cr = child[2], cv = child[6];
+    if (cr.length !== 0) return null;
+    switch (op) {
+      case 11: return '{if(_es(' + tv + ')!==' + cv + ')return false;}';
+      case 43: return 'if(' + tv + '!=null&&typeof ' + tv + "==='object'&&!Array.isArray(" + tv + ')){' + emitResolve('t', tv, cr) + 'if(t!==void 0&&_es(t)!==' + cv + ')return false;}';
+      default: return null;
+    }
+  }
+  function seq(ci, tv) { var c = ''; for (var j = 0; j < ci.length; j++) { var inl = inlineCondition(ci[j], tv); if (inl !== null) { budget[0] -= inl.length; c += inl; continue; } var r = compileInstructionToCode(ci[j], captures, visited, budget); if (r === null) { var idx = captures.length; captures.push(ci[j]); c += 'if(!_e(_c['+idx+'],'+tv+',d+1,_t,_v))return false;'; } else { budget[0] -= r.length; c += 'if(!(function(i,d,_t,_v){'+r+'})('+tv+',d+1,_t,_v))return false;'; } } return c; }
+  function lb(ci, iv) { return seq(ci, iv); }
+  function fb(op) { var ci = captures.length; captures.push(instruction); return 'return _fh['+op+'](_c['+ci+'],i,d,_t,_v);'; }
+  function cc(child, tv) { var r = compileInstructionToCode(child, captures, visited, budget); if (r === null) { var ci = captures.length; captures.push(child); return '_e(_c['+ci+'],'+tv+',d+1,_t,_v)'; } budget[0] -= r.length; return '(function(i,d,_t,_v){'+r+'})('+tv+',d+1,_t,_v)'; }
+  var IO = "if(i==null||typeof i!=='object'||Array.isArray(i))return true;";
+  var TO = "if(t==null||typeof t!=='object'||Array.isArray(t))";
+  switch (opcode) {
+    case 0: return 'return false;';
+    case 1: { var r=R('t'); return r?r+TO+'return true;return Object.hasOwn(t,'+JSON.stringify(value)+');':null; }
+    case 2: { var r=R('t'); return r?r+"return t!=null&&typeof t==='object'&&!Array.isArray(t)&&Object.hasOwn(t,"+JSON.stringify(value)+');':null; }
+    case 3: { var r=R('t'); if(!r)return null; var c=r+TO+'return true;'; for(var j=0;j<value.length;j++)c+='if(!Object.hasOwn(t,'+JSON.stringify(value[j])+'))return false;'; return c+'return true;'; }
+    case 4: { var r=R('t'); if(!r)return null; var c=r+TO+'return false;'; for(var j=0;j<value.length;j++)c+='if(!Object.hasOwn(t,'+JSON.stringify(value[j])+'))return false;'; return c+'return true;'; }
+    case 5: { var r=R('t'); if(!r)return null; var c=r+TO+'return true;var s=0;for(var k in t)s++;if(s!=='+value.length+')return false;'; for(var j=0;j<value.length;j++)c+='if(!Object.hasOwn(t,'+JSON.stringify(value[j])+'))return false;'; return c+'return true;'; }
+    case 6: { var r=R('t'); if(!r)return null; var c=r+TO+'return false;var s=0;for(var k in t)s++;if(s!=='+value.length+')return false;'; for(var j=0;j<value.length;j++)c+='if(!Object.hasOwn(t,'+JSON.stringify(value[j])+'))return false;'; return c+'return true;'; }
+    case 7: return fb(7); case 8: return fb(8);
+    case 9: { var r=R('t'); return r?r+'var a=_jt(t);if(a==='+value+')return true;return '+value+'===2&&_ii(t);':null; }
+    case 10: { var r=R('t'); return r?r+'var a=_jt(t);if(('+value+'&(1<<a))!==0)return true;return('+value+'&4)!==0&&_ii(t);':null; }
+    case 11: { var r=R('t'); return r?r+'return _es(t)==='+value+';':null; }
+    case 12: { var r=R('t'); return r?r+'return('+value+'&(1<<_es(t)))!==0;':null; }
+    case 13: { var r=R('t'); return r?r+'return('+value+'&(1<<_es(t)))===0;':null; }
+    case 14: { var r=R('t'); return r?r+"if(typeof t!=='string')return false;var l=_ul(t);if(l<"+value[0]+')return false;'+(value[1]!==null?'if(l>'+value[1]+')return false;':'')+'return true;':null; }
+    case 15: { var r=R('t'); return r?r+"return typeof t==='string'&&_ul(t)<="+value+';':null; }
+    case 16: { var r=R('t'); return r?r+'if(!Array.isArray(t))return false;if(t.length<'+value[0]+')return false;'+(value[1]!==null?'if(t.length>'+value[1]+')return false;':'')+'return true;':null; }
+    case 17: { var r=R('t'); return r?r+'return Array.isArray(t)&&t.length<='+value+';':null; }
+    case 18: { var r=R('t'); return r?r+TO+'return false;var s=0;for(var k in t)s++;if(s<'+value[0]+')return false;'+(value[1]!==null?'if(s>'+value[1]+')return false;':'')+'return true;':null; }
+    case 19: { var r=R('t'); return r?r+TO+'return false;var s=0;for(var k in t)s++;return s<='+value+';':null; }
+    case 20: return fb(20); case 21: return fb(21); case 22: return fb(22);
+    case 23: { var r=R('t'); return r?r+'if(!Array.isArray(t))return true;return t.length<'+value+';':null; }
+    case 24: { var r=R('t'); return r?r+'if(!Array.isArray(t))return true;return t.length>'+value+';':null; }
+    case 25: { var r=R('t'); return r?r+TO+'return true;var s=0;for(var k in t)s++;return s<'+value+';':null; }
+    case 26: { var r=R('t'); return r?r+TO+'return true;var s=0;for(var k in t)s++;return s>'+value+';':null; }
+    case 27: { if(typeof value==='string'||typeof value==='number'||typeof value==='boolean'||value===null){var r=R('t');return r?r+'return t==='+JSON.stringify(value)+';':null;}return fb(27); }
+    case 28: return fb(28); case 29: return fb(29);
+    case 30: { var r=R('t'),v=typeof value==='bigint'?value+'n':value; return r?r+"var tt=typeof t;if(tt!=='number'&&tt!=='bigint')return true;return t>="+v+';':null; }
+    case 31: { var r=R('t'),v=typeof value==='bigint'?value+'n':value; return r?r+"var tt=typeof t;if(tt!=='number'&&tt!=='bigint')return true;return t<="+v+';':null; }
+    case 32: { var r=R('t'),v=typeof value==='bigint'?value+'n':value; return r?r+"var tt=typeof t;if(tt!=='number'&&tt!=='bigint')return true;return t>"+v+';':null; }
+    case 33: { var r=R('t'),v=typeof value==='bigint'?value+'n':value; return r?r+"var tt=typeof t;if(tt!=='number'&&tt!=='bigint')return true;return t<"+v+';':null; }
+    case 34: return fb(34); case 35: return fb(35);
+    case 36: return fb(36); case 37: return fb(37); case 38: return fb(38); case 39: return fb(39);
+    case 40: return fb(40);
+    case 41: { var r=R('t'); return r?IO+r+'if(t===void 0)return true;var a=_jt(t);return a==='+value+'||('+value+'===2&&_ii(t));':null; }
+    case 42: return fb(42);
+    case 43: { var r=R('t'); return r?IO+r+'if(t===void 0)return true;return _es(t)==='+value+';':null; }
+    case 44: return fb(44);
+    case 45: { var r=R('t'); return r?IO+r+'if(t===void 0)return true;return('+value+'&(1<<_es(t)))!==0;':null; }
+    case 46: return fb(46); case 47: return fb(47); case 48: return fb(48);
+    case 49: return fb(49);
+    case 50: case 51: case 52: case 53: case 54: return 'return true;';
+    case 55: { var r=R('t'); if(!r)return null; if(!children||children.length===0)return 'return false;'; var c=r; for(var j=0;j<children.length;j++)c+='if(!'+cc(children[j],'t')+')return true;'; return c+'return false;'; }
+    case 56: return fb(56);
+    case 57: { var r=R('t'); if(!r)return null; if(!children||children.length===0)return 'return true;'; if(value){var c=r+'var __r=false;';for(var j=0;j<children.length;j++)c+='if('+cc(children[j],'t')+')__r=true;';return c+'return __r;';} var c=r;for(var j=0;j<children.length;j++)c+='if('+cc(children[j],'t')+')return true;';return c+'return false;'; }
+    case 58: { var r=R('t'); if(!r)return null; if(!children||children.length===0)return 'return true;'; return r+seq(children,'t')+'return true;'; }
+    case 59: { var r=R('t'); if(!r)return null; if(!children||children.length===0)return 'return false;'; var c=r+'var __r=true,__m=false;';for(var j=0;j<children.length;j++){c+='if('+cc(children[j],'t')+'){if(__m){__r=false;'+(!value?'return false;':'')+ '}else __m=true;}';}return c+'return __r&&__m;'; }
+    case 60: return fb(60);
+    case 61: { var r=R('t'); if(!r)return null; var c=r+'if(_jt(t)!=='+value+')return true;'; if(children&&children.length>0)c+=seq(children,'t'); return c+'return true;'; }
+    case 62: { var r=R('t'); if(!r)return null; var c=r+TO+'return true;if(!Object.hasOwn(t,'+JSON.stringify(value)+'))return true;'; if(children&&children.length>0)c+=seq(children,'t'); return c+'return true;'; }
+    case 63: { var r=R('t'); if(!r)return null; var c=r+'if(!Array.isArray(t)||t.length<='+value+')return true;'; if(children&&children.length>0)c+=seq(children,'t'); return c+'return true;'; }
+    case 64: return fb(64); case 65: return fb(65);
+    case 66: { var r=R('t'); if(!r)return null; if(!children||children.length===0)return r+'return true;'; var mi=captures.length; captures.push(value); var gf=''; for(var gi=0;gi<children.length;gi++){var gc=children[gi][7]; if(gc&&gc.length>0){gf+='function(i,d,_t,_v){'+lb(gc,'i')+'return true;},';}else{gf+='null,';}} return r+TO+'return true;var __cg=['+gf+'];for(var k in t){var __mi=_c['+mi+'][k];if(__mi!==void 0){var __cf=__cg[__mi];if(__cf&&!__cf(t,d,_t,_v))return false;}}return true;'; }
+    case 67: { var r=R('t'); if(!r)return null; if(!children||children.length===0)return r+'return true;'; var mi=captures.length; captures.push(value); var gf=''; for(var gi=0;gi<children.length;gi++){var gc=children[gi][7]; if(gc&&gc.length>0){gf+='function(i,d,_t,_v){'+lb(gc,'i')+'return true;},';}else{gf+='null,';}} return r+TO+'return true;var __cg=['+gf+'];for(var k in t){var __mi=_c['+mi+'][k];if(__mi===void 0)return false;var __cf=__cg[__mi];if(__cf&&!__cf(t,d,_t,_v))return false;}return true;'; }
+    case 68: { var r=R('t'); if(!r)return null; if(!children||children.length===0)return r+'return true;'; return r+TO+'return true;for(var k in t){'+lb(children,'t[k]')+'}return true;'; }
+    case 69: return fb(69); case 70: return fb(70); case 71: return fb(71); case 72: return fb(72); case 73: return fb(73);
+    case 74: return fb(74); case 75: return fb(75); case 76: return fb(76);
+    case 77: { var r=R('t'); return r?r+TO+'return true;for(var k in t){if(_es(t[k])!=='+value+')return false;}return true;':null; }
+    case 78: return fb(78); case 79: return fb(79); case 80: return fb(80); case 81: return fb(81);
+    case 82: return fb(82);
+    case 83: { var r=R('t'); if(!r)return null; if(!children||children.length===0)return r+'return true;'; return r+'if(!Array.isArray(t))return true;for(var j=0;j<t.length;j++){'+lb(children,'t[j]')+'}return true;'; }
+    case 84: { var r=R('t'); if(!r)return null; if(!children||children.length===0)return r+'return true;'; return r+'if(!Array.isArray(t)||'+value+'>=t.length)return true;for(var j='+value+';j<t.length;j++){'+lb(children,'t[j]')+'}return true;'; }
+    case 85: return fb(85);
+    case 86: { var r=R('t'); return r?r+'if(!Array.isArray(t))return true;for(var j=0;j<t.length;j++){var a=_jt(t[j]);if(a!=='+value+'&&!('+value+'===2&&_ii(t[j])))return false;}return true;':null; }
+    case 87: { var r=R('t'); return r?r+'if(!Array.isArray(t))return true;for(var j=0;j<t.length;j++){if(_es(t[j])!=='+value+')return false;}return true;':null; }
+    case 88: { var r=R('t'); return r?r+'if(!Array.isArray(t))return true;for(var j=0;j<t.length;j++){if(('+value+'&(1<<_es(t[j])))===0)return false;}return true;':null; }
+    case 89: return fb(89); case 90: return fb(90); case 91: return fb(91); case 92: return fb(92);
+    case 93: return fb(93);
+    case 94: { if(!children||children.length===0)return 'return true;'; var c=''; for(var j=0;j<children.length;j++){var r2=compileInstructionToCode(children[j],captures,visited,budget); if(r2===null){var ci=captures.length;captures.push(children[j]);c+='if(!_e(_c['+ci+'],i,d+1,_t,_v))return false;';}else{budget[0]-=r2.length;c+='if(!(function(i,d,_t,_v){'+r2+'})(i,d+1,_t,_v))return false;';}} return c+'return true;'; }
+    case 95: { var r=R('t'); if(!r)return null; var c=r+TO+'return true;if(!Object.hasOwn(t,'+JSON.stringify(value)+'))return true;'; if(children&&children.length>0)c+=seq(children,'i'); return c+'return true;'; }
+    case 96: { var c=IO+'if(!Object.hasOwn(i,'+JSON.stringify(value)+'))return true;'; if(children&&children.length>0)c+=seq(children,'i'); return c+'return true;'; }
+    case 97: { var c='if(_jt(i)!=='+value+')return true;'; if(children&&children.length>0)c+=seq(children,'i'); return c+'return true;'; }
+    case 98: return 'return true;';
+    case 99: return fb(99);
+    case 100: { if(!value)return 'return true;'; if(visited&&visited.has(instruction))return fb(100); if(!visited)visited=new Set(); visited.add(instruction); var r=R('t'); if(!r)return fb(100); var c=r; for(var j=0;j<value.length;j++){var r2=compileInstructionToCode(value[j],captures,visited,budget); if(r2===null){var ci=captures.length;captures.push(value[j]);c+='if(!_e(_c['+ci+'],t,d+1,_t,_v))return false;';}else{budget[0]-=r2.length;c+='if(!(function(i,d,_t,_v){'+r2+'})(t,d+1,_t,_v))return false;';}} return c+'return true;'; }
+    default: return null;
+  }
+}
+
+function generateNativeValidator(template) {
+  if (template[1] || template[2]) return null;
+  const targets = template[3];
+  if (targets.length === 0) return () => true;
+  const instructions = targets[0];
+  if (instructions.length === 0) return () => true;
+
+  const capturedInstructions = [];
+  const budget = [5000000];
+  let body = '';
+  for (let index = 0; index < instructions.length; index++) {
+    const code = compileInstructionToCode(instructions[index], capturedInstructions, null, budget);
+    if (code === null) return null;
+    budget[0] -= code.length;
+    body += `if(!(function(i,d,_t,_v){${code}})(instance,0,_t,_v))return false;`;
+  }
+  body += 'return true;';
+
+  try {
+    const fn = eval(
+      '(function(_es,_jt,_ii,_ul,_e,_fh,_c,_t){' +
+      'return function(instance,_v){' + body + '};' +
+      '})'
+    );
+    return fn(
+      effectiveTypeStrictReal, jsonTypeOf, isIntegral, unicodeLength,
+      evaluateInstructionFast, fastHandlers, capturedInstructions, template
+    );
+  } catch {
+    return null;
+  }
+}
+
+function sourceToBigInt(source) {
+  // Plain integer like "99999999999999999999999999999999999"
+  if (/^-?[0-9]+$/.test(source)) return BigInt(source);
+  // Exponential notation like "9.9999999999999999e+34". Parse the coefficient
+  // and exponent to reconstruct the exact integer, as `BigInt` cannot parse
+  // exponential notation directly
+  const match = source.match(/^(-?)([0-9]+)\.?([0-9]*)[eE][+]?([0-9]+)$/);
+  if (!match) return null;
+  const exponent = parseInt(match[4]) - match[3].length;
+  if (exponent < 0) return null;
+  return BigInt(match[1] + match[2] + match[3]) * (10n ** BigInt(exponent));
+}
+
+function reviver(_key, value, context) {
+  // On older engines, `JSON.parse` calls the reviver with only two arguments
+  if (context === undefined) return value;
+  if (typeof value !== 'number') return value;
+  const source = context.source;
+  // Only convert when `JSON.parse` actually truncated the value, avoiding
+  // unnecessary `BigInt` conversion for integers that are exactly
+  // representable as doubles
+  if (String(value) === source) return value;
+  const bigint = sourceToBigInt(source);
+  return bigint !== null ? bigint : value;
+}
+
+class Blaze {
+  static reviver = reviver;
+
+  constructor(template) {
+    if (!Array.isArray(template) || template[0] !== JSON_VERSION) {
+      throw new Error(
+        `Only version ${JSON_VERSION} of the compiled template is supported by this version of the evaluator`);
+    }
+    compile(template);
+    this.template = template;
+    this.callbackMode = false;
+    this.trackMode = false;
+    this.dynamicMode = false;
+    this.callback = null;
+    this.evaluatePathLength = 0;
+    this.evaluatePathTokens = null;
+    this.instanceLocationLength = 0;
+    this.instanceLocationTokens = null;
+    this.resources = null;
+    this.evaluated = null;
+    this.propertyTarget = undefined;
+    this.propertyParent = undefined;
+    this.propertyKey = undefined;
+    this._nativeValidate = generateNativeValidator(template);
+  }
+
+  validate(instance, callbackOrFormat) {
+    if (typeof callbackOrFormat === 'string') {
+      return runStandard(this, instance, callbackOrFormat);
+    }
+
+    const callback = callbackOrFormat;
+
+    if (callback === undefined && this._nativeValidate) {
+      return this._nativeValidate(instance, this);
+    }
+
+    const template = this.template;
+    const targets = template[3];
+    if (targets.length === 0) return true;
+
+    const track = template[2];
+    const dynamic = template[1];
+    this.trackMode = track;
+    this.dynamicMode = dynamic;
+    this.callbackMode = callback !== undefined;
+    this.callback = callback;
+
+    if (this.callbackMode) {
+      this.evaluatePathLength = 0;
+      this.evaluatePathTokens = [];
+      this.instanceLocationLength = 0;
+      this.instanceLocationTokens = [];
+      this.resources = [];
+      if (track || dynamic) {
+        evaluateInstruction = evaluateInstructionTrackedCallback;
+        if (track) {
+          this.evaluated = [];
+        }
+      } else {
+        evaluateInstruction = evaluateInstructionFastCallback;
+      }
+    } else if (track || dynamic) {
+      evaluateInstruction = evaluateInstructionTracked;
+      if (track) {
+        this.evaluatePathLength = 0;
+        this.evaluatePathTokens = [];
+        this.evaluated = [];
+      }
+      if (dynamic) {
+        this.resources = [];
+      }
+    } else {
+      evaluateInstruction = evaluateInstructionFast;
+    }
+
+    const instructions = targets[0];
+    let result = true;
+    for (let index = 0; index < instructions.length; index++) {
+      if (!evaluateInstruction(instructions[index], instance, 0, template, this)) {
+        result = false;
+        break;
+      }
+    }
+
+    this.resources = null;
+    this.evaluated = null;
+    this.evaluatePathTokens = null;
+    this.instanceLocationTokens = null;
+    this.callback = null;
+    this.callbackMode = false;
+    return result;
+  }
+
+  snapshotPathTokens() {
+    return this.evaluatePathTokens.slice(0, this.evaluatePathLength);
+  }
+
+  pushPath(relativeSchemaLocation) {
+    for (let index = 0; index < relativeSchemaLocation.length; index++) {
+      if (this.evaluatePathLength < this.evaluatePathTokens.length) {
+        this.evaluatePathTokens[this.evaluatePathLength] = relativeSchemaLocation[index];
+      } else {
+        this.evaluatePathTokens.push(relativeSchemaLocation[index]);
+      }
+      this.evaluatePathLength++;
+    }
+  }
+
+  popPath(count) {
+    this.evaluatePathLength -= count;
+  }
+
+  callbackPush(instruction) {
+    if (!this.trackMode) {
+      this.pushPath(instruction[1]);
+    }
+    const relInstance = instruction[2];
+    for (let index = 0; index < relInstance.length; index++) {
+      this.pushInstanceToken(relInstance[index]);
+    }
+    this.callback("pre", true, instruction,
+      buildJsonPointer(this.evaluatePathTokens, this.evaluatePathLength),
+      buildJsonPointer(this.instanceLocationTokens, this.instanceLocationLength),
+      null);
+  }
+
+  callbackPop(instruction, result) {
+    const isAnnotation = instruction[0] >= ANNOTATION_EMIT &&
+                         instruction[0] <= ANNOTATION_BASENAME_TO_PARENT;
+    this.callback("post", result, instruction,
+      buildJsonPointer(this.evaluatePathTokens, this.evaluatePathLength),
+      buildJsonPointer(this.instanceLocationTokens, this.instanceLocationLength),
+      isAnnotation ? instruction[6] : null);
+    if (!this.trackMode) {
+      this.popPath(instruction[1].length);
+    }
+    const relInstance = instruction[2];
+    for (let index = 0; index < relInstance.length; index++) {
+      this.popInstanceToken();
+    }
+  }
+
+  callbackAnnotation(instruction) {
+    if (!this.trackMode) {
+      this.pushPath(instruction[1]);
+    }
+    const relInstance = instruction[2];
+    for (let index = 0; index < relInstance.length; index++) {
+      this.pushInstanceToken(relInstance[index]);
+    }
+    const evaluatePath = buildJsonPointer(this.evaluatePathTokens, this.evaluatePathLength);
+    const opcode = instruction[0];
+    let instanceLocation;
+    if (opcode === ANNOTATION_EMIT || opcode === ANNOTATION_EMIT_WRAPPED) {
+      instanceLocation = buildJsonPointer(this.instanceLocationTokens, this.instanceLocationLength);
+    } else {
+      const parentLength = this.instanceLocationLength > 0 ? this.instanceLocationLength - 1 : 0;
+      instanceLocation = buildJsonPointer(this.instanceLocationTokens, parentLength);
+    }
+    let annotationValue = instruction[6];
+    if (opcode === ANNOTATION_BASENAME_TO_PARENT && this.instanceLocationLength > 0) {
+      annotationValue = this.instanceLocationTokens[this.instanceLocationLength - 1];
+    }
+    this.callback("pre", true, instruction, evaluatePath, instanceLocation, null);
+    this.callback("post", true, instruction, evaluatePath, instanceLocation, annotationValue);
+    if (!this.trackMode) {
+      this.popPath(instruction[1].length);
+    }
+    for (let index = 0; index < relInstance.length; index++) {
+      this.popInstanceToken();
+    }
+  }
+
+  pushInstanceToken(token) {
+    if (this.instanceLocationLength < this.instanceLocationTokens.length) {
+      this.instanceLocationTokens[this.instanceLocationLength] = token;
+    } else {
+      this.instanceLocationTokens.push(token);
+    }
+    this.instanceLocationLength++;
+  }
+
+  popInstanceToken() {
+    this.instanceLocationLength--;
+  }
+
+  markEvaluated(target, parent, key) {
+    this.evaluated.push({
+      instance: target,
+      parent: parent,
+      key: key,
+      pathTokens: this.snapshotPathTokens(),
+      pathLength: this.evaluatePathLength,
+      skip: false
+    });
+  }
+
+  isEvaluated(target, parent, key) {
+    const pathLen = this.evaluatePathLength;
+    const initialLen = pathLen <= 1 ? 0 : pathLen - 1;
+    const initialTokens = this.evaluatePathTokens;
+    const isPrimitive = target === null || typeof target !== 'object';
+    const hasLocation = parent !== undefined;
+
+    for (let index = this.evaluated.length - 1; index >= 0; index--) {
+      const entry = this.evaluated[index];
+      if (entry.skip) continue;
+
+      if (isPrimitive && hasLocation && entry.parent !== undefined) {
+        if (entry.parent !== parent || entry.key !== key) continue;
+      } else {
+        if (entry.instance !== target) continue;
+      }
+
+      if (initialLen === 0) return true;
+      if (entry.pathLength < initialLen) continue;
+      let match = true;
+      for (let token = 0; token < initialLen; token++) {
+        if (entry.pathTokens[token] !== initialTokens[token]) {
+          match = false;
+          break;
+        }
+      }
+      if (match) return true;
+    }
+    return false;
+  }
+
+  unevaluate() {
+    const pathLen = this.evaluatePathLength;
+    const tokens = this.evaluatePathTokens;
+    for (let index = 0; index < this.evaluated.length; index++) {
+      const entry = this.evaluated[index];
+      if (entry.skip) continue;
+      if (entry.pathLength < pathLen) continue;
+      let match = true;
+      for (let token = 0; token < pathLen; token++) {
+        if (entry.pathTokens[token] !== tokens[token]) {
+          match = false;
+          break;
+        }
+      }
+      if (match) entry.skip = true;
+    }
+  }
+
+  checkpoint() {
+    return this.evaluated.length;
+  }
+
+  rewind(checkpoint) {
+    this.evaluated.length = checkpoint;
+  }
+}
+
+function evaluateInstructionFast(instruction, instance, depth, template, evaluator) {
+  if (depth > DEPTH_LIMIT) {
+    throw new Error('The evaluation path depth limit was reached likely due to infinite recursion');
+  }
+  const handler = fastHandlers[instruction[0]];
+  if (!handler) return true;
+  return handler(instruction, instance, depth, template, evaluator);
+}
+
+function evaluateInstructionTracked(instruction, instance, depth, template, evaluator) {
+  if (depth > DEPTH_LIMIT) {
+    throw new Error('The evaluation path depth limit was reached likely due to infinite recursion');
+  }
+  const handler = fastHandlers[instruction[0]];
+  if (!handler) return true;
+
+  const type = instruction[0];
+  if (type < CONTROL_GROUP_START || type > CONTROL_EVALUATE_END) {
+    if (evaluator.trackMode) {
+      evaluator.pushPath(instruction[1]);
+    }
+    if (evaluator.dynamicMode) {
+      evaluator.resources.push(instruction[4]);
+    }
+
+    const result = handler(instruction, instance, depth, template, evaluator);
+
+    if (evaluator.trackMode) {
+      evaluator.popPath(instruction[1].length);
+    }
+    if (evaluator.dynamicMode) {
+      evaluator.resources.pop();
+    }
+    return result;
+  }
+
+  return handler(instruction, instance, depth, template, evaluator);
+}
+
+function evaluateInstructionFastCallback(instruction, instance, depth, template, evaluator) {
+  if (depth > DEPTH_LIMIT) {
+    throw new Error('The evaluation path depth limit was reached likely due to infinite recursion');
+  }
+  const handler = handlers[instruction[0]];
+  if (!handler) return true;
+  return handler(instruction, instance, depth, template, evaluator);
+}
+
+// Evaluate an entire subtree without emitting callbacks, while still
+// maintaining the schema resources stack for dynamic anchor resolution,
+// mirroring `evaluate_instruction_without_callback` from the C++ evaluator
+function evaluateInstructionWithoutCallback(instruction, instance, depth, template, evaluator) {
+  const previousDispatch = evaluateInstruction;
+  const previousCallbackMode = evaluator.callbackMode;
+  evaluateInstruction = (evaluator.trackMode || evaluator.dynamicMode)
+    ? evaluateInstructionTracked
+    : evaluateInstructionFast;
+  evaluator.callbackMode = false;
+  const result = evaluateInstruction(instruction, instance, depth, template, evaluator);
+  evaluateInstruction = previousDispatch;
+  evaluator.callbackMode = previousCallbackMode;
+  return result;
+}
+
+function evaluateInstructionTrackedCallback(instruction, instance, depth, template, evaluator) {
+  if (depth > DEPTH_LIMIT) {
+    throw new Error('The evaluation path depth limit was reached likely due to infinite recursion');
+  }
+  const handler = handlers[instruction[0]];
+  if (!handler) return true;
+
+  const type = instruction[0];
+  if (type < CONTROL_GROUP_START || type > CONTROL_EVALUATE_END) {
+    if (evaluator.trackMode) {
+      evaluator.pushPath(instruction[1]);
+    }
+    if (evaluator.dynamicMode) {
+      evaluator.resources.push(instruction[4]);
+    }
+
+    const result = handler(instruction, instance, depth, template, evaluator);
+
+    if (evaluator.trackMode) {
+      evaluator.popPath(instruction[1].length);
+    }
+    if (evaluator.dynamicMode) {
+      evaluator.resources.pop();
+    }
+    return result;
+  }
+
+  return handler(instruction, instance, depth, template, evaluator);
+}
+
+let evaluateInstruction = evaluateInstructionFast;
+
+function effectiveTypeStrictReal(value) {
+  if (value === null) return Type.Null;
+  switch (typeof value) {
+    case 'boolean': return Type.Boolean;
+    case 'number': return Number.isInteger(value) ? Type.Integer : Type.Real;
+    case 'bigint': return Type.Integer;
+    case 'string': return Type.String;
+    case 'object': return Array.isArray(value) ? Type.Array : Type.Object;
+    default: return Type.Null;
+  }
+}
+
+function typeSetTest(bitmask, typeIndex) {
+  return (bitmask & (1 << typeIndex)) !== 0;
+}
+
+function jsonEqual(left, right) {
+  if (left === right) return true;
+  if (left === null || right === null) return left === right;
+  if (typeof left !== typeof right) return false;
+  if (typeof left !== 'object') return left === right;
+  if (Array.isArray(left) !== Array.isArray(right)) return false;
+  if (Array.isArray(left)) {
+    if (left.length !== right.length) return false;
+    for (let index = 0; index < left.length; index++) {
+      if (!jsonEqual(left[index], right[index])) return false;
+    }
+    return true;
+  }
+  const keysLeft = Object.keys(left);
+  const keysRight = Object.keys(right);
+  if (keysLeft.length !== keysRight.length) return false;
+  for (let index = 0; index < keysLeft.length; index++) {
+    const key = keysLeft[index];
+    if (!Object.hasOwn(right, key)) return false;
+    if (!jsonEqual(left[key], right[key])) return false;
+  }
+  return true;
+}
+
+function fastHash(value) {
+  if (value === null) return 2;
+  switch (typeof value) {
+    case 'boolean': return value ? 1 : 0;
+    case 'number': return 4 + ((value | 0) & 255);
+    case 'bigint': return 4 + Number(value & 255n);
+    case 'string': return 3 + value.length;
+    case 'object':
+      if (Array.isArray(value)) {
+        let hash = 6;
+        for (let index = 0; index < value.length; index++) hash += 1 + fastHash(value[index]);
+        return hash;
+      } else {
+        let hash = 7;
+        for (const key in value) hash += 1 + key.length + fastHash(value[key]);
+        return hash;
+      }
+    default: return 2;
+  }
+}
+
+function isUnique(array) {
+  const length = array.length;
+  if (length <= 1) return true;
+  const first = array[0];
+  const firstType = typeof first;
+  if (first !== null && firstType !== 'object') {
+    let allPrimitive = true;
+    for (let index = 1; index < length; index++) {
+      const element = array[index];
+      if (element === null || typeof element === 'object') {
+        allPrimitive = false;
+        break;
+      }
+    }
+    if (allPrimitive) {
+      const set = new Set();
+      for (let index = 0; index < length; index++) {
+        const size = set.size;
+        set.add(array[index]);
+        if (set.size === size) return false;
+      }
+      return true;
+    }
+  }
+  const hashes = new Array(length);
+  for (let index = 0; index < length; index++) {
+    hashes[index] = fastHash(array[index]);
+  }
+  for (let index = 1; index < length; index++) {
+    for (let previous = 0; previous < index; previous++) {
+      if (hashes[index] === hashes[previous] && jsonEqual(array[index], array[previous])) return false;
+    }
+  }
+  return true;
+}
+
+function isDivisibleBy(value, divisor) {
+  if (divisor === 0 || divisor === 0n) return false;
+  if (typeof value === 'bigint' && typeof divisor === 'bigint') {
+    return value % divisor === 0n;
+  }
+  if (typeof value === 'bigint') {
+    value = Number(value);
+  } else if (typeof divisor === 'bigint') {
+    divisor = Number(divisor);
+  }
+  const remainder = value % divisor;
+  if (remainder === 0) return true;
+  return Math.abs(remainder) < 1e-9 || Math.abs(remainder - divisor) < 1e-9 ||
+         Math.abs(remainder + divisor) < 1e-9;
+}
+
+function unicodeLength(string) {
+  let count = 0;
+  for (let index = 0; index < string.length; index++) {
+    count++;
+    const code = string.charCodeAt(index);
+    if (code >= 0xD800 && code <= 0xDBFF) index++;
+  }
+  return count;
+}
+
+function objectSize(object) {
+  let count = 0;
+  for (const key in object) count++;
+  return count;
+}
+
+function isObject(value) {
+  return value !== null && typeof value === 'object' && !Array.isArray(value);
+}
+
+function AssertionFail(instruction, instance, depth, template, evaluator) {
+  if (evaluator.callbackMode) evaluator.callbackPush(instruction);
+  if (evaluator.callbackMode) evaluator.callbackPop(instruction, false);
+  return false;
+};
+
+function AssertionDefines(instruction, instance, depth, template, evaluator) {
+  const target = resolveInstance(instance, instruction[2]);
+  if (!isObject(target)) return true;
+  if (evaluator.callbackMode) evaluator.callbackPush(instruction);
+  const __result = Object.hasOwn(target, instruction[6]);
+  if (evaluator.callbackMode) evaluator.callbackPop(instruction, __result);
+  return __result;
+};
+
+function AssertionDefinesStrict(instruction, instance, depth, template, evaluator) {
+  if (evaluator.callbackMode) evaluator.callbackPush(instruction);
+  const target = resolveInstance(instance, instruction[2]);
+  if (!isObject(target)) {
+    if (evaluator.callbackMode) evaluator.callbackPop(instruction, false);
+    return false;
+  }
+  const __result = Object.hasOwn(target, instruction[6]);
+  if (evaluator.callbackMode) evaluator.callbackPop(instruction, __result);
+  return __result;
+};
+
+function AssertionDefinesAll(instruction, instance, depth, template, evaluator) {
+  const target = resolveInstance(instance, instruction[2]);
+  if (!isObject(target)) return true;
+  if (evaluator.callbackMode) evaluator.callbackPush(instruction);
+  const strings = instruction[6];
+  for (let index = 0; index < strings.length; index++) {
+    if (!Object.hasOwn(target, strings[index])) {
+      if (evaluator.callbackMode) evaluator.callbackPop(instruction, false);
+      return false;
+    }
+  }
+  if (evaluator.callbackMode) evaluator.callbackPop(instruction, true);
+  return true;
+};
+
+function AssertionDefinesAllStrict(instruction, instance, depth, template, evaluator) {
+  if (evaluator.callbackMode) evaluator.callbackPush(instruction);
+  const target = resolveInstance(instance, instruction[2]);
+  if (!isObject(target)) {
+    if (evaluator.callbackMode) evaluator.callbackPop(instruction, false);
+    return false;
+  }
+  const strings = instruction[6];
+  for (let index = 0; index < strings.length; index++) {
+    if (!Object.hasOwn(target, strings[index])) {
+      if (evaluator.callbackMode) evaluator.callbackPop(instruction, false);
+      return false;
+    }
+  }
+  if (evaluator.callbackMode) evaluator.callbackPop(instruction, true);
+  return true;
+};
+
+function AssertionDefinesExactly(instruction, instance, depth, template, evaluator) {
+  const target = resolveInstance(instance, instruction[2]);
+  if (!isObject(target)) return true;
+  if (evaluator.callbackMode) evaluator.callbackPush(instruction);
+  let targetSize = 0;
+  for (const key in target) targetSize++;
+  const strings = instruction[6];
+  if (targetSize !== strings.length) {
+    if (evaluator.callbackMode) evaluator.callbackPop(instruction, false);
+    return false;
+  }
+  for (let index = 0; index < strings.length; index++) {
+    if (!Object.hasOwn(target, strings[index])) {
+      if (evaluator.callbackMode) evaluator.callbackPop(instruction, false);
+      return false;
+    }
+  }
+  if (evaluator.callbackMode) evaluator.callbackPop(instruction, true);
+  return true;
+};
+
+function AssertionDefinesExactlyStrict(instruction, instance, depth, template, evaluator) {
+  if (evaluator.callbackMode) evaluator.callbackPush(instruction);
+  const target = resolveInstance(instance, instruction[2]);
+  if (!isObject(target)) {
+    if (evaluator.callbackMode) evaluator.callbackPop(instruction, false);
+    return false;
+  }
+  let targetSize = 0;
+  for (const key in target) targetSize++;
+  const strings = instruction[6];
+  if (targetSize !== strings.length) {
+    if (evaluator.callbackMode) evaluator.callbackPop(instruction, false);
+    return false;
+  }
+  for (let index = 0; index < strings.length; index++) {
+    if (!Object.hasOwn(target, strings[index])) {
+      if (evaluator.callbackMode) evaluator.callbackPop(instruction, false);
+      return false;
+    }
+  }
+  if (evaluator.callbackMode) evaluator.callbackPop(instruction, true);
+  return true;
+};
+
+function AssertionDefinesExactlyStrictHash3(instruction, instance, depth, template, evaluator) {
+  if (evaluator.callbackMode) evaluator.callbackPush(instruction);
+  const target = resolveInstance(instance, instruction[2]);
+  if (!isObject(target)) {
+    if (evaluator.callbackMode) evaluator.callbackPop(instruction, false);
+    return false;
+  }
+  const entries = instruction[6][0];
+  let count = 0;
+  for (const key in target) count++;
+  if (count !== 3) {
+    if (evaluator.callbackMode) evaluator.callbackPop(instruction, false);
+    return false;
+  }
+  const __result = Object.hasOwn(target, entries[0][1]) &&
+    Object.hasOwn(target, entries[1][1]) &&
+    Object.hasOwn(target, entries[2][1]);
+  if (evaluator.callbackMode) evaluator.callbackPop(instruction, __result);
+  return __result;
+};
+
+function AssertionPropertyDependencies(instruction, instance, depth, template, evaluator) {
+  const target = resolveInstance(instance, instruction[2]);
+  if (!isObject(target)) return true;
+  if (evaluator.callbackMode) evaluator.callbackPush(instruction);
+  const value = instruction[6];
+  for (const property in value) {
+    if (!Object.hasOwn(target, property)) continue;
+    const dependencies = value[property];
+    for (let index = 0; index < dependencies.length; index++) {
+      if (!Object.hasOwn(target, dependencies[index])) {
+        if (evaluator.callbackMode) evaluator.callbackPop(instruction, false);
+        return false;
+      }
+    }
+  }
+  if (evaluator.callbackMode) evaluator.callbackPop(instruction, true);
+  return true;
+};
+
+function AssertionType(instruction, instance, depth, template, evaluator) {
+  if (evaluator.callbackMode) evaluator.callbackPush(instruction);
+  const target = resolveInstance(instance, instruction[2]);
+  const expected = instruction[6];
+  const actual = jsonTypeOf(target);
+  if (actual === expected) {
+    if (evaluator.callbackMode) evaluator.callbackPop(instruction, true);
+    return true;
+  }
+  if (expected === Type.Integer && isIntegral(target)) {
+    if (evaluator.callbackMode) evaluator.callbackPop(instruction, true);
+    return true;
+  }
+  if (evaluator.callbackMode) evaluator.callbackPop(instruction, false);
+  return false;
+};
+
+function AssertionTypeAny(instruction, instance, depth, template, evaluator) {
+  if (evaluator.callbackMode) evaluator.callbackPush(instruction);
+  const target = resolveInstance(instance, instruction[2]);
+  const bitmask = instruction[6];
+  const typeIndex = jsonTypeOf(target);
+  if (typeSetTest(bitmask, typeIndex)) {
+    if (evaluator.callbackMode) evaluator.callbackPop(instruction, true);
+    return true;
+  }
+  if (typeSetTest(bitmask, Type.Integer) && isIntegral(target)) {
+    if (evaluator.callbackMode) evaluator.callbackPop(instruction, true);
+    return true;
+  }
+  if (evaluator.callbackMode) evaluator.callbackPop(instruction, false);
+  return false;
+};
+
+function AssertionTypeStrict(instruction, instance, depth, template, evaluator) {
+  if (evaluator.callbackMode) evaluator.callbackPush(instruction);
+  const target = resolveInstance(instance, instruction[2]);
+  const __result = effectiveTypeStrictReal(target) === instruction[6];
+  if (evaluator.callbackMode) evaluator.callbackPop(instruction, __result);
+  return __result;
+};
+
+function AssertionTypeStrictAny(instruction, instance, depth, template, evaluator) {
+  if (evaluator.callbackMode) evaluator.callbackPush(instruction);
+  const target = resolveInstance(instance, instruction[2]);
+  const __result = typeSetTest(instruction[6], effectiveTypeStrictReal(target));
+  if (evaluator.callbackMode) evaluator.callbackPop(instruction, __result);
+  return __result;
+};
+
+function AssertionNotTypeStrictAny(instruction, instance, depth, template, evaluator) {
+  if (evaluator.callbackMode) evaluator.callbackPush(instruction);
+  const target = resolveInstance(instance, instruction[2]);
+  const __result = !typeSetTest(instruction[6], effectiveTypeStrictReal(target));
+  if (evaluator.callbackMode) evaluator.callbackPop(instruction, __result);
+  return __result;
+};
+
+function AssertionTypeStringBounded(instruction, instance, depth, template, evaluator) {
+  if (evaluator.callbackMode) evaluator.callbackPush(instruction);
+  const target = resolveInstance(instance, instruction[2]);
+  if (typeof target !== 'string') {
+    if (evaluator.callbackMode) evaluator.callbackPop(instruction, false);
+    return false;
+  }
+  const range = instruction[6];
+  const length = unicodeLength(target);
+  if (length < range[0]) {
+    if (evaluator.callbackMode) evaluator.callbackPop(instruction, false);
+    return false;
+  }
+  if (range[1] !== null && length > range[1]) {
+    if (evaluator.callbackMode) evaluator.callbackPop(instruction, false);
+    return false;
+  }
+  if (evaluator.callbackMode) evaluator.callbackPop(instruction, true);
+  return true;
+};
+
+function AssertionTypeStringUpper(instruction, instance, depth, template, evaluator) {
+  if (evaluator.callbackMode) evaluator.callbackPush(instruction);
+  const target = resolveInstance(instance, instruction[2]);
+  const __result = typeof target === 'string' && unicodeLength(target) <= instruction[6];
+  if (evaluator.callbackMode) evaluator.callbackPop(instruction, __result);
+  return __result;
+};
+
+function AssertionTypeArrayBounded(instruction, instance, depth, template, evaluator) {
+  if (evaluator.callbackMode) evaluator.callbackPush(instruction);
+  const target = resolveInstance(instance, instruction[2]);
+  if (!Array.isArray(target)) {
+    if (evaluator.callbackMode) evaluator.callbackPop(instruction, false);
+    return false;
+  }
+  const range = instruction[6];
+  if (target.length < range[0]) {
+    if (evaluator.callbackMode) evaluator.callbackPop(instruction, false);
+    return false;
+  }
+  if (range[1] !== null && target.length > range[1]) {
+    if (evaluator.callbackMode) evaluator.callbackPop(instruction, false);
+    return false;
+  }
+  if (evaluator.callbackMode) evaluator.callbackPop(instruction, true);
+  return true;
+};
+
+function AssertionTypeArrayUpper(instruction, instance, depth, template, evaluator) {
+  if (evaluator.callbackMode) evaluator.callbackPush(instruction);
+  const target = resolveInstance(instance, instruction[2]);
+  const __result = Array.isArray(target) && target.length <= instruction[6];
+  if (evaluator.callbackMode) evaluator.callbackPop(instruction, __result);
+  return __result;
+};
+
+function AssertionTypeObjectBounded(instruction, instance, depth, template, evaluator) {
+  if (evaluator.callbackMode) evaluator.callbackPush(instruction);
+  const target = resolveInstance(instance, instruction[2]);
+  if (!isObject(target)) {
+    if (evaluator.callbackMode) evaluator.callbackPop(instruction, false);
+    return false;
+  }
+  const range = instruction[6];
+  const size = objectSize(target);
+  if (size < range[0]) {
+    if (evaluator.callbackMode) evaluator.callbackPop(instruction, false);
+    return false;
+  }
+  if (range[1] !== null && size > range[1]) {
+    if (evaluator.callbackMode) evaluator.callbackPop(instruction, false);
+    return false;
+  }
+  if (evaluator.callbackMode) evaluator.callbackPop(instruction, true);
+  return true;
+};
+
+function AssertionTypeObjectUpper(instruction, instance, depth, template, evaluator) {
+  if (evaluator.callbackMode) evaluator.callbackPush(instruction);
+  const target = resolveInstance(instance, instruction[2]);
+  if (!isObject(target)) {
+    if (evaluator.callbackMode) evaluator.callbackPop(instruction, false);
+    return false;
+  }
+  const __result = objectSize(target) <= instruction[6];
+  if (evaluator.callbackMode) evaluator.callbackPop(instruction, __result);
+  return __result;
+};
+
+function AssertionRegex(instruction, instance, depth, template, evaluator) {
+  const target = evaluator.propertyTarget !== undefined
+    ? evaluator.propertyTarget : resolveInstance(instance, instruction[2]);
+  if (typeof target !== 'string') return true;
+  if (evaluator.callbackMode) evaluator.callbackPush(instruction);
+  const __result = instruction[6].test(target);
+  if (evaluator.callbackMode) evaluator.callbackPop(instruction, __result);
+  return __result;
+};
+
+function AssertionStringSizeLess(instruction, instance, depth, template, evaluator) {
+  const target = evaluator.propertyTarget !== undefined
+    ? evaluator.propertyTarget : resolveInstance(instance, instruction[2]);
+  if (typeof target !== 'string') return true;
+  if (evaluator.callbackMode) evaluator.callbackPush(instruction);
+  const __result = unicodeLength(target) < instruction[6];
+  if (evaluator.callbackMode) evaluator.callbackPop(instruction, __result);
+  return __result;
+};
+
+function AssertionStringSizeGreater(instruction, instance, depth, template, evaluator) {
+  const target = evaluator.propertyTarget !== undefined
+    ? evaluator.propertyTarget : resolveInstance(instance, instruction[2]);
+  if (typeof target !== 'string') return true;
+  if (evaluator.callbackMode) evaluator.callbackPush(instruction);
+  const __result = unicodeLength(target) > instruction[6];
+  if (evaluator.callbackMode) evaluator.callbackPop(instruction, __result);
+  return __result;
+};
+
+function AssertionArraySizeLess(instruction, instance, depth, template, evaluator) {
+  const target = resolveInstance(instance, instruction[2]);
+  if (!Array.isArray(target)) return true;
+  if (evaluator.callbackMode) evaluator.callbackPush(instruction);
+  const __result = target.length < instruction[6];
+  if (evaluator.callbackMode) evaluator.callbackPop(instruction, __result);
+  return __result;
+};
+
+function AssertionArraySizeGreater(instruction, instance, depth, template, evaluator) {
+  const target = resolveInstance(instance, instruction[2]);
+  if (!Array.isArray(target)) return true;
+  if (evaluator.callbackMode) evaluator.callbackPush(instruction);
+  const __result = target.length > instruction[6];
+  if (evaluator.callbackMode) evaluator.callbackPop(instruction, __result);
+  return __result;
+};
+
+function AssertionObjectSizeLess(instruction, instance, depth, template, evaluator) {
+  const target = resolveInstance(instance, instruction[2]);
+  if (!isObject(target)) return true;
+  if (evaluator.callbackMode) evaluator.callbackPush(instruction);
+  const __result = objectSize(target) < instruction[6];
+  if (evaluator.callbackMode) evaluator.callbackPop(instruction, __result);
+  return __result;
+};
+
+function AssertionObjectSizeGreater(instruction, instance, depth, template, evaluator) {
+  const target = resolveInstance(instance, instruction[2]);
+  if (!isObject(target)) return true;
+  if (evaluator.callbackMode) evaluator.callbackPush(instruction);
+  const __result = objectSize(target) > instruction[6];
+  if (evaluator.callbackMode) evaluator.callbackPop(instruction, __result);
+  return __result;
+};
+
+function AssertionEqual(instruction, instance, depth, template, evaluator) {
+  if (evaluator.callbackMode) evaluator.callbackPush(instruction);
+  let __result;
+  if (evaluator.propertyTarget !== undefined) {
+    const value = instruction[6];
+    __result = typeof value === 'string' && value === evaluator.propertyTarget;
+  } else {
+    __result = jsonEqual(resolveInstance(instance, instruction[2]), instruction[6]);
+  }
+  if (evaluator.callbackMode) evaluator.callbackPop(instruction, __result);
+  return __result;
+};
+
+function AssertionEqualsAny(instruction, instance, depth, template, evaluator) {
+  if (evaluator.callbackMode) evaluator.callbackPush(instruction);
+  const value = instruction[6];
+  const target = evaluator.propertyTarget !== undefined
+    ? evaluator.propertyTarget : resolveInstance(instance, instruction[2]);
+  if (value.primitive) {
+    const __result = value.set.has(target);
+    if (evaluator.callbackMode) evaluator.callbackPop(instruction, __result);
+    return __result;
+  }
+  const values = Array.isArray(value) ? value : value.values;
+  for (let index = 0; index < values.length; index++) {
+    if (jsonEqual(target, values[index])) {
+      if (evaluator.callbackMode) evaluator.callbackPop(instruction, true);
+      return true;
+    }
+  }
+  if (evaluator.callbackMode) evaluator.callbackPop(instruction, false);
+  return false;
+};
+
+function AssertionEqualsAnyStringHash(instruction, instance, depth, template, evaluator) {
+  if (evaluator.callbackMode) evaluator.callbackPush(instruction);
+  const target = evaluator.propertyTarget !== undefined
+    ? evaluator.propertyTarget
+    : resolveInstance(instance, instruction[2]);
+  if (typeof target !== 'string') {
+    if (evaluator.callbackMode) evaluator.callbackPop(instruction, false);
+    return false;
+  }
+
+  const value = instruction[6];
+  const entries = value[0];
+  const tableOfContents = value[1];
+
+  const stringSize = target.length;
+  if (stringSize < tableOfContents.length) {
+    const hint = tableOfContents[stringSize];
+    if (hint[1] === 0) {
+      if (evaluator.callbackMode) evaluator.callbackPop(instruction, false);
+      return false;
+    }
+    for (let index = hint[0] - 1; index < hint[1]; index++) {
+      if (entries[index][1] === target) {
+        if (evaluator.callbackMode) evaluator.callbackPop(instruction, true);
+        return true;
+      }
+    }
+    if (evaluator.callbackMode) evaluator.callbackPop(instruction, false);
+    return false;
+  }
+
+  if (evaluator.callbackMode) evaluator.callbackPop(instruction, false);
+  return false;
+};
+
+function AssertionGreaterEqual(instruction, instance, depth, template, evaluator) {
+  const target = resolveInstance(instance, instruction[2]);
+  const targetType = typeof target;
+  if (targetType !== 'number' && targetType !== 'bigint') return true;
+  if (evaluator.callbackMode) evaluator.callbackPush(instruction);
+  const __result = target >= instruction[6];
+  if (evaluator.callbackMode) evaluator.callbackPop(instruction, __result);
+  return __result;
+};
+
+function AssertionLessEqual(instruction, instance, depth, template, evaluator) {
+  const target = resolveInstance(instance, instruction[2]);
+  const targetType = typeof target;
+  if (targetType !== 'number' && targetType !== 'bigint') return true;
+  if (evaluator.callbackMode) evaluator.callbackPush(instruction);
+  const __result = target <= instruction[6];
+  if (evaluator.callbackMode) evaluator.callbackPop(instruction, __result);
+  return __result;
+};
+
+function AssertionGreater(instruction, instance, depth, template, evaluator) {
+  const target = resolveInstance(instance, instruction[2]);
+  const targetType = typeof target;
+  if (targetType !== 'number' && targetType !== 'bigint') return true;
+  if (evaluator.callbackMode) evaluator.callbackPush(instruction);
+  const __result = target > instruction[6];
+  if (evaluator.callbackMode) evaluator.callbackPop(instruction, __result);
+  return __result;
+};
+
+function AssertionLess(instruction, instance, depth, template, evaluator) {
+  const target = resolveInstance(instance, instruction[2]);
+  const targetType = typeof target;
+  if (targetType !== 'number' && targetType !== 'bigint') return true;
+  if (evaluator.callbackMode) evaluator.callbackPush(instruction);
+  const __result = target < instruction[6];
+  if (evaluator.callbackMode) evaluator.callbackPop(instruction, __result);
+  return __result;
+};
+
+function AssertionUnique(instruction, instance, depth, template, evaluator) {
+  const target = resolveInstance(instance, instruction[2]);
+  if (!Array.isArray(target)) return true;
+  if (evaluator.callbackMode) evaluator.callbackPush(instruction);
+  const __result = isUnique(target);
+  if (evaluator.callbackMode) evaluator.callbackPop(instruction, __result);
+  return __result;
+};
+
+function AssertionDivisible(instruction, instance, depth, template, evaluator) {
+  const target = resolveInstance(instance, instruction[2]);
+  const targetType = typeof target;
+  if (targetType !== 'number' && targetType !== 'bigint') return true;
+  if (evaluator.callbackMode) evaluator.callbackPush(instruction);
+  const __result = isDivisibleBy(target, instruction[6]);
+  if (evaluator.callbackMode) evaluator.callbackPop(instruction, __result);
+  return __result;
+};
+
+function AssertionTypeIntegerBounded(instruction, instance, depth, template, evaluator) {
+  const target = resolveInstance(instance, instruction[2]);
+  if (evaluator.callbackMode) evaluator.callbackPush(instruction);
+  const range = instruction[6];
+  const __result = (typeof target === 'bigint' || Number.isInteger(target)) && target >= range[0] && target <= range[1];
+  if (evaluator.callbackMode) evaluator.callbackPop(instruction, __result);
+  return __result;
+};
+
+function AssertionTypeIntegerBoundedStrict(instruction, instance, depth, template, evaluator) {
+  const target = resolveInstance(instance, instruction[2]);
+  if (evaluator.callbackMode) evaluator.callbackPush(instruction);
+  const range = instruction[6];
+  const __result = (typeof target === 'bigint' || Number.isInteger(target)) && target >= range[0] && target <= range[1];
+  if (evaluator.callbackMode) evaluator.callbackPop(instruction, __result);
+  return __result;
+};
+
+function AssertionTypeIntegerLowerBound(instruction, instance, depth, template, evaluator) {
+  const target = resolveInstance(instance, instruction[2]);
+  if (evaluator.callbackMode) evaluator.callbackPush(instruction);
+  const range = instruction[6];
+  const __result = (typeof target === 'bigint' || Number.isInteger(target)) && target >= range[0];
+  if (evaluator.callbackMode) evaluator.callbackPop(instruction, __result);
+  return __result;
+};
+
+function AssertionTypeIntegerLowerBoundStrict(instruction, instance, depth, template, evaluator) {
+  const target = resolveInstance(instance, instruction[2]);
+  if (evaluator.callbackMode) evaluator.callbackPush(instruction);
+  const range = instruction[6];
+  const __result = (typeof target === 'bigint' || Number.isInteger(target)) && target >= range[0];
+  if (evaluator.callbackMode) evaluator.callbackPop(instruction, __result);
+  return __result;
+};
+
+function AssertionStringType(instruction, instance, depth, template, evaluator) {
+  const target = evaluator.propertyTarget !== undefined
+    ? evaluator.propertyTarget : resolveInstance(instance, instruction[2]);
+  if (typeof target !== 'string') return true;
+  if (evaluator.callbackMode) evaluator.callbackPush(instruction);
+  const __result = URI_REGEX.test(target);
+  if (evaluator.callbackMode) evaluator.callbackPop(instruction, __result);
+  return __result;
+};
+
+function AssertionPropertyType(instruction, instance, depth, template, evaluator) {
+  if (!isObject(instance)) return true;
+  const target = resolveInstance(instance, instruction[2]);
+  if (target === undefined) return true;
+  if (evaluator.callbackMode) evaluator.callbackPush(instruction);
+  const expected = instruction[6];
+  const actual = jsonTypeOf(target);
+  const __result = actual === expected || (expected === Type.Integer && isIntegral(target));
+  if (evaluator.callbackMode) evaluator.callbackPop(instruction, __result);
+  return __result;
+};
+
+function AssertionPropertyTypeEvaluate(instruction, instance, depth, template, evaluator) {
+  if (!isObject(instance)) return true;
+  const target = resolveInstance(instance, instruction[2]);
+  if (target === undefined) return true;
+  if (evaluator.callbackMode) evaluator.callbackPush(instruction);
+  const expected = instruction[6];
+  const actual = jsonTypeOf(target);
+  const result = actual === expected || (expected === Type.Integer && isIntegral(target));
+  if (result && evaluator.trackMode) {
+    const location = instruction[2];
+    evaluator.markEvaluated(target, instance, location.length > 0 ? location[location.length - 1] : undefined);
+  }
+  if (evaluator.callbackMode) evaluator.callbackPop(instruction, result);
+  return result;
+};
+
+function AssertionPropertyTypeStrict(instruction, instance, depth, template, evaluator) {
+  if (!isObject(instance)) return true;
+  const target = resolveInstance(instance, instruction[2]);
+  if (target === undefined) return true;
+  if (evaluator.callbackMode) evaluator.callbackPush(instruction);
+  const __result = effectiveTypeStrictReal(target) === instruction[6];
+  if (evaluator.callbackMode) evaluator.callbackPop(instruction, __result);
+  return __result;
+};
+
+function AssertionPropertyTypeStrictEvaluate(instruction, instance, depth, template, evaluator) {
+  if (!isObject(instance)) return true;
+  const target = resolveInstance(instance, instruction[2]);
+  if (target === undefined) return true;
+  if (evaluator.callbackMode) evaluator.callbackPush(instruction);
+  const result = effectiveTypeStrictReal(target) === instruction[6];
+  if (result && evaluator.trackMode) {
+    const location = instruction[2];
+    evaluator.markEvaluated(target, instance, location.length > 0 ? location[location.length - 1] : undefined);
+  }
+  if (evaluator.callbackMode) evaluator.callbackPop(instruction, result);
+  return result;
+};
+
+function AssertionPropertyTypeStrictAny(instruction, instance, depth, template, evaluator) {
+  if (!isObject(instance)) return true;
+  const target = resolveInstance(instance, instruction[2]);
+  if (target === undefined) return true;
+  if (evaluator.callbackMode) evaluator.callbackPush(instruction);
+  const __result = typeSetTest(instruction[6], effectiveTypeStrictReal(target));
+  if (evaluator.callbackMode) evaluator.callbackPop(instruction, __result);
+  return __result;
+};
+
+function AssertionPropertyTypeStrictAnyEvaluate(instruction, instance, depth, template, evaluator) {
+  if (!isObject(instance)) return true;
+  const target = resolveInstance(instance, instruction[2]);
+  if (target === undefined) return true;
+  if (evaluator.callbackMode) evaluator.callbackPush(instruction);
+  const result = typeSetTest(instruction[6], effectiveTypeStrictReal(target));
+  if (result && evaluator.trackMode) {
+    const location = instruction[2];
+    evaluator.markEvaluated(target, instance, location.length > 0 ? location[location.length - 1] : undefined);
+  }
+  if (evaluator.callbackMode) evaluator.callbackPop(instruction, result);
+  return result;
+};
+
+function AssertionArrayPrefix(instruction, instance, depth, template, evaluator) {
+  const target = resolveInstance(instance, instruction[2]);
+  if (!Array.isArray(target)) return true;
+  if (evaluator.callbackMode) evaluator.callbackPush(instruction);
+  if (target.length === 0) {
+    if (evaluator.callbackMode) evaluator.callbackPop(instruction, true);
+    return true;
+  }
+  const children = instruction[7];
+  const prefixes = children.length - 1;
+  const pointer = target.length === prefixes ? prefixes : Math.min(target.length, prefixes) - 1;
+  const entry = children[pointer];
+  const entryChildren = entry[7];
+  if (entryChildren) {
+    for (let index = 0; index < entryChildren.length; index++) {
+      if (!evaluateInstruction(entryChildren[index], target, depth + 1, template, evaluator)) {
+        if (evaluator.callbackMode) evaluator.callbackPop(instruction, false);
+        return false;
+      }
+    }
+  }
+  if (evaluator.callbackMode) evaluator.callbackPop(instruction, true);
+  return true;
+};
+
+function AssertionArrayPrefixEvaluate(instruction, instance, depth, template, evaluator) {
+  const target = resolveInstance(instance, instruction[2]);
+  if (!Array.isArray(target)) return true;
+  if (evaluator.callbackMode) evaluator.callbackPush(instruction);
+  if (target.length === 0) {
+    if (evaluator.callbackMode) evaluator.callbackPop(instruction, true);
+    return true;
+  }
+  const children = instruction[7];
+  const prefixes = children.length - 1;
+  const pointer = target.length === prefixes ? prefixes : Math.min(target.length, prefixes) - 1;
+  const entry = children[pointer];
+  const entryChildren = entry[7];
+  if (entryChildren) {
+    for (let index = 0; index < entryChildren.length; index++) {
+      if (!evaluateInstruction(entryChildren[index], target, depth + 1, template, evaluator)) {
+        if (evaluator.callbackMode) evaluator.callbackPop(instruction, false);
+        return false;
+      }
+    }
+  }
+  if (evaluator.trackMode) {
+    if (target.length === prefixes) {
+      evaluator.markEvaluated(target);
+    } else {
+      for (let cursor = 0; cursor <= pointer; cursor++) {
+        evaluator.markEvaluated(target[cursor], target, cursor);
+      }
+    }
+  }
+  if (evaluator.callbackMode) evaluator.callbackPop(instruction, true);
+  return true;
+};
+
+function AssertionObjectPropertiesSimple(instruction, instance, depth, template, evaluator) {
+  const target = resolveInstance(instance, instruction[2]);
+  if (evaluator.callbackMode) evaluator.callbackPush(instruction);
+  if (!isObject(target)) {
+    if (evaluator.callbackMode) evaluator.callbackPop(instruction, false);
+    return false;
+  }
+  const value = instruction[6];
+  const children = instruction[7];
+  for (let index = 0; index < value.length; index++) {
+    const entry = value[index];
+    const name = entry[0];
+    const required = entry[2];
+    if (!Object.hasOwn(target, name)) {
+      if (required) {
+        if (evaluator.callbackMode) evaluator.callbackPop(instruction, false);
+        return false;
+      }
+      continue;
+    }
+    if (index < children.length) {
+      if (!evaluateInstructionWithoutCallback(children[index], target[name], depth + 1, template, evaluator)) {
+        if (evaluator.callbackMode) evaluator.callbackPop(instruction, false);
+        return false;
+      }
+    }
+  }
+  if (evaluator.callbackMode) evaluator.callbackPop(instruction, true);
+  return true;
+};
+
+function AnnotationEmit(instruction, instance, depth, template, evaluator) {
+  if (evaluator.callbackMode) evaluator.callbackAnnotation(instruction);
+  return true;
+}
+function AnnotationEmitWrapped(instruction, instance, depth, template, evaluator) {
+  if (evaluator.callbackMode) evaluator.callbackAnnotation(instruction);
+  return true;
+}
+function AnnotationToParent(instruction, instance, depth, template, evaluator) {
+  if (evaluator.callbackMode) evaluator.callbackAnnotation(instruction);
+  return true;
+}
+function AnnotationBasenameToParent(instruction, instance, depth, template, evaluator) {
+  if (evaluator.callbackMode) evaluator.callbackAnnotation(instruction);
+  return true;
+}
+
+function Evaluate(instruction, instance, depth, template, evaluator) {
+  if (evaluator.callbackMode) evaluator.callbackPush(instruction);
+  if (evaluator.trackMode) {
+    const target = resolveInstance(instance, instruction[2]);
+    evaluator.markEvaluated(target);
+  }
+  if (evaluator.callbackMode) evaluator.callbackPop(instruction, true);
+  return true;
+};
+
+function LogicalNot(instruction, instance, depth, template, evaluator) {
+  if (evaluator.callbackMode) evaluator.callbackPush(instruction);
+  const target = resolveInstance(instance, instruction[2]);
+  const children = instruction[7];
+  if (children) {
+    for (let index = 0; index < children.length; index++) {
+      if (!evaluateInstruction(children[index], target, depth + 1, template, evaluator)) {
+        if (evaluator.callbackMode) evaluator.callbackPop(instruction, true);
+        return true;
+      }
+    }
+  }
+  if (evaluator.callbackMode) evaluator.callbackPop(instruction, false);
+  return false;
+};
+
+function LogicalNotEvaluate(instruction, instance, depth, template, evaluator) {
+  if (evaluator.callbackMode) evaluator.callbackPush(instruction);
+  const target = resolveInstance(instance, instruction[2]);
+  const children = instruction[7];
+  let result = false;
+  if (children) {
+    for (let index = 0; index < children.length; index++) {
+      if (!evaluateInstruction(children[index], target, depth + 1, template, evaluator)) {
+        result = true;
+        break;
+      }
+    }
+  }
+  if (evaluator.trackMode) evaluator.unevaluate();
+  if (evaluator.callbackMode) evaluator.callbackPop(instruction, result);
+  return result;
+};
+
+function LogicalOr(instruction, instance, depth, template, evaluator) {
+  if (evaluator.callbackMode) evaluator.callbackPush(instruction);
+  const children = instruction[7];
+  if (!children || children.length === 0) {
+    if (evaluator.callbackMode) evaluator.callbackPop(instruction, true);
+    return true;
+  }
+  const target = resolveInstance(instance, instruction[2]);
+  const exhaustive = instruction[6];
+  let result = false;
+  if (exhaustive) {
+    for (let index = 0; index < children.length; index++) {
+      const checkpoint = evaluator.trackMode ? evaluator.checkpoint() : 0;
+      if (evaluateInstruction(children[index], target, depth + 1, template, evaluator)) {
+        result = true;
+      } else if (evaluator.trackMode) {
+        evaluator.rewind(checkpoint);
+      }
+    }
+  } else {
+    for (let index = 0; index < children.length; index++) {
+      const checkpoint = evaluator.trackMode ? evaluator.checkpoint() : 0;
+      if (evaluateInstruction(children[index], target, depth + 1, template, evaluator)) {
+        result = true;
+        break;
+      }
+      if (evaluator.trackMode) evaluator.rewind(checkpoint);
+    }
+  }
+  if (evaluator.callbackMode) evaluator.callbackPop(instruction, result);
+  return result;
+};
+
+function LogicalAnd(instruction, instance, depth, template, evaluator) {
+  if (evaluator.callbackMode) evaluator.callbackPush(instruction);
+  const target = resolveInstance(instance, instruction[2]);
+  const children = instruction[7];
+  if (children) {
+    for (let index = 0; index < children.length; index++) {
+      if (!evaluateInstruction(children[index], target, depth + 1, template, evaluator)) {
+        if (evaluator.callbackMode) evaluator.callbackPop(instruction, false);
+        return false;
+      }
+    }
+  }
+  if (evaluator.callbackMode) evaluator.callbackPop(instruction, true);
+  return true;
+};
+
+function LogicalXor(instruction, instance, depth, template, evaluator) {
+  if (evaluator.callbackMode) evaluator.callbackPush(instruction);
+  const target = resolveInstance(instance, instruction[2]);
+  const exhaustive = instruction[6];
+  const children = instruction[7];
+  let result = true;
+  let hasMatched = false;
+  if (children) {
+    for (let index = 0; index < children.length; index++) {
+      const checkpoint = evaluator.trackMode ? evaluator.checkpoint() : 0;
+      if (evaluateInstruction(children[index], target, depth + 1, template, evaluator)) {
+        if (hasMatched) {
+          result = false;
+          if (!exhaustive) break;
+        } else {
+          hasMatched = true;
+        }
+      } else if (evaluator.trackMode) {
+        evaluator.rewind(checkpoint);
+      }
+    }
+  }
+  const __result = result && hasMatched;
+  if (evaluator.callbackMode) evaluator.callbackPop(instruction, __result);
+  return __result;
+};
+
+function LogicalCondition(instruction, instance, depth, template, evaluator) {
+  if (evaluator.callbackMode) evaluator.callbackPush(instruction);
+  const value = instruction[6];
+  const thenStart = value[0];
+  const elseStart = value[1];
+  const children = instruction[7];
+  const childrenSize = children ? children.length : 0;
+
+  const target = resolveInstance(instance, instruction[2]);
+
+  const checkpoint = evaluator.trackMode ? evaluator.checkpoint() : 0;
+  let conditionResult = true;
+  for (let cursor = 0; cursor < thenStart; cursor++) {
+    if (!evaluateInstruction(children[cursor], target, depth + 1, template, evaluator)) {
+      conditionResult = false;
+      break;
+    }
+  }
+  if (!conditionResult && evaluator.trackMode) evaluator.rewind(checkpoint);
+
+  let consequenceStart;
+  let consequenceEnd;
+  if (conditionResult) {
+    consequenceStart = thenStart;
+    consequenceEnd = elseStart > 0 ? elseStart : childrenSize;
+  } else {
+    consequenceStart = elseStart;
+    consequenceEnd = elseStart > 0 ? childrenSize : elseStart;
+  }
+
+  if (consequenceStart < consequenceEnd) {
+    if (evaluator.trackMode || evaluator.callbackMode) {
+      evaluator.popPath(instruction[1].length);
+    }
+
+    let result = true;
+    for (let cursor = consequenceStart; cursor < consequenceEnd; cursor++) {
+      if (!evaluateInstruction(children[cursor], target, depth + 1, template, evaluator)) {
+        result = false;
+        break;
+      }
+    }
+
+    if (evaluator.trackMode || evaluator.callbackMode) {
+      evaluator.pushPath(instruction[1]);
+    }
+
+    if (evaluator.callbackMode) evaluator.callbackPop(instruction, result);
+    return result;
+  }
+  if (evaluator.callbackMode) evaluator.callbackPop(instruction, true);
+  return true;
+};
+
+function LogicalWhenType(instruction, instance, depth, template, evaluator) {
+  const target = resolveInstance(instance, instruction[2]);
+  if (jsonTypeOf(target) !== instruction[6]) return true;
+  if (evaluator.callbackMode) evaluator.callbackPush(instruction);
+  const children = instruction[7];
+  if (children) {
+    for (let index = 0; index < children.length; index++) {
+      if (!evaluateInstruction(children[index], target, depth + 1, template, evaluator)) {
+        if (evaluator.callbackMode) evaluator.callbackPop(instruction, false);
+        return false;
+      }
+    }
+  }
+  if (evaluator.callbackMode) evaluator.callbackPop(instruction, true);
+  return true;
+};
+
+function LogicalWhenDefines(instruction, instance, depth, template, evaluator) {
+  const target = resolveInstance(instance, instruction[2]);
+  if (!isObject(target)) return true;
+  if (!Object.hasOwn(target, instruction[6])) return true;
+  if (evaluator.callbackMode) evaluator.callbackPush(instruction);
+  const children = instruction[7];
+  if (children) {
+    for (let index = 0; index < children.length; index++) {
+      if (!evaluateInstruction(children[index], target, depth + 1, template, evaluator)) {
+        if (evaluator.callbackMode) evaluator.callbackPop(instruction, false);
+        return false;
+      }
+    }
+  }
+  if (evaluator.callbackMode) evaluator.callbackPop(instruction, true);
+  return true;
+};
+
+function LogicalWhenArraySizeGreater(instruction, instance, depth, template, evaluator) {
+  const target = resolveInstance(instance, instruction[2]);
+  if (!Array.isArray(target) || target.length <= instruction[6]) return true;
+  if (evaluator.callbackMode) evaluator.callbackPush(instruction);
+  const children = instruction[7];
+  if (children) {
+    for (let index = 0; index < children.length; index++) {
+      if (!evaluateInstruction(children[index], target, depth + 1, template, evaluator)) {
+        if (evaluator.callbackMode) evaluator.callbackPop(instruction, false);
+        return false;
+      }
+    }
+  }
+  if (evaluator.callbackMode) evaluator.callbackPop(instruction, true);
+  return true;
+};
+
+function LoopPropertiesUnevaluated(instruction, instance, depth, template, evaluator) {
+  const target = resolveInstance(instance, instruction[2]);
+  if (!isObject(target)) return true;
+  if (evaluator.callbackMode) evaluator.callbackPush(instruction);
+  if (evaluator.trackMode && evaluator.isEvaluated(target)) {
+    if (evaluator.callbackMode) evaluator.callbackPop(instruction, true);
+    return true;
+  }
+  const children = instruction[7];
+  for (const key in target) {
+    if (evaluator.trackMode && evaluator.isEvaluated(target[key], target, key)) continue;
+    if (evaluator.callbackMode) evaluator.pushInstanceToken(key);
+    if (children) {
+      for (let childIndex = 0; childIndex < children.length; childIndex++) {
+        if (!evaluateInstruction(children[childIndex], target[key], depth + 1, template, evaluator)) {
+          if (evaluator.callbackMode) evaluator.popInstanceToken();
+          if (evaluator.callbackMode) evaluator.callbackPop(instruction, false);
+          return false;
+        }
+      }
+    }
+    if (evaluator.callbackMode) evaluator.popInstanceToken();
+  }
+  if (evaluator.trackMode) evaluator.markEvaluated(target);
+  if (evaluator.callbackMode) evaluator.callbackPop(instruction, true);
+  return true;
+};
+
+function LoopPropertiesUnevaluatedExcept(instruction, instance, depth, template, evaluator) {
+  const target = resolveInstance(instance, instruction[2]);
+  if (!isObject(target)) return true;
+  if (evaluator.callbackMode) evaluator.callbackPush(instruction);
+  if (evaluator.trackMode && evaluator.isEvaluated(target)) {
+    if (evaluator.callbackMode) evaluator.callbackPop(instruction, true);
+    return true;
+  }
+  const filter = instruction[6];
+  const filterStrings = filter[0];
+  const filterPrefixes = filter[1];
+  const filterRegexes = filter[2];
+  const children = instruction[7];
+  for (const key in target) {
+    if (filterStrings.has(key)) continue;
+    let matched = false;
+    for (let index = 0; index < filterPrefixes.length; index++) {
+      if (key.startsWith(filterPrefixes[index])) { matched = true; break; }
+    }
+    if (matched) continue;
+    for (let index = 0; index < filterRegexes.length; index++) {
+      filterRegexes[index].lastIndex = 0;
+      if (filterRegexes[index].test(key)) { matched = true; break; }
+    }
+    if (matched) continue;
+    if (evaluator.trackMode && evaluator.isEvaluated(target[key], target, key)) continue;
+    if (evaluator.callbackMode) evaluator.pushInstanceToken(key);
+    if (children) {
+      for (let childIndex = 0; childIndex < children.length; childIndex++) {
+        if (!evaluateInstruction(children[childIndex], target[key], depth + 1, template, evaluator)) {
+          if (evaluator.callbackMode) evaluator.popInstanceToken();
+          if (evaluator.callbackMode) evaluator.callbackPop(instruction, false);
+          return false;
+        }
+      }
+    }
+    if (evaluator.callbackMode) evaluator.popInstanceToken();
+  }
+  if (evaluator.trackMode) evaluator.markEvaluated(target);
+  if (evaluator.callbackMode) evaluator.callbackPop(instruction, true);
+  return true;
+};
+
+function LoopPropertiesMatch(instruction, instance, depth, template, evaluator) {
+  const target = resolveInstance(instance, instruction[2]);
+  if (!isObject(target)) return true;
+  if (evaluator.callbackMode) evaluator.callbackPush(instruction);
+  const children = instruction[7];
+  for (const key in target) {
+    const index = instruction[6][key];
+    if (index === undefined) continue;
+    const subinstruction = children[index];
+    const subchildren = subinstruction[7];
+    if (subchildren) {
+      for (let childIndex = 0; childIndex < subchildren.length; childIndex++) {
+        if (!evaluateInstruction(subchildren[childIndex], target, depth + 1, template, evaluator)) {
+          if (evaluator.callbackMode) evaluator.callbackPop(instruction, false);
+          return false;
+        }
+      }
+    }
+  }
+  if (evaluator.callbackMode) evaluator.callbackPop(instruction, true);
+  return true;
+};
+
+function LoopPropertiesMatchClosed(instruction, instance, depth, template, evaluator) {
+  const target = resolveInstance(instance, instruction[2]);
+  if (!isObject(target)) return true;
+  if (evaluator.callbackMode) evaluator.callbackPush(instruction);
+  const children = instruction[7];
+  for (const key in target) {
+    const index = instruction[6][key];
+    if (index === undefined) {
+      if (evaluator.callbackMode) evaluator.callbackPop(instruction, false);
+      return false;
+    }
+    const subinstruction = children[index];
+    const subchildren = subinstruction[7];
+    if (subchildren) {
+      for (let childIndex = 0; childIndex < subchildren.length; childIndex++) {
+        if (!evaluateInstruction(subchildren[childIndex], target, depth + 1, template, evaluator)) {
+          if (evaluator.callbackMode) evaluator.callbackPop(instruction, false);
+          return false;
+        }
+      }
+    }
+  }
+  if (evaluator.callbackMode) evaluator.callbackPop(instruction, true);
+  return true;
+};
+
+function LoopProperties(instruction, instance, depth, template, evaluator) {
+  const target = resolveInstance(instance, instruction[2]);
+  if (!isObject(target)) return true;
+  if (evaluator.callbackMode) evaluator.callbackPush(instruction);
+  const children = instruction[7];
+  for (const key in target) {
+    evaluator.propertyParent = target;
+    evaluator.propertyKey = key;
+    if (evaluator.callbackMode) evaluator.pushInstanceToken(key);
+    if (children) {
+      for (let childIndex = 0; childIndex < children.length; childIndex++) {
+        if (!evaluateInstruction(children[childIndex], target[key], depth + 1, template, evaluator)) {
+          if (evaluator.callbackMode) evaluator.popInstanceToken();
+          if (evaluator.callbackMode) evaluator.callbackPop(instruction, false);
+          return false;
+        }
+      }
+    }
+    if (evaluator.callbackMode) evaluator.popInstanceToken();
+  }
+  evaluator.propertyParent = undefined;
+  evaluator.propertyKey = undefined;
+  if (evaluator.callbackMode) evaluator.callbackPop(instruction, true);
+  return true;
+};
+
+function LoopPropertiesEvaluate(instruction, instance, depth, template, evaluator) {
+  const target = resolveInstance(instance, instruction[2]);
+  if (!isObject(target)) return true;
+  if (evaluator.callbackMode) evaluator.callbackPush(instruction);
+  const children = instruction[7];
+  for (const key in target) {
+    evaluator.propertyParent = target;
+    evaluator.propertyKey = key;
+    if (evaluator.callbackMode) evaluator.pushInstanceToken(key);
+    if (children) {
+      for (let childIndex = 0; childIndex < children.length; childIndex++) {
+        if (!evaluateInstruction(children[childIndex], target[key], depth + 1, template, evaluator)) {
+          if (evaluator.callbackMode) evaluator.popInstanceToken();
+          if (evaluator.callbackMode) evaluator.callbackPop(instruction, false);
+          return false;
+        }
+      }
+    }
+    if (evaluator.callbackMode) evaluator.popInstanceToken();
+  }
+  evaluator.propertyParent = undefined;
+  evaluator.propertyKey = undefined;
+  if (evaluator.trackMode) evaluator.markEvaluated(target);
+  if (evaluator.callbackMode) evaluator.callbackPop(instruction, true);
+  return true;
+};
+
+function LoopPropertiesRegex(instruction, instance, depth, template, evaluator) {
+  const target = resolveInstance(instance, instruction[2]);
+  if (!isObject(target)) return true;
+  if (evaluator.callbackMode) evaluator.callbackPush(instruction);
+  const regex = instruction[6];
+  const children = instruction[7];
+  for (const key in target) {
+    regex.lastIndex = 0;
+    if (!regex.test(key)) continue;
+    evaluator.propertyParent = target;
+    evaluator.propertyKey = key;
+    if (evaluator.callbackMode) evaluator.pushInstanceToken(key);
+    if (children) {
+      for (let childIndex = 0; childIndex < children.length; childIndex++) {
+        if (!evaluateInstruction(children[childIndex], target[key], depth + 1, template, evaluator)) {
+          if (evaluator.callbackMode) evaluator.popInstanceToken();
+          if (evaluator.callbackMode) evaluator.callbackPop(instruction, false);
+          return false;
+        }
+      }
+    }
+    if (evaluator.callbackMode) evaluator.popInstanceToken();
+  }
+  evaluator.propertyParent = undefined;
+  evaluator.propertyKey = undefined;
+  if (evaluator.callbackMode) evaluator.callbackPop(instruction, true);
+  return true;
+};
+
+function LoopPropertiesRegexClosed(instruction, instance, depth, template, evaluator) {
+  const target = resolveInstance(instance, instruction[2]);
+  if (!isObject(target)) return true;
+  if (evaluator.callbackMode) evaluator.callbackPush(instruction);
+  const regex = instruction[6];
+  const children = instruction[7];
+  for (const key in target) {
+    regex.lastIndex = 0;
+    if (!regex.test(key)) {
+      if (evaluator.callbackMode) evaluator.callbackPop(instruction, false);
+      return false;
+    }
+    evaluator.propertyParent = target;
+    evaluator.propertyKey = key;
+    if (evaluator.callbackMode) evaluator.pushInstanceToken(key);
+    if (children) {
+      for (let childIndex = 0; childIndex < children.length; childIndex++) {
+        if (!evaluateInstruction(children[childIndex], target[key], depth + 1, template, evaluator)) {
+          if (evaluator.callbackMode) evaluator.popInstanceToken();
+          if (evaluator.callbackMode) evaluator.callbackPop(instruction, false);
+          return false;
+        }
+      }
+    }
+    if (evaluator.callbackMode) evaluator.popInstanceToken();
+  }
+  evaluator.propertyParent = undefined;
+  evaluator.propertyKey = undefined;
+  if (evaluator.callbackMode) evaluator.callbackPop(instruction, true);
+  return true;
+};
+
+function LoopPropertiesStartsWith(instruction, instance, depth, template, evaluator) {
+  const target = resolveInstance(instance, instruction[2]);
+  if (!isObject(target)) return true;
+  if (evaluator.callbackMode) evaluator.callbackPush(instruction);
+  const prefix = instruction[6];
+  const children = instruction[7];
+  for (const key in target) {
+    if (!key.startsWith(prefix)) continue;
+    evaluator.propertyParent = target;
+    evaluator.propertyKey = key;
+    if (evaluator.callbackMode) evaluator.pushInstanceToken(key);
+    if (children) {
+      for (let childIndex = 0; childIndex < children.length; childIndex++) {
+        if (!evaluateInstruction(children[childIndex], target[key], depth + 1, template, evaluator)) {
+          if (evaluator.callbackMode) evaluator.popInstanceToken();
+          if (evaluator.callbackMode) evaluator.callbackPop(instruction, false);
+          return false;
+        }
+      }
+    }
+    if (evaluator.callbackMode) evaluator.popInstanceToken();
+  }
+  evaluator.propertyParent = undefined;
+  evaluator.propertyKey = undefined;
+  if (evaluator.callbackMode) evaluator.callbackPop(instruction, true);
+  return true;
+};
+
+function LoopPropertiesExcept(instruction, instance, depth, template, evaluator) {
+  const target = resolveInstance(instance, instruction[2]);
+  if (!isObject(target)) return true;
+  if (evaluator.callbackMode) evaluator.callbackPush(instruction);
+  const filter = instruction[6];
+  const filterStrings = filter[0];
+  const filterPrefixes = filter[1];
+  const filterRegexes = filter[2];
+  const children = instruction[7];
+  for (const key in target) {
+    if (filterStrings.has(key)) continue;
+    let matched = false;
+    for (let index = 0; index < filterPrefixes.length; index++) {
+      if (key.startsWith(filterPrefixes[index])) { matched = true; break; }
+    }
+    if (matched) continue;
+    for (let index = 0; index < filterRegexes.length; index++) {
+      filterRegexes[index].lastIndex = 0;
+      if (filterRegexes[index].test(key)) { matched = true; break; }
+    }
+    if (matched) continue;
+    evaluator.propertyParent = target;
+    evaluator.propertyKey = key;
+    if (evaluator.callbackMode) evaluator.pushInstanceToken(key);
+    if (children) {
+      for (let childIndex = 0; childIndex < children.length; childIndex++) {
+        if (!evaluateInstruction(children[childIndex], target[key], depth + 1, template, evaluator)) {
+          if (evaluator.callbackMode) evaluator.popInstanceToken();
+          if (evaluator.callbackMode) evaluator.callbackPop(instruction, false);
+          return false;
+        }
+      }
+    }
+    if (evaluator.callbackMode) evaluator.popInstanceToken();
+  }
+  evaluator.propertyParent = undefined;
+  evaluator.propertyKey = undefined;
+  if (evaluator.callbackMode) evaluator.callbackPop(instruction, true);
+  return true;
+};
+
+function LoopPropertiesType(instruction, instance, depth, template, evaluator) {
+  const target = resolveInstance(instance, instruction[2]);
+  if (!isObject(target)) return true;
+  if (evaluator.callbackMode) evaluator.callbackPush(instruction);
+  const expected = instruction[6];
+  for (const key in target) {
+    const actual = jsonTypeOf(target[key]);
+    if (actual !== expected && !(expected === Type.Integer && isIntegral(target[key]))) {
+      if (evaluator.callbackMode) evaluator.callbackPop(instruction, false);
+      return false;
+    }
+  }
+  if (evaluator.callbackMode) evaluator.callbackPop(instruction, true);
+  return true;
+};
+
+function LoopPropertiesTypeEvaluate(instruction, instance, depth, template, evaluator) {
+  const target = resolveInstance(instance, instruction[2]);
+  if (!isObject(target)) return true;
+  if (evaluator.callbackMode) evaluator.callbackPush(instruction);
+  const expected = instruction[6];
+  for (const key in target) {
+    const actual = jsonTypeOf(target[key]);
+    if (actual !== expected && !(expected === Type.Integer && isIntegral(target[key]))) {
+      if (evaluator.callbackMode) evaluator.callbackPop(instruction, false);
+      return false;
+    }
+  }
+  if (evaluator.trackMode) evaluator.markEvaluated(target);
+  if (evaluator.callbackMode) evaluator.callbackPop(instruction, true);
+  return true;
+};
+
+function LoopPropertiesExactlyTypeStrict(instruction, instance, depth, template, evaluator) {
+  if (evaluator.callbackMode) evaluator.callbackPush(instruction);
+  const target = resolveInstance(instance, instruction[2]);
+  if (!isObject(target)) {
+    if (evaluator.callbackMode) evaluator.callbackPop(instruction, false);
+    return false;
+  }
+  const value = instruction[6];
+  const names = new Set(value[1]);
+  let count = 0;
+  for (const key in target) {
+    count++;
+    if (effectiveTypeStrictReal(target[key]) !== value[0] || !names.has(key)) {
+      if (evaluator.callbackMode) evaluator.callbackPop(instruction, false);
+      return false;
+    }
+  }
+  const __result = count === names.size;
+  if (evaluator.callbackMode) evaluator.callbackPop(instruction, __result);
+  return __result;
+};
+
+function LoopPropertiesExactlyTypeStrictHash(instruction, instance, depth, template, evaluator) {
+  if (evaluator.callbackMode) evaluator.callbackPush(instruction);
+  const target = resolveInstance(instance, instruction[2]);
+  if (!isObject(target)) {
+    if (evaluator.callbackMode) evaluator.callbackPop(instruction, false);
+    return false;
+  }
+  const value = instruction[6];
+  const entries = value[1][0];
+  const expectedCount = entries.length;
+  let count = 0;
+  for (const key in target) {
+    count++;
+    if (effectiveTypeStrictReal(target[key]) !== value[0]) {
+      if (evaluator.callbackMode) evaluator.callbackPop(instruction, false);
+      return false;
+    }
+  }
+  if (count !== expectedCount) {
+    if (evaluator.callbackMode) evaluator.callbackPop(instruction, false);
+    return false;
+  }
+  for (let index = 0; index < expectedCount; index++) {
+    if (!Object.hasOwn(target, entries[index][1])) {
+      if (evaluator.callbackMode) evaluator.callbackPop(instruction, false);
+      return false;
+    }
+  }
+  if (evaluator.callbackMode) evaluator.callbackPop(instruction, true);
+  return true;
+};
+
+function LoopPropertiesTypeStrict(instruction, instance, depth, template, evaluator) {
+  const target = resolveInstance(instance, instruction[2]);
+  if (!isObject(target)) return true;
+  if (evaluator.callbackMode) evaluator.callbackPush(instruction);
+  const expected = instruction[6];
+  for (const key in target) {
+    if (effectiveTypeStrictReal(target[key]) !== expected) {
+      if (evaluator.callbackMode) evaluator.callbackPop(instruction, false);
+      return false;
+    }
+  }
+  if (evaluator.callbackMode) evaluator.callbackPop(instruction, true);
+  return true;
+};
+
+function LoopPropertiesTypeStrictEvaluate(instruction, instance, depth, template, evaluator) {
+  const target = resolveInstance(instance, instruction[2]);
+  if (!isObject(target)) return true;
+  if (evaluator.callbackMode) evaluator.callbackPush(instruction);
+  const expected = instruction[6];
+  for (const key in target) {
+    if (effectiveTypeStrictReal(target[key]) !== expected) {
+      if (evaluator.callbackMode) evaluator.callbackPop(instruction, false);
+      return false;
+    }
+  }
+  if (evaluator.trackMode) evaluator.markEvaluated(target);
+  if (evaluator.callbackMode) evaluator.callbackPop(instruction, true);
+  return true;
+};
+
+function LoopPropertiesTypeStrictAny(instruction, instance, depth, template, evaluator) {
+  const target = resolveInstance(instance, instruction[2]);
+  if (!isObject(target)) return true;
+  if (evaluator.callbackMode) evaluator.callbackPush(instruction);
+  const bitmask = instruction[6];
+  for (const key in target) {
+    if (!typeSetTest(bitmask, effectiveTypeStrictReal(target[key]))) {
+      if (evaluator.callbackMode) evaluator.callbackPop(instruction, false);
+      return false;
+    }
+  }
+  if (evaluator.callbackMode) evaluator.callbackPop(instruction, true);
+  return true;
+};
+
+function LoopPropertiesTypeStrictAnyEvaluate(instruction, instance, depth, template, evaluator) {
+  const target = resolveInstance(instance, instruction[2]);
+  if (!isObject(target)) return true;
+  if (evaluator.callbackMode) evaluator.callbackPush(instruction);
+  const bitmask = instruction[6];
+  for (const key in target) {
+    if (!typeSetTest(bitmask, effectiveTypeStrictReal(target[key]))) {
+      if (evaluator.callbackMode) evaluator.callbackPop(instruction, false);
+      return false;
+    }
+  }
+  if (evaluator.trackMode) evaluator.markEvaluated(target);
+  if (evaluator.callbackMode) evaluator.callbackPop(instruction, true);
+  return true;
+};
+
+function LoopKeys(instruction, instance, depth, template, evaluator) {
+  const target = resolveInstance(instance, instruction[2]);
+  if (!isObject(target)) return true;
+  if (evaluator.callbackMode) evaluator.callbackPush(instruction);
+  const children = instruction[7];
+  for (const key in target) {
+    if (evaluator.callbackMode) evaluator.pushInstanceToken(key);
+    const previousPropertyTarget = evaluator.propertyTarget;
+    evaluator.propertyTarget = key;
+    if (children) {
+      for (let childIndex = 0; childIndex < children.length; childIndex++) {
+        if (!evaluateInstruction(children[childIndex], null, depth + 1, template, evaluator)) {
+          evaluator.propertyTarget = previousPropertyTarget;
+          if (evaluator.callbackMode) evaluator.popInstanceToken();
+          if (evaluator.callbackMode) evaluator.callbackPop(instruction, false);
+          return false;
+        }
+      }
+    }
+    evaluator.propertyTarget = previousPropertyTarget;
+    if (evaluator.callbackMode) evaluator.popInstanceToken();
+  }
+  if (evaluator.callbackMode) evaluator.callbackPop(instruction, true);
+  return true;
+};
+
+function LoopItems(instruction, instance, depth, template, evaluator) {
+  const target = resolveInstance(instance, instruction[2]);
+  if (!Array.isArray(target)) return true;
+  if (evaluator.callbackMode) evaluator.callbackPush(instruction);
+  const children = instruction[7];
+  for (let index = 0; index < target.length; index++) {
+    if (evaluator.callbackMode) evaluator.pushInstanceToken(index);
+    if (children) {
+      for (let childIndex = 0; childIndex < children.length; childIndex++) {
+        if (!evaluateInstruction(children[childIndex], target[index], depth + 1, template, evaluator)) {
+          if (evaluator.callbackMode) evaluator.popInstanceToken();
+          if (evaluator.callbackMode) evaluator.callbackPop(instruction, false);
+          return false;
+        }
+      }
+    }
+    if (evaluator.callbackMode) evaluator.popInstanceToken();
+  }
+  if (evaluator.callbackMode) evaluator.callbackPop(instruction, true);
+  return true;
+};
+
+function LoopItemsFrom(instruction, instance, depth, template, evaluator) {
+  const target = resolveInstance(instance, instruction[2]);
+  const startIndex = instruction[6];
+  if (!Array.isArray(target) || startIndex >= target.length) return true;
+  if (evaluator.callbackMode) evaluator.callbackPush(instruction);
+  const children = instruction[7];
+  for (let index = startIndex; index < target.length; index++) {
+    if (evaluator.callbackMode) evaluator.pushInstanceToken(index);
+    if (children) {
+      for (let childIndex = 0; childIndex < children.length; childIndex++) {
+        if (!evaluateInstruction(children[childIndex], target[index], depth + 1, template, evaluator)) {
+          if (evaluator.callbackMode) evaluator.popInstanceToken();
+          if (evaluator.callbackMode) evaluator.callbackPop(instruction, false);
+          return false;
+        }
+      }
+    }
+    if (evaluator.callbackMode) evaluator.popInstanceToken();
+  }
+  if (evaluator.callbackMode) evaluator.callbackPop(instruction, true);
+  return true;
+};
+
+function LoopItemsUnevaluated(instruction, instance, depth, template, evaluator) {
+  const target = resolveInstance(instance, instruction[2]);
+  if (!Array.isArray(target)) return true;
+  if (evaluator.callbackMode) evaluator.callbackPush(instruction);
+  if (evaluator.trackMode && evaluator.isEvaluated(target)) {
+    if (evaluator.callbackMode) evaluator.callbackPop(instruction, true);
+    return true;
+  }
+  const children = instruction[7];
+  for (let index = 0; index < target.length; index++) {
+    if (evaluator.trackMode && evaluator.isEvaluated(target[index], target, index)) continue;
+    if (evaluator.callbackMode) evaluator.pushInstanceToken(index);
+    if (children) {
+      for (let childIndex = 0; childIndex < children.length; childIndex++) {
+        if (!evaluateInstruction(children[childIndex], target[index], depth + 1, template, evaluator)) {
+          if (evaluator.callbackMode) evaluator.popInstanceToken();
+          if (evaluator.callbackMode) evaluator.callbackPop(instruction, false);
+          return false;
+        }
+      }
+    }
+    if (evaluator.callbackMode) evaluator.popInstanceToken();
+  }
+  if (evaluator.trackMode) evaluator.markEvaluated(target);
+  if (evaluator.callbackMode) evaluator.callbackPop(instruction, true);
+  return true;
+};
+
+function LoopItemsType(instruction, instance, depth, template, evaluator) {
+  const target = resolveInstance(instance, instruction[2]);
+  if (!Array.isArray(target)) return true;
+  if (evaluator.callbackMode) evaluator.callbackPush(instruction);
+  const expected = instruction[6];
+  for (let index = 0; index < target.length; index++) {
+    const actual = jsonTypeOf(target[index]);
+    if (actual !== expected && !(expected === Type.Integer && isIntegral(target[index]))) {
+      if (evaluator.callbackMode) evaluator.callbackPop(instruction, false);
+      return false;
+    }
+  }
+  if (evaluator.callbackMode) evaluator.callbackPop(instruction, true);
+  return true;
+};
+
+function LoopItemsTypeStrict(instruction, instance, depth, template, evaluator) {
+  const target = resolveInstance(instance, instruction[2]);
+  if (!Array.isArray(target)) return true;
+  if (evaluator.callbackMode) evaluator.callbackPush(instruction);
+  const expected = instruction[6];
+  for (let index = 0; index < target.length; index++) {
+    if (effectiveTypeStrictReal(target[index]) !== expected) {
+      if (evaluator.callbackMode) evaluator.callbackPop(instruction, false);
+      return false;
+    }
+  }
+  if (evaluator.callbackMode) evaluator.callbackPop(instruction, true);
+  return true;
+};
+
+function LoopItemsTypeStrictAny(instruction, instance, depth, template, evaluator) {
+  const target = resolveInstance(instance, instruction[2]);
+  if (!Array.isArray(target)) return true;
+  if (evaluator.callbackMode) evaluator.callbackPush(instruction);
+  const bitmask = instruction[6];
+  for (let index = 0; index < target.length; index++) {
+    if (!typeSetTest(bitmask, effectiveTypeStrictReal(target[index]))) {
+      if (evaluator.callbackMode) evaluator.callbackPop(instruction, false);
+      return false;
+    }
+  }
+  if (evaluator.callbackMode) evaluator.callbackPop(instruction, true);
+  return true;
+};
+
+function LoopItemsPropertiesExactlyTypeStrictHash(instruction, instance, depth, template, evaluator) {
+  if (evaluator.callbackMode) evaluator.callbackPush(instruction);
+  const target = resolveInstance(instance, instruction[2]);
+  if (!Array.isArray(target)) {
+    if (evaluator.callbackMode) evaluator.callbackPop(instruction, false);
+    return false;
+  }
+  const expectedType = instruction[6][0];
+  const entries = instruction[6][1][0];
+  const expectedCount = entries.length;
+  for (let index = 0; index < target.length; index++) {
+    const item = target[index];
+    if (!isObject(item)) {
+      if (evaluator.callbackMode) evaluator.callbackPop(instruction, false);
+      return false;
+    }
+    let count = 0;
+    for (const key in item) {
+      count++;
+      if (effectiveTypeStrictReal(item[key]) !== expectedType) {
+        if (evaluator.callbackMode) evaluator.callbackPop(instruction, false);
+        return false;
+      }
+    }
+    if (count !== expectedCount) {
+      if (evaluator.callbackMode) evaluator.callbackPop(instruction, false);
+      return false;
+    }
+    for (let entry = 0; entry < expectedCount; entry++) {
+      if (!Object.hasOwn(item, entries[entry][1])) {
+        if (evaluator.callbackMode) evaluator.callbackPop(instruction, false);
+        return false;
+      }
+    }
+  }
+  if (evaluator.callbackMode) evaluator.callbackPop(instruction, true);
+  return true;
+};
+
+function LoopItemsIntegerBounded(instruction, instance, depth, template, evaluator) {
+  const target = resolveInstance(instance, instruction[2]);
+  if (!Array.isArray(target) || target.length === 0) return true;
+  if (evaluator.callbackMode) evaluator.callbackPush(instruction);
+  const minimum = instruction[6][0];
+  const maximum = instruction[6][1];
+  for (let index = 0; index < target.length; index++) {
+    const element = target[index];
+    const elementType = typeof element;
+    if (elementType !== 'number' && elementType !== 'bigint') {
+      if (evaluator.callbackMode) evaluator.callbackPop(instruction, false);
+      return false;
+    }
+    if (element < minimum || element > maximum) {
+      if (evaluator.callbackMode) evaluator.callbackPop(instruction, false);
+      return false;
+    }
+  }
+  if (evaluator.callbackMode) evaluator.callbackPop(instruction, true);
+  return true;
+};
+
+function LoopItemsIntegerBoundedSized(instruction, instance, depth, template, evaluator) {
+  const value = instruction[6];
+  const minimum = value[0][0];
+  const maximum = value[0][1];
+  const minimumSize = value[1][0];
+  const maximumSize = value[1][1];
+  const target = resolveInstance(instance, instruction[2]);
+  if (evaluator.callbackMode) evaluator.callbackPush(instruction);
+  if (!Array.isArray(target) || target.length < minimumSize ||
+      (maximumSize !== null && maximumSize !== undefined && target.length > maximumSize)) {
+    if (evaluator.callbackMode) evaluator.callbackPop(instruction, false);
+    return false;
+  }
+  for (let index = 0; index < target.length; index++) {
+    const element = target[index];
+    const elementType = typeof element;
+    if (elementType !== 'number' && elementType !== 'bigint') {
+      if (evaluator.callbackMode) evaluator.callbackPop(instruction, false);
+      return false;
+    }
+    if (element < minimum || element > maximum) {
+      if (evaluator.callbackMode) evaluator.callbackPop(instruction, false);
+      return false;
+    }
+  }
+  if (evaluator.callbackMode) evaluator.callbackPop(instruction, true);
+  return true;
+};
+
+function LoopContains(instruction, instance, depth, template, evaluator) {
+  const target = resolveInstance(instance, instruction[2]);
+  if (!Array.isArray(target)) return true;
+  const range = instruction[6];
+  const minimum = range[0];
+  const maximum = range[1];
+  const isExhaustive = range[2];
+  if (evaluator.callbackMode) evaluator.callbackPush(instruction);
+
+  const children = instruction[7];
+  let result = minimum === 0;
+  let matchCount = 0;
+  for (let index = 0; index < target.length; index++) {
+    if (evaluator.callbackMode) evaluator.pushInstanceToken(index);
+    let subresult = true;
+    if (children) {
+      for (let childIndex = 0; childIndex < children.length; childIndex++) {
+        if (!evaluateInstruction(children[childIndex], target[index], depth + 1, template, evaluator)) {
+          subresult = false;
+          break;
+        }
+      }
+    }
+    if (evaluator.callbackMode) evaluator.popInstanceToken();
+    if (subresult) {
+      matchCount++;
+      if (maximum !== null && matchCount > maximum) {
+        result = false;
+        break;
+      }
+      if (matchCount >= minimum) {
+        result = true;
+        if (maximum === null && !isExhaustive) break;
+      }
+    }
+  }
+
+  if (evaluator.callbackMode) evaluator.callbackPop(instruction, result);
+  return result;
+};
+
+function ControlGroup(instruction, instance, depth, template, evaluator) {
+  const children = instruction[7];
+  if (children) {
+    for (let index = 0; index < children.length; index++) {
+      if (!evaluateInstruction(children[index], instance, depth + 1, template, evaluator)) return false;
+    }
+  }
+  return true;
+};
+
+function ControlGroupWhenDefines(instruction, instance, depth, template, evaluator) {
+  const target = resolveInstance(instance, instruction[2]);
+  if (!isObject(target)) return true;
+  if (!Object.hasOwn(target, instruction[6])) return true;
+  const children = instruction[7];
+  if (children) {
+    for (let index = 0; index < children.length; index++) {
+      if (!evaluateInstruction(children[index], instance, depth + 1, template, evaluator)) return false;
+    }
+  }
+  return true;
+};
+
+function ControlGroupWhenDefinesDirect(instruction, instance, depth, template, evaluator) {
+  if (!isObject(instance)) return true;
+  if (!Object.hasOwn(instance, instruction[6])) return true;
+  const children = instruction[7];
+  if (children) {
+    for (let index = 0; index < children.length; index++) {
+      if (!evaluateInstruction(children[index], instance, depth + 1, template, evaluator)) return false;
+    }
+  }
+  return true;
+};
+
+function ControlGroupWhenType(instruction, instance, depth, template, evaluator) {
+  if (jsonTypeOf(instance) !== instruction[6]) return true;
+  const children = instruction[7];
+  if (children) {
+    for (let index = 0; index < children.length; index++) {
+      if (!evaluateInstruction(children[index], instance, depth + 1, template, evaluator)) return false;
+    }
+  }
+  return true;
+};
+
+function ControlEvaluate(instruction, instance, depth, template, evaluator) {
+  if (evaluator.trackMode) {
+    const target = resolveInstance(instance, instruction[6]);
+    evaluator.markEvaluated(target, evaluator.propertyParent, evaluator.propertyKey);
+  }
+  return true;
+};
+
+function ControlDynamicAnchorJump(instruction, instance, depth, template, evaluator) {
+  if (evaluator.callbackMode) evaluator.callbackPush(instruction);
+  const resolved = resolveInstance(instance, instruction[2]);
+  const anchor = instruction[6];
+
+  if (!evaluator.resources) {
+    if (evaluator.callbackMode) evaluator.callbackPop(instruction, false);
+    return false;
+  }
+
+  const anchors = template[6];
+  for (let index = 0; index < evaluator.resources.length; index++) {
+    const jumpTarget = anchors.get(evaluator.resources[index] + ':' + anchor);
+    if (jumpTarget !== undefined) {
+      for (let childIndex = 0; childIndex < jumpTarget.length; childIndex++) {
+        if (!evaluateInstruction(jumpTarget[childIndex], resolved, depth + 1, template, evaluator)) {
+          if (evaluator.callbackMode) evaluator.callbackPop(instruction, false);
+          return false;
+        }
+      }
+      if (evaluator.callbackMode) evaluator.callbackPop(instruction, true);
+      return true;
+    }
+  }
+
+  if (evaluator.callbackMode) evaluator.callbackPop(instruction, false);
+  return false;
+};
+
+function ControlJump(instruction, instance, depth, template, evaluator) {
+  if (evaluator.callbackMode) evaluator.callbackPush(instruction);
+  const jumpTarget = instruction[6];
+  if (!jumpTarget) {
+    if (evaluator.callbackMode) evaluator.callbackPop(instruction, true);
+    return true;
+  }
+  const resolved = resolveInstance(instance, instruction[2]);
+  for (let index = 0; index < jumpTarget.length; index++) {
+    if (!evaluateInstruction(jumpTarget[index], resolved, depth + 1, template, evaluator)) {
+      if (evaluator.callbackMode) evaluator.callbackPop(instruction, false);
+      return false;
+    }
+  }
+  if (evaluator.callbackMode) evaluator.callbackPop(instruction, true);
+  return true;
+};
+
+const handlers = [
+  AssertionFail,                              // 0
+  AssertionDefines,                           // 1
+  AssertionDefinesStrict,                     // 2
+  AssertionDefinesAll,                        // 3
+  AssertionDefinesAllStrict,                  // 4
+  AssertionDefinesExactly,                    // 5
+  AssertionDefinesExactlyStrict,              // 6
+  AssertionDefinesExactlyStrictHash3,         // 7
+  AssertionPropertyDependencies,              // 8
+  AssertionType,                              // 9
+  AssertionTypeAny,                           // 10
+  AssertionTypeStrict,                        // 11
+  AssertionTypeStrictAny,                     // 12
+  AssertionNotTypeStrictAny,                  // 13
+  AssertionTypeStringBounded,                 // 14
+  AssertionTypeStringUpper,                   // 15
+  AssertionTypeArrayBounded,                  // 16
+  AssertionTypeArrayUpper,                    // 17
+  AssertionTypeObjectBounded,                 // 18
+  AssertionTypeObjectUpper,                   // 19
+  AssertionRegex,                             // 20
+  AssertionStringSizeLess,                    // 21
+  AssertionStringSizeGreater,                 // 22
+  AssertionArraySizeLess,                     // 23
+  AssertionArraySizeGreater,                  // 24
+  AssertionObjectSizeLess,                    // 25
+  AssertionObjectSizeGreater,                 // 26
+  AssertionEqual,                             // 27
+  AssertionEqualsAny,                         // 28
+  AssertionEqualsAnyStringHash,               // 29
+  AssertionGreaterEqual,                      // 30
+  AssertionLessEqual,                         // 31
+  AssertionGreater,                           // 32
+  AssertionLess,                              // 33
+  AssertionUnique,                            // 34
+  AssertionDivisible,                         // 35
+  AssertionTypeIntegerBounded,                // 36
+  AssertionTypeIntegerBoundedStrict,          // 37
+  AssertionTypeIntegerLowerBound,             // 38
+  AssertionTypeIntegerLowerBoundStrict,       // 39
+  AssertionStringType,                        // 40
+  AssertionPropertyType,                      // 41
+  AssertionPropertyTypeEvaluate,              // 42
+  AssertionPropertyTypeStrict,                // 43
+  AssertionPropertyTypeStrictEvaluate,        // 44
+  AssertionPropertyTypeStrictAny,             // 45
+  AssertionPropertyTypeStrictAnyEvaluate,     // 46
+  AssertionArrayPrefix,                       // 47
+  AssertionArrayPrefixEvaluate,               // 48
+  AssertionObjectPropertiesSimple,            // 49
+  AnnotationEmit,                             // 50
+  AnnotationEmitWrapped,                      // 51
+  AnnotationToParent,                         // 52
+  AnnotationBasenameToParent,                 // 53
+  Evaluate,                                   // 54
+  LogicalNot,                                 // 55
+  LogicalNotEvaluate,                         // 56
+  LogicalOr,                                  // 57
+  LogicalAnd,                                 // 58
+  LogicalXor,                                 // 59
+  LogicalCondition,                           // 60
+  LogicalWhenType,                            // 61
+  LogicalWhenDefines,                         // 62
+  LogicalWhenArraySizeGreater,                // 63
+  LoopPropertiesUnevaluated,                  // 64
+  LoopPropertiesUnevaluatedExcept,            // 65
+  LoopPropertiesMatch,                        // 66
+  LoopPropertiesMatchClosed,                  // 67
+  LoopProperties,                             // 68
+  LoopPropertiesEvaluate,                     // 69
+  LoopPropertiesRegex,                        // 70
+  LoopPropertiesRegexClosed,                  // 71
+  LoopPropertiesStartsWith,                   // 72
+  LoopPropertiesExcept,                       // 73
+  LoopPropertiesType,                         // 74
+  LoopPropertiesTypeEvaluate,                 // 75
+  LoopPropertiesExactlyTypeStrict,            // 76
+  LoopPropertiesExactlyTypeStrictHash,        // 77
+  LoopPropertiesTypeStrict,                   // 78
+  LoopPropertiesTypeStrictEvaluate,           // 79
+  LoopPropertiesTypeStrictAny,                // 80
+  LoopPropertiesTypeStrictAnyEvaluate,        // 81
+  LoopKeys,                                   // 82
+  LoopItems,                                  // 83
+  LoopItemsFrom,                              // 84
+  LoopItemsUnevaluated,                       // 85
+  LoopItemsType,                              // 86
+  LoopItemsTypeStrict,                        // 87
+  LoopItemsTypeStrictAny,                     // 88
+  LoopItemsPropertiesExactlyTypeStrictHash,   // 89
+  LoopItemsPropertiesExactlyTypeStrictHash,   // 90
+  LoopItemsIntegerBounded,                    // 91
+  LoopItemsIntegerBoundedSized,               // 92
+  LoopContains,                               // 93
+  ControlGroup,                               // 94
+  ControlGroupWhenDefines,                    // 95
+  ControlGroupWhenDefinesDirect,              // 96
+  ControlGroupWhenType,                       // 97
+  ControlEvaluate,                            // 98
+  ControlDynamicAnchorJump,                   // 99
+  ControlJump                                 // 100
+];
+
+function AssertionTypeArrayBounded_fast(instruction, instance, depth, template, evaluator) {
+  const relInstance = instruction[2];
+  const target = relInstance.length === 0 ? instance : resolveInstance(instance, relInstance);
+  if (!Array.isArray(target)) return false;
+  const range = instruction[6];
+  if (target.length < range[0]) return false;
+  if (range[1] !== null && target.length > range[1]) return false;
+  return true;
+}
+
+function LoopItemsTypeStrictAny_fast(instruction, instance, depth, template, evaluator) {
+  const relInstance = instruction[2];
+  const target = relInstance.length === 0 ? instance : resolveInstance(instance, relInstance);
+  if (!Array.isArray(target)) return true;
+  const bitmask = instruction[6];
+  for (let index = 0; index < target.length; index++) {
+    if (!typeSetTest(bitmask, effectiveTypeStrictReal(target[index]))) return false;
+  }
+  return true;
+}
+
+function AssertionPropertyTypeStrict_fast(instruction, instance, depth, template, evaluator) {
+  if (!isObject(instance)) return true;
+  const target = resolveInstance(instance, instruction[2]);
+  if (target === undefined) return true;
+  return effectiveTypeStrictReal(target) === instruction[6];
+}
+
+function AssertionTypeStrict_fast(instruction, instance, depth, template, evaluator) {
+  const relInstance = instruction[2];
+  const target = relInstance.length === 0 ? instance : resolveInstance(instance, relInstance);
+  return effectiveTypeStrictReal(target) === instruction[6];
+}
+
+function AssertionDefinesAllStrict_fast(instruction, instance, depth, template, evaluator) {
+  const target = resolveInstance(instance, instruction[2]);
+  if (!isObject(target)) return false;
+  const strings = instruction[6];
+  for (let index = 0; index < strings.length; index++) {
+    if (!Object.hasOwn(target, strings[index])) return false;
+  }
+  return true;
+}
+
+function AssertionEqual_fast(instruction, instance, depth, template, evaluator) {
+  if (evaluator.propertyTarget !== undefined) {
+    const value = instruction[6];
+    return typeof value === 'string' && value === evaluator.propertyTarget;
+  }
+  return jsonEqual(resolveInstance(instance, instruction[2]), instruction[6]);
+}
+
+function LoopPropertiesMatch_fast(instruction, instance, depth, template, evaluator) {
+  const relInstance = instruction[2];
+  const target = relInstance.length === 0 ? instance : resolveInstance(instance, relInstance);
+  if (!isObject(target)) return true;
+  const children = instruction[7];
+  for (const key in target) {
+    const index = instruction[6][key];
+    if (index === undefined) continue;
+    const subinstruction = children[index];
+    const subchildren = subinstruction[7];
+    if (subchildren) {
+      for (let childIndex = 0; childIndex < subchildren.length; childIndex++) {
+        if (!evaluateInstruction(subchildren[childIndex], target, depth + 1, template, evaluator)) return false;
+      }
+    }
+  }
+  return true;
+}
+
+function LogicalOr_fast(instruction, instance, depth, template, evaluator) {
+  const children = instruction[7];
+  if (!children || children.length === 0) return true;
+  const relInstance = instruction[2];
+  const target = relInstance.length === 0 ? instance : resolveInstance(instance, relInstance);
+  const exhaustive = instruction[6];
+  let result = false;
+  if (exhaustive) {
+    for (let index = 0; index < children.length; index++) {
+      const checkpoint = evaluator.trackMode ? evaluator.checkpoint() : 0;
+      if (evaluateInstruction(children[index], target, depth + 1, template, evaluator)) result = true;
+      else if (evaluator.trackMode) evaluator.rewind(checkpoint);
+    }
+  } else {
+    for (let index = 0; index < children.length; index++) {
+      const checkpoint = evaluator.trackMode ? evaluator.checkpoint() : 0;
+      if (evaluateInstruction(children[index], target, depth + 1, template, evaluator)) return true;
+      if (evaluator.trackMode) evaluator.rewind(checkpoint);
+    }
+  }
+  return result;
+}
+
+function ControlJump_fast(instruction, instance, depth, template, evaluator) {
+  const jumpTarget = instruction[6];
+  if (!jumpTarget) return true;
+  const relInstance = instruction[2];
+  const resolved = relInstance.length === 0 ? instance : resolveInstance(instance, relInstance);
+  for (let index = 0; index < jumpTarget.length; index++) {
+    if (!evaluateInstruction(jumpTarget[index], resolved, depth + 1, template, evaluator)) return false;
+  }
+  return true;
+}
+
+function AssertionEqualsAnyStringHash_fast(instruction, instance, depth, template, evaluator) {
+  const target = evaluator.propertyTarget !== undefined
+    ? evaluator.propertyTarget
+    : resolveInstance(instance, instruction[2]);
+  if (typeof target !== 'string') return false;
+  const value = instruction[6];
+  const entries = value[0];
+  const tableOfContents = value[1];
+  const stringSize = target.length;
+  if (stringSize < tableOfContents.length) {
+    const hint = tableOfContents[stringSize];
+    if (hint[1] === 0) return false;
+    for (let index = hint[0] - 1; index < hint[1]; index++) {
+      if (entries[index][1] === target) return true;
+    }
+  }
+  return false;
+}
+
+function LogicalXor_fast(instruction, instance, depth, template, evaluator) {
+  const relInstance = instruction[2];
+  const target = relInstance.length === 0 ? instance : resolveInstance(instance, relInstance);
+  const exhaustive = instruction[6];
+  const children = instruction[7];
+  let result = true;
+  let hasMatched = false;
+  if (children) {
+    for (let index = 0; index < children.length; index++) {
+      const checkpoint = evaluator.trackMode ? evaluator.checkpoint() : 0;
+      if (evaluateInstruction(children[index], target, depth + 1, template, evaluator)) {
+        if (hasMatched) {
+          result = false;
+          if (!exhaustive) break;
+        } else {
+          hasMatched = true;
+        }
+      } else if (evaluator.trackMode) {
+        evaluator.rewind(checkpoint);
+      }
+    }
+  }
+  return result && hasMatched;
+}
+
+function AssertionDefinesStrict_fast(instruction, instance, depth, template, evaluator) {
+  const target = resolveInstance(instance, instruction[2]);
+  return isObject(target) && Object.hasOwn(target, instruction[6]);
+}
+
+function LoopItems_fast(instruction, instance, depth, template, evaluator) {
+  const relInstance = instruction[2];
+  const target = relInstance.length === 0 ? instance : resolveInstance(instance, relInstance);
+  if (!Array.isArray(target)) return true;
+  const children = instruction[7];
+  for (let index = 0; index < target.length; index++) {
+    if (children) {
+      for (let childIndex = 0; childIndex < children.length; childIndex++) {
+        if (!evaluateInstruction(children[childIndex], target[index], depth + 1, template, evaluator)) return false;
+      }
+    }
+  }
+  return true;
+}
+
+function LoopPropertiesMatchClosed_fast(instruction, instance, depth, template, evaluator) {
+  const relInstance = instruction[2];
+  const target = relInstance.length === 0 ? instance : resolveInstance(instance, relInstance);
+  if (!isObject(target)) return true;
+  const children = instruction[7];
+  for (const key in target) {
+    const index = instruction[6][key];
+    if (index === undefined) return false;
+    const subinstruction = children[index];
+    const subchildren = subinstruction[7];
+    if (subchildren) {
+      for (let childIndex = 0; childIndex < subchildren.length; childIndex++) {
+        if (!evaluateInstruction(subchildren[childIndex], target, depth + 1, template, evaluator)) return false;
+      }
+    }
+  }
+  return true;
+}
+
+function LogicalAnd_fast(instruction, instance, depth, template, evaluator) {
+  const relInstance = instruction[2];
+  const target = relInstance.length === 0 ? instance : resolveInstance(instance, relInstance);
+  const children = instruction[7];
+  if (children) {
+    for (let index = 0; index < children.length; index++) {
+      if (!evaluateInstruction(children[index], target, depth + 1, template, evaluator)) return false;
+    }
+  }
+  return true;
+}
+
+function AssertionTypeStringBounded_fast(instruction, instance, depth, template, evaluator) {
+  const relInstance = instruction[2];
+  const target = relInstance.length === 0 ? instance : resolveInstance(instance, relInstance);
+  if (typeof target !== 'string') return false;
+  const range = instruction[6];
+  const length = unicodeLength(target);
+  if (length < range[0]) return false;
+  return range[1] === null || length <= range[1];
+}
+
+function AssertionPropertyDependencies_fast(instruction, instance, depth, template, evaluator) {
+  const target = resolveInstance(instance, instruction[2]);
+  if (!isObject(target)) return true;
+  const value = instruction[6];
+  for (const property in value) {
+    if (!Object.hasOwn(target, property)) continue;
+    const dependencies = value[property];
+    for (let index = 0; index < dependencies.length; index++) {
+      if (!Object.hasOwn(target, dependencies[index])) return false;
+    }
+  }
+  return true;
+}
+
+function AssertionTypeAny_fast(instruction, instance, depth, template, evaluator) {
+  const relInstance = instruction[2];
+  const target = relInstance.length === 0 ? instance : resolveInstance(instance, relInstance);
+  const bitmask = instruction[6];
+  const typeIndex = jsonTypeOf(target);
+  if (typeSetTest(bitmask, typeIndex)) return true;
+  return typeSetTest(bitmask, Type.Integer) && isIntegral(target);
+}
+
+function LogicalCondition_fast(instruction, instance, depth, template, evaluator) {
+  const value = instruction[6];
+  const thenStart = value[0];
+  const elseStart = value[1];
+  const children = instruction[7];
+  const childrenSize = children ? children.length : 0;
+  const relInstance = instruction[2];
+  const target = relInstance.length === 0 ? instance : resolveInstance(instance, relInstance);
+  const checkpoint = evaluator.trackMode ? evaluator.checkpoint() : 0;
+  let conditionResult = true;
+  for (let cursor = 0; cursor < thenStart; cursor++) {
+    if (!evaluateInstruction(children[cursor], target, depth + 1, template, evaluator)) {
+      conditionResult = false;
+      break;
+    }
+  }
+  if (!conditionResult && evaluator.trackMode) evaluator.rewind(checkpoint);
+  let consequenceStart;
+  let consequenceEnd;
+  if (conditionResult) {
+    consequenceStart = thenStart;
+    consequenceEnd = elseStart > 0 ? elseStart : childrenSize;
+  } else {
+    consequenceStart = elseStart;
+    consequenceEnd = elseStart > 0 ? childrenSize : elseStart;
+  }
+  if (consequenceStart < consequenceEnd) {
+    if (evaluator.trackMode) {
+      evaluator.popPath(instruction[1].length);
+    }
+    let result = true;
+    for (let cursor = consequenceStart; cursor < consequenceEnd; cursor++) {
+      if (!evaluateInstruction(children[cursor], target, depth + 1, template, evaluator)) {
+        result = false;
+        break;
+      }
+    }
+    if (evaluator.trackMode) {
+      evaluator.pushPath(instruction[1]);
+    }
+    return result;
+  }
+  return true;
+}
+
+function LoopPropertiesExcept_fast(instruction, instance, depth, template, evaluator) {
+  const relInstance = instruction[2];
+  const target = relInstance.length === 0 ? instance : resolveInstance(instance, relInstance);
+  if (!isObject(target)) return true;
+  const filter = instruction[6];
+  const filterStrings = filter[0];
+  const filterPrefixes = filter[1];
+  const filterRegexes = filter[2];
+  const children = instruction[7];
+  for (const key in target) {
+    if (filterStrings.has(key)) continue;
+    let matched = false;
+    for (let index = 0; index < filterPrefixes.length; index++) {
+      if (key.startsWith(filterPrefixes[index])) { matched = true; break; }
+    }
+    if (matched) continue;
+    for (let index = 0; index < filterRegexes.length; index++) {
+      filterRegexes[index].lastIndex = 0;
+      if (filterRegexes[index].test(key)) { matched = true; break; }
+    }
+    if (matched) continue;
+    evaluator.propertyParent = target;
+    evaluator.propertyKey = key;
+    if (children) {
+      for (let childIndex = 0; childIndex < children.length; childIndex++) {
+        if (!evaluateInstruction(children[childIndex], target[key], depth + 1, template, evaluator)) {
+          evaluator.propertyParent = undefined;
+          evaluator.propertyKey = undefined;
+          return false;
+        }
+      }
+    }
+  }
+  evaluator.propertyParent = undefined;
+  evaluator.propertyKey = undefined;
+  return true;
+}
+
+function AssertionRegex_fast(instruction, instance, depth, template, evaluator) {
+  const target = evaluator.propertyTarget !== undefined
+    ? evaluator.propertyTarget : resolveInstance(instance, instruction[2]);
+  if (typeof target !== 'string') return true;
+  return instruction[6].test(target);
+}
+
+function LoopProperties_fast(instruction, instance, depth, template, evaluator) {
+  const relInstance = instruction[2];
+  const target = relInstance.length === 0 ? instance : resolveInstance(instance, relInstance);
+  if (!isObject(target)) return true;
+  const children = instruction[7];
+  for (const key in target) {
+    evaluator.propertyParent = target;
+    evaluator.propertyKey = key;
+    if (children) {
+      for (let childIndex = 0; childIndex < children.length; childIndex++) {
+        if (!evaluateInstruction(children[childIndex], target[key], depth + 1, template, evaluator)) {
+          evaluator.propertyParent = undefined;
+          evaluator.propertyKey = undefined;
+          return false;
+        }
+      }
+    }
+  }
+  evaluator.propertyParent = undefined;
+  evaluator.propertyKey = undefined;
+  return true;
+}
+
+function AssertionDefines_fast(instruction, instance, depth, template, evaluator) {
+  const target = resolveInstance(instance, instruction[2]);
+  if (!isObject(target)) return true;
+  return Object.hasOwn(target, instruction[6]);
+}
+
+function LogicalWhenType_fast(instruction, instance, depth, template, evaluator) {
+  const relInstance = instruction[2];
+  const target = relInstance.length === 0 ? instance : resolveInstance(instance, relInstance);
+  if (jsonTypeOf(target) !== instruction[6]) return true;
+  const children = instruction[7];
+  if (children) {
+    for (let index = 0; index < children.length; index++) {
+      if (!evaluateInstruction(children[index], target, depth + 1, template, evaluator)) return false;
+    }
+  }
+  return true;
+}
+
+function LogicalWhenDefines_fast(instruction, instance, depth, template, evaluator) {
+  const target = resolveInstance(instance, instruction[2]);
+  if (!isObject(target)) return true;
+  if (!Object.hasOwn(target, instruction[6])) return true;
+  const children = instruction[7];
+  if (children) {
+    for (let index = 0; index < children.length; index++) {
+      if (!evaluateInstruction(children[index], target, depth + 1, template, evaluator)) return false;
+    }
+  }
+  return true;
+}
+
+function AssertionFail_fast() { return false; }
+
+function LoopContains_fast(instruction, instance, depth, template, evaluator) {
+  const relInstance = instruction[2];
+  const target = relInstance.length === 0 ? instance : resolveInstance(instance, relInstance);
+  if (!Array.isArray(target)) return true;
+  const range = instruction[6];
+  const minimum = range[0];
+  const maximum = range[1];
+  const isExhaustive = range[2];
+  if (minimum === 0 && target.length === 0) return true;
+  const children = instruction[7];
+  let matchCount = 0;
+  for (let index = 0; index < target.length; index++) {
+    let subresult = true;
+    if (children) {
+      for (let childIndex = 0; childIndex < children.length; childIndex++) {
+        if (!evaluateInstruction(children[childIndex], target[index], depth + 1, template, evaluator)) {
+          subresult = false;
+          break;
+        }
+      }
+    }
+    if (subresult) {
+      matchCount++;
+      if (maximum !== null && matchCount > maximum) return false;
+      if (matchCount >= minimum && maximum === null && !isExhaustive) return true;
+    }
+  }
+  return matchCount >= minimum;
+}
+
+function LogicalNot_fast(instruction, instance, depth, template, evaluator) {
+  const relInstance = instruction[2];
+  const target = relInstance.length === 0 ? instance : resolveInstance(instance, relInstance);
+  const children = instruction[7];
+  if (children) {
+    for (let index = 0; index < children.length; index++) {
+      if (!evaluateInstruction(children[index], target, depth + 1, template, evaluator)) return true;
+    }
+  }
+  return false;
+}
+
+function LoopItemsType_fast(instruction, instance, depth, template, evaluator) {
+  const relInstance = instruction[2];
+  const target = relInstance.length === 0 ? instance : resolveInstance(instance, relInstance);
+  if (!Array.isArray(target)) return true;
+  const expected = instruction[6];
+  for (let index = 0; index < target.length; index++) {
+    const actual = jsonTypeOf(target[index]);
+    if (actual !== expected && !(expected === Type.Integer && isIntegral(target[index]))) return false;
+  }
+  return true;
+}
+
+function LoopItemsTypeStrict_fast(instruction, instance, depth, template, evaluator) {
+  const relInstance = instruction[2];
+  const target = relInstance.length === 0 ? instance : resolveInstance(instance, relInstance);
+  if (!Array.isArray(target)) return true;
+  const expected = instruction[6];
+  for (let index = 0; index < target.length; index++) {
+    if (effectiveTypeStrictReal(target[index]) !== expected) return false;
+  }
+  return true;
+}
+
+function AssertionEqualsAny_fast(instruction, instance, depth, template, evaluator) {
+  const value = instruction[6];
+  const target = evaluator.propertyTarget !== undefined
+    ? evaluator.propertyTarget : resolveInstance(instance, instruction[2]);
+  if (value.primitive) return value.set.has(target);
+  const values = Array.isArray(value) ? value : value.values;
+  for (let index = 0; index < values.length; index++) {
+    if (jsonEqual(target, values[index])) return true;
+  }
+  return false;
+}
+
+function AssertionDefinesAll_fast(instruction, instance, depth, template, evaluator) {
+  const target = resolveInstance(instance, instruction[2]);
+  if (!isObject(target)) return true;
+  const strings = instruction[6];
+  for (let index = 0; index < strings.length; index++) {
+    if (!Object.hasOwn(target, strings[index])) return false;
+  }
+  return true;
+}
+
+function AssertionDefinesExactly_fast(instruction, instance, depth, template, evaluator) {
+  const target = resolveInstance(instance, instruction[2]);
+  if (!isObject(target)) return true;
+  let targetSize = 0;
+  for (const key in target) targetSize++;
+  const strings = instruction[6];
+  if (targetSize !== strings.length) return false;
+  for (let index = 0; index < strings.length; index++) {
+    if (!Object.hasOwn(target, strings[index])) return false;
+  }
+  return true;
+}
+
+function AssertionDefinesExactlyStrict_fast(instruction, instance, depth, template, evaluator) {
+  const target = resolveInstance(instance, instruction[2]);
+  if (!isObject(target)) return false;
+  let targetSize = 0;
+  for (const key in target) targetSize++;
+  const strings = instruction[6];
+  if (targetSize !== strings.length) return false;
+  for (let index = 0; index < strings.length; index++) {
+    if (!Object.hasOwn(target, strings[index])) return false;
+  }
+  return true;
+}
+
+function AssertionDefinesExactlyStrictHash3_fast(instruction, instance, depth, template, evaluator) {
+  const target = resolveInstance(instance, instruction[2]);
+  if (!isObject(target)) return false;
+  const entries = instruction[6][0];
+  let count = 0;
+  for (const key in target) count++;
+  if (count !== 3) return false;
+  return Object.hasOwn(target, entries[0][1]) &&
+    Object.hasOwn(target, entries[1][1]) &&
+    Object.hasOwn(target, entries[2][1]);
+}
+
+function AssertionType_fast(instruction, instance, depth, template, evaluator) {
+  const target = resolveInstance(instance, instruction[2]);
+  const expected = instruction[6];
+  const actual = jsonTypeOf(target);
+  if (actual === expected) return true;
+  return expected === Type.Integer && isIntegral(target);
+}
+
+function AssertionTypeStrictAny_fast(instruction, instance, depth, template, evaluator) {
+  const relInstance = instruction[2];
+  const target = relInstance.length === 0 ? instance : resolveInstance(instance, relInstance);
+  return typeSetTest(instruction[6], effectiveTypeStrictReal(target));
+}
+
+function AssertionNotTypeStrictAny_fast(instruction, instance, depth, template, evaluator) {
+  const relInstance = instruction[2];
+  const target = relInstance.length === 0 ? instance : resolveInstance(instance, relInstance);
+  return !typeSetTest(instruction[6], effectiveTypeStrictReal(target));
+}
+
+function AssertionTypeStringUpper_fast(instruction, instance, depth, template, evaluator) {
+  const relInstance = instruction[2];
+  const target = relInstance.length === 0 ? instance : resolveInstance(instance, relInstance);
+  return typeof target === 'string' && unicodeLength(target) <= instruction[6];
+}
+
+function AssertionTypeArrayUpper_fast(instruction, instance, depth, template, evaluator) {
+  const relInstance = instruction[2];
+  const target = relInstance.length === 0 ? instance : resolveInstance(instance, relInstance);
+  return Array.isArray(target) && target.length <= instruction[6];
+}
+
+function AssertionTypeObjectBounded_fast(instruction, instance, depth, template, evaluator) {
+  const relInstance = instruction[2];
+  const target = relInstance.length === 0 ? instance : resolveInstance(instance, relInstance);
+  if (!isObject(target)) return false;
+  const range = instruction[6];
+  const size = objectSize(target);
+  if (size < range[0]) return false;
+  return range[1] === null || size <= range[1];
+}
+
+function AssertionTypeObjectUpper_fast(instruction, instance, depth, template, evaluator) {
+  const relInstance = instruction[2];
+  const target = relInstance.length === 0 ? instance : resolveInstance(instance, relInstance);
+  if (!isObject(target)) return false;
+  return objectSize(target) <= instruction[6];
+}
+
+function AssertionStringSizeLess_fast(instruction, instance, depth, template, evaluator) {
+  const target = evaluator.propertyTarget !== undefined
+    ? evaluator.propertyTarget : resolveInstance(instance, instruction[2]);
+  if (typeof target !== 'string') return true;
+  return unicodeLength(target) < instruction[6];
+}
+
+function AssertionStringSizeGreater_fast(instruction, instance, depth, template, evaluator) {
+  const target = evaluator.propertyTarget !== undefined
+    ? evaluator.propertyTarget : resolveInstance(instance, instruction[2]);
+  if (typeof target !== 'string') return true;
+  return unicodeLength(target) > instruction[6];
+}
+
+function AssertionArraySizeLess_fast(instruction, instance, depth, template, evaluator) {
+  const target = resolveInstance(instance, instruction[2]);
+  if (!Array.isArray(target)) return true;
+  return target.length < instruction[6];
+}
+
+function AssertionArraySizeGreater_fast(instruction, instance, depth, template, evaluator) {
+  const target = resolveInstance(instance, instruction[2]);
+  if (!Array.isArray(target)) return true;
+  return target.length > instruction[6];
+}
+
+function AssertionObjectSizeLess_fast(instruction, instance, depth, template, evaluator) {
+  const target = resolveInstance(instance, instruction[2]);
+  if (!isObject(target)) return true;
+  return objectSize(target) < instruction[6];
+}
+
+function AssertionObjectSizeGreater_fast(instruction, instance, depth, template, evaluator) {
+  const target = resolveInstance(instance, instruction[2]);
+  if (!isObject(target)) return true;
+  return objectSize(target) > instruction[6];
+}
+
+function AssertionGreaterEqual_fast(instruction, instance, depth, template, evaluator) {
+  const target = resolveInstance(instance, instruction[2]);
+  const targetType = typeof target;
+  if (targetType !== 'number' && targetType !== 'bigint') return true;
+  return target >= instruction[6];
+}
+
+function AssertionLessEqual_fast(instruction, instance, depth, template, evaluator) {
+  const target = resolveInstance(instance, instruction[2]);
+  const targetType = typeof target;
+  if (targetType !== 'number' && targetType !== 'bigint') return true;
+  return target <= instruction[6];
+}
+
+function AssertionGreater_fast(instruction, instance, depth, template, evaluator) {
+  const target = resolveInstance(instance, instruction[2]);
+  const targetType = typeof target;
+  if (targetType !== 'number' && targetType !== 'bigint') return true;
+  return target > instruction[6];
+}
+
+function AssertionLess_fast(instruction, instance, depth, template, evaluator) {
+  const target = resolveInstance(instance, instruction[2]);
+  const targetType = typeof target;
+  if (targetType !== 'number' && targetType !== 'bigint') return true;
+  return target < instruction[6];
+}
+
+function AssertionUnique_fast(instruction, instance, depth, template, evaluator) {
+  const target = resolveInstance(instance, instruction[2]);
+  if (!Array.isArray(target)) return true;
+  return isUnique(target);
+}
+
+function AssertionDivisible_fast(instruction, instance, depth, template, evaluator) {
+  const target = resolveInstance(instance, instruction[2]);
+  const targetType = typeof target;
+  if (targetType !== 'number' && targetType !== 'bigint') return true;
+  return isDivisibleBy(target, instruction[6]);
+}
+
+function AssertionStringType_fast(instruction, instance, depth, template, evaluator) {
+  const target = evaluator.propertyTarget !== undefined
+    ? evaluator.propertyTarget : resolveInstance(instance, instruction[2]);
+  if (typeof target !== 'string') return true;
+  return URI_REGEX.test(target);
+}
+
+function AssertionPropertyType_fast(instruction, instance, depth, template, evaluator) {
+  if (!isObject(instance)) return true;
+  const target = resolveInstance(instance, instruction[2]);
+  if (target === undefined) return true;
+  const expected = instruction[6];
+  const actual = jsonTypeOf(target);
+  return actual === expected || (expected === Type.Integer && isIntegral(target));
+}
+
+function AssertionPropertyTypeEvaluate_fast(instruction, instance, depth, template, evaluator) {
+  if (!isObject(instance)) return true;
+  const target = resolveInstance(instance, instruction[2]);
+  if (target === undefined) return true;
+  const expected = instruction[6];
+  const actual = jsonTypeOf(target);
+  const result = actual === expected || (expected === Type.Integer && isIntegral(target));
+  if (result && evaluator.trackMode) {
+    const location = instruction[2];
+    evaluator.markEvaluated(target, instance, location.length > 0 ? location[location.length - 1] : undefined);
+  }
+  return result;
+}
+
+function AssertionPropertyTypeStrictEvaluate_fast(instruction, instance, depth, template, evaluator) {
+  if (!isObject(instance)) return true;
+  const target = resolveInstance(instance, instruction[2]);
+  if (target === undefined) return true;
+  const result = effectiveTypeStrictReal(target) === instruction[6];
+  if (result && evaluator.trackMode) {
+    const location = instruction[2];
+    evaluator.markEvaluated(target, instance, location.length > 0 ? location[location.length - 1] : undefined);
+  }
+  return result;
+}
+
+function AssertionPropertyTypeStrictAny_fast(instruction, instance, depth, template, evaluator) {
+  if (!isObject(instance)) return true;
+  const target = resolveInstance(instance, instruction[2]);
+  if (target === undefined) return true;
+  return typeSetTest(instruction[6], effectiveTypeStrictReal(target));
+}
+
+function AssertionPropertyTypeStrictAnyEvaluate_fast(instruction, instance, depth, template, evaluator) {
+  if (!isObject(instance)) return true;
+  const target = resolveInstance(instance, instruction[2]);
+  if (target === undefined) return true;
+  const result = typeSetTest(instruction[6], effectiveTypeStrictReal(target));
+  if (result && evaluator.trackMode) {
+    const location = instruction[2];
+    evaluator.markEvaluated(target, instance, location.length > 0 ? location[location.length - 1] : undefined);
+  }
+  return result;
+}
+
+function AssertionArrayPrefix_fast(instruction, instance, depth, template, evaluator) {
+  const target = resolveInstance(instance, instruction[2]);
+  if (!Array.isArray(target)) return true;
+  if (target.length === 0) return true;
+  const children = instruction[7];
+  const prefixes = children.length - 1;
+  const pointer = target.length === prefixes ? prefixes : Math.min(target.length, prefixes) - 1;
+  const entry = children[pointer];
+  const entryChildren = entry[7];
+  if (entryChildren) {
+    for (let index = 0; index < entryChildren.length; index++) {
+      if (!evaluateInstruction(entryChildren[index], target, depth + 1, template, evaluator)) return false;
+    }
+  }
+  return true;
+}
+
+function AssertionArrayPrefixEvaluate_fast(instruction, instance, depth, template, evaluator) {
+  const target = resolveInstance(instance, instruction[2]);
+  if (!Array.isArray(target)) return true;
+  if (target.length === 0) return true;
+  const children = instruction[7];
+  const prefixes = children.length - 1;
+  const pointer = target.length === prefixes ? prefixes : Math.min(target.length, prefixes) - 1;
+  const entry = children[pointer];
+  const entryChildren = entry[7];
+  if (entryChildren) {
+    for (let index = 0; index < entryChildren.length; index++) {
+      if (!evaluateInstruction(entryChildren[index], target, depth + 1, template, evaluator)) return false;
+    }
+  }
+  if (evaluator.trackMode) {
+    if (target.length === prefixes) {
+      evaluator.markEvaluated(target);
+    } else {
+      for (let cursor = 0; cursor <= pointer; cursor++) {
+        evaluator.markEvaluated(target[cursor], target, cursor);
+      }
+    }
+  }
+  return true;
+}
+
+function AssertionObjectPropertiesSimple_fast(instruction, instance, depth, template, evaluator) {
+  const target = resolveInstance(instance, instruction[2]);
+  if (!isObject(target)) return false;
+  const value = instruction[6];
+  const children = instruction[7];
+  for (let index = 0; index < value.length; index++) {
+    const entry = value[index];
+    const name = entry[0];
+    const required = entry[2];
+    if (!Object.hasOwn(target, name)) {
+      if (required) return false;
+      continue;
+    }
+    if (index < children.length) {
+      // Note that we don't hardcode the fast dispatcher here, as the fused
+      // children may require schema resource tracking for dynamic anchor
+      // resolution, which the current dispatcher takes care of
+      if (!evaluateInstruction(children[index], target[name], depth + 1, template, evaluator)) return false;
+    }
+  }
+  return true;
+}
+
+function AnnotationEmit_fast() { return true; }
+function AnnotationEmitWrapped_fast() { return true; }
+function AnnotationToParent_fast() { return true; }
+function AnnotationBasenameToParent_fast() { return true; }
+
+function Evaluate_fast(instruction, instance, depth, template, evaluator) {
+  if (evaluator.trackMode) {
+    const target = resolveInstance(instance, instruction[2]);
+    evaluator.markEvaluated(target);
+  }
+  return true;
+}
+
+function LogicalNotEvaluate_fast(instruction, instance, depth, template, evaluator) {
+  const relInstance = instruction[2];
+  const target = relInstance.length === 0 ? instance : resolveInstance(instance, relInstance);
+  const children = instruction[7];
+  let result = false;
+  if (children) {
+    for (let index = 0; index < children.length; index++) {
+      if (!evaluateInstruction(children[index], target, depth + 1, template, evaluator)) {
+        result = true;
+        break;
+      }
+    }
+  }
+  if (evaluator.trackMode) evaluator.unevaluate();
+  return result;
+}
+
+function LogicalWhenArraySizeGreater_fast(instruction, instance, depth, template, evaluator) {
+  const target = resolveInstance(instance, instruction[2]);
+  if (!Array.isArray(target) || target.length <= instruction[6]) return true;
+  const children = instruction[7];
+  if (children) {
+    for (let index = 0; index < children.length; index++) {
+      if (!evaluateInstruction(children[index], target, depth + 1, template, evaluator)) return false;
+    }
+  }
+  return true;
+}
+
+function LoopPropertiesUnevaluated_fast(instruction, instance, depth, template, evaluator) {
+  const target = resolveInstance(instance, instruction[2]);
+  if (!isObject(target)) return true;
+  if (evaluator.trackMode && evaluator.isEvaluated(target)) return true;
+  const children = instruction[7];
+  for (const key in target) {
+    if (evaluator.trackMode && evaluator.isEvaluated(target[key], target, key)) continue;
+    if (children) {
+      for (let childIndex = 0; childIndex < children.length; childIndex++) {
+        if (!evaluateInstruction(children[childIndex], target[key], depth + 1, template, evaluator)) return false;
+      }
+    }
+  }
+  if (evaluator.trackMode) evaluator.markEvaluated(target);
+  return true;
+}
+
+function LoopPropertiesUnevaluatedExcept_fast(instruction, instance, depth, template, evaluator) {
+  const target = resolveInstance(instance, instruction[2]);
+  if (!isObject(target)) return true;
+  if (evaluator.trackMode && evaluator.isEvaluated(target)) return true;
+  const filter = instruction[6];
+  const filterStrings = filter[0];
+  const filterPrefixes = filter[1];
+  const filterRegexes = filter[2];
+  const children = instruction[7];
+  for (const key in target) {
+    if (filterStrings.has(key)) continue;
+    let matched = false;
+    for (let index = 0; index < filterPrefixes.length; index++) {
+      if (key.startsWith(filterPrefixes[index])) { matched = true; break; }
+    }
+    if (matched) continue;
+    for (let index = 0; index < filterRegexes.length; index++) {
+      filterRegexes[index].lastIndex = 0;
+      if (filterRegexes[index].test(key)) { matched = true; break; }
+    }
+    if (matched) continue;
+    if (evaluator.trackMode && evaluator.isEvaluated(target[key], target, key)) continue;
+    if (children) {
+      for (let childIndex = 0; childIndex < children.length; childIndex++) {
+        if (!evaluateInstruction(children[childIndex], target[key], depth + 1, template, evaluator)) return false;
+      }
+    }
+  }
+  if (evaluator.trackMode) evaluator.markEvaluated(target);
+  return true;
+}
+
+function LoopPropertiesEvaluate_fast(instruction, instance, depth, template, evaluator) {
+  const relInstance = instruction[2];
+  const target = relInstance.length === 0 ? instance : resolveInstance(instance, relInstance);
+  if (!isObject(target)) return true;
+  const children = instruction[7];
+  for (const key in target) {
+    evaluator.propertyParent = target;
+    evaluator.propertyKey = key;
+    if (children) {
+      for (let childIndex = 0; childIndex < children.length; childIndex++) {
+        if (!evaluateInstruction(children[childIndex], target[key], depth + 1, template, evaluator)) {
+          evaluator.propertyParent = undefined;
+          evaluator.propertyKey = undefined;
+          return false;
+        }
+      }
+    }
+  }
+  evaluator.propertyParent = undefined;
+  evaluator.propertyKey = undefined;
+  if (evaluator.trackMode) evaluator.markEvaluated(target);
+  return true;
+}
+
+function LoopPropertiesRegex_fast(instruction, instance, depth, template, evaluator) {
+  const relInstance = instruction[2];
+  const target = relInstance.length === 0 ? instance : resolveInstance(instance, relInstance);
+  if (!isObject(target)) return true;
+  const regex = instruction[6];
+  const children = instruction[7];
+  for (const key in target) {
+    regex.lastIndex = 0;
+    if (!regex.test(key)) continue;
+    evaluator.propertyParent = target;
+    evaluator.propertyKey = key;
+    if (children) {
+      for (let childIndex = 0; childIndex < children.length; childIndex++) {
+        if (!evaluateInstruction(children[childIndex], target[key], depth + 1, template, evaluator)) {
+          evaluator.propertyParent = undefined;
+          evaluator.propertyKey = undefined;
+          return false;
+        }
+      }
+    }
+  }
+  evaluator.propertyParent = undefined;
+  evaluator.propertyKey = undefined;
+  return true;
+}
+
+function LoopPropertiesRegexClosed_fast(instruction, instance, depth, template, evaluator) {
+  const relInstance = instruction[2];
+  const target = relInstance.length === 0 ? instance : resolveInstance(instance, relInstance);
+  if (!isObject(target)) return true;
+  const regex = instruction[6];
+  const children = instruction[7];
+  for (const key in target) {
+    regex.lastIndex = 0;
+    if (!regex.test(key)) return false;
+    evaluator.propertyParent = target;
+    evaluator.propertyKey = key;
+    if (children) {
+      for (let childIndex = 0; childIndex < children.length; childIndex++) {
+        if (!evaluateInstruction(children[childIndex], target[key], depth + 1, template, evaluator)) {
+          evaluator.propertyParent = undefined;
+          evaluator.propertyKey = undefined;
+          return false;
+        }
+      }
+    }
+  }
+  evaluator.propertyParent = undefined;
+  evaluator.propertyKey = undefined;
+  return true;
+}
+
+function LoopPropertiesStartsWith_fast(instruction, instance, depth, template, evaluator) {
+  const relInstance = instruction[2];
+  const target = relInstance.length === 0 ? instance : resolveInstance(instance, relInstance);
+  if (!isObject(target)) return true;
+  const prefix = instruction[6];
+  const children = instruction[7];
+  for (const key in target) {
+    if (!key.startsWith(prefix)) continue;
+    evaluator.propertyParent = target;
+    evaluator.propertyKey = key;
+    if (children) {
+      for (let childIndex = 0; childIndex < children.length; childIndex++) {
+        if (!evaluateInstruction(children[childIndex], target[key], depth + 1, template, evaluator)) {
+          evaluator.propertyParent = undefined;
+          evaluator.propertyKey = undefined;
+          return false;
+        }
+      }
+    }
+  }
+  evaluator.propertyParent = undefined;
+  evaluator.propertyKey = undefined;
+  return true;
+}
+
+function LoopPropertiesType_fast(instruction, instance, depth, template, evaluator) {
+  const relInstance = instruction[2];
+  const target = relInstance.length === 0 ? instance : resolveInstance(instance, relInstance);
+  if (!isObject(target)) return true;
+  const expected = instruction[6];
+  for (const key in target) {
+    const actual = jsonTypeOf(target[key]);
+    if (actual !== expected && !(expected === Type.Integer && isIntegral(target[key]))) return false;
+  }
+  return true;
+}
+
+function LoopPropertiesTypeEvaluate_fast(instruction, instance, depth, template, evaluator) {
+  const relInstance = instruction[2];
+  const target = relInstance.length === 0 ? instance : resolveInstance(instance, relInstance);
+  if (!isObject(target)) return true;
+  const expected = instruction[6];
+  for (const key in target) {
+    const actual = jsonTypeOf(target[key]);
+    if (actual !== expected && !(expected === Type.Integer && isIntegral(target[key]))) return false;
+  }
+  if (evaluator.trackMode) evaluator.markEvaluated(target);
+  return true;
+}
+
+function LoopPropertiesExactlyTypeStrict_fast(instruction, instance, depth, template, evaluator) {
+  const target = resolveInstance(instance, instruction[2]);
+  if (!isObject(target)) return false;
+  const value = instruction[6];
+  const names = new Set(value[1]);
+  let count = 0;
+  for (const key in target) {
+    count++;
+    if (effectiveTypeStrictReal(target[key]) !== value[0] || !names.has(key)) return false;
+  }
+  return count === names.size;
+}
+
+function LoopPropertiesExactlyTypeStrictHash_fast(instruction, instance, depth, template, evaluator) {
+  const target = resolveInstance(instance, instruction[2]);
+  if (!isObject(target)) return false;
+  const value = instruction[6];
+  const entries = value[1][0];
+  const expectedCount = entries.length;
+  let count = 0;
+  for (const key in target) {
+    count++;
+    if (effectiveTypeStrictReal(target[key]) !== value[0]) return false;
+  }
+  if (count !== expectedCount) return false;
+  for (let index = 0; index < expectedCount; index++) {
+    if (!Object.hasOwn(target, entries[index][1])) return false;
+  }
+  return true;
+}
+
+function LoopPropertiesTypeStrict_fast(instruction, instance, depth, template, evaluator) {
+  const relInstance = instruction[2];
+  const target = relInstance.length === 0 ? instance : resolveInstance(instance, relInstance);
+  if (!isObject(target)) return true;
+  const expected = instruction[6];
+  for (const key in target) {
+    if (effectiveTypeStrictReal(target[key]) !== expected) return false;
+  }
+  return true;
+}
+
+function LoopPropertiesTypeStrictEvaluate_fast(instruction, instance, depth, template, evaluator) {
+  const relInstance = instruction[2];
+  const target = relInstance.length === 0 ? instance : resolveInstance(instance, relInstance);
+  if (!isObject(target)) return true;
+  const expected = instruction[6];
+  for (const key in target) {
+    if (effectiveTypeStrictReal(target[key]) !== expected) return false;
+  }
+  if (evaluator.trackMode) evaluator.markEvaluated(target);
+  return true;
+}
+
+function LoopPropertiesTypeStrictAny_fast(instruction, instance, depth, template, evaluator) {
+  const relInstance = instruction[2];
+  const target = relInstance.length === 0 ? instance : resolveInstance(instance, relInstance);
+  if (!isObject(target)) return true;
+  const bitmask = instruction[6];
+  for (const key in target) {
+    if (!typeSetTest(bitmask, effectiveTypeStrictReal(target[key]))) return false;
+  }
+  return true;
+}
+
+function LoopPropertiesTypeStrictAnyEvaluate_fast(instruction, instance, depth, template, evaluator) {
+  const relInstance = instruction[2];
+  const target = relInstance.length === 0 ? instance : resolveInstance(instance, relInstance);
+  if (!isObject(target)) return true;
+  const bitmask = instruction[6];
+  for (const key in target) {
+    if (!typeSetTest(bitmask, effectiveTypeStrictReal(target[key]))) return false;
+  }
+  if (evaluator.trackMode) evaluator.markEvaluated(target);
+  return true;
+}
+
+function LoopKeys_fast(instruction, instance, depth, template, evaluator) {
+  const target = resolveInstance(instance, instruction[2]);
+  if (!isObject(target)) return true;
+  const children = instruction[7];
+  for (const key in target) {
+    const previousPropertyTarget = evaluator.propertyTarget;
+    evaluator.propertyTarget = key;
+    if (children) {
+      for (let childIndex = 0; childIndex < children.length; childIndex++) {
+        if (!evaluateInstruction(children[childIndex], null, depth + 1, template, evaluator)) {
+          evaluator.propertyTarget = previousPropertyTarget;
+          return false;
+        }
+      }
+    }
+    evaluator.propertyTarget = previousPropertyTarget;
+  }
+  return true;
+}
+
+function LoopItemsFrom_fast(instruction, instance, depth, template, evaluator) {
+  const target = resolveInstance(instance, instruction[2]);
+  const startIndex = instruction[6];
+  if (!Array.isArray(target) || startIndex >= target.length) return true;
+  const children = instruction[7];
+  for (let index = startIndex; index < target.length; index++) {
+    if (children) {
+      for (let childIndex = 0; childIndex < children.length; childIndex++) {
+        if (!evaluateInstruction(children[childIndex], target[index], depth + 1, template, evaluator)) return false;
+      }
+    }
+  }
+  return true;
+}
+
+function LoopItemsUnevaluated_fast(instruction, instance, depth, template, evaluator) {
+  const target = resolveInstance(instance, instruction[2]);
+  if (!Array.isArray(target)) return true;
+  if (evaluator.trackMode && evaluator.isEvaluated(target)) return true;
+  const children = instruction[7];
+  for (let index = 0; index < target.length; index++) {
+    if (evaluator.trackMode && evaluator.isEvaluated(target[index], target, index)) continue;
+    if (children) {
+      for (let childIndex = 0; childIndex < children.length; childIndex++) {
+        if (!evaluateInstruction(children[childIndex], target[index], depth + 1, template, evaluator)) return false;
+      }
+    }
+  }
+  if (evaluator.trackMode) evaluator.markEvaluated(target);
+  return true;
+}
+
+function LoopItemsPropertiesExactlyTypeStrictHash_fast(instruction, instance, depth, template, evaluator) {
+  const target = resolveInstance(instance, instruction[2]);
+  if (!Array.isArray(target)) return false;
+  const expectedType = instruction[6][0];
+  const entries = instruction[6][1][0];
+  const expectedCount = entries.length;
+  for (let index = 0; index < target.length; index++) {
+    const item = target[index];
+    if (!isObject(item)) return false;
+    let count = 0;
+    for (const key in item) {
+      count++;
+      if (effectiveTypeStrictReal(item[key]) !== expectedType) return false;
+    }
+    if (count !== expectedCount) return false;
+    for (let entry = 0; entry < expectedCount; entry++) {
+      if (!Object.hasOwn(item, entries[entry][1])) return false;
+    }
+  }
+  return true;
+}
+
+function ControlDynamicAnchorJump_fast(instruction, instance, depth, template, evaluator) {
+  const resolved = resolveInstance(instance, instruction[2]);
+  const anchor = instruction[6];
+  if (!evaluator.resources) return false;
+  const anchors = template[6];
+  for (let index = 0; index < evaluator.resources.length; index++) {
+    const jumpTarget = anchors.get(evaluator.resources[index] + ':' + anchor);
+    if (jumpTarget !== undefined) {
+      for (let childIndex = 0; childIndex < jumpTarget.length; childIndex++) {
+        if (!evaluateInstruction(jumpTarget[childIndex], resolved, depth + 1, template, evaluator)) return false;
+      }
+      return true;
+    }
+  }
+  return false;
+}
+
+function LoopItemsIntegerBounded_fast(instruction, instance, depth, template, evaluator) {
+  const target = resolveInstance(instance, instruction[2]);
+  if (!Array.isArray(target) || target.length === 0) return true;
+  const minimum = instruction[6][0];
+  const maximum = instruction[6][1];
+  for (let index = 0; index < target.length; index++) {
+    const element = target[index];
+    const elementType = typeof element;
+    if ((elementType !== 'number' && elementType !== 'bigint') || element < minimum || element > maximum) return false;
+  }
+  return true;
+}
+
+function LoopItemsIntegerBoundedSized_fast(instruction, instance, depth, template, evaluator) {
+  const value = instruction[6];
+  const minimum = value[0][0];
+  const maximum = value[0][1];
+  const minimumSize = value[1][0];
+  const maximumSize = value[1][1];
+  const target = resolveInstance(instance, instruction[2]);
+  if (!Array.isArray(target) || target.length < minimumSize ||
+      (maximumSize !== null && maximumSize !== undefined && target.length > maximumSize)) return false;
+  for (let index = 0; index < target.length; index++) {
+    const element = target[index];
+    const elementType = typeof element;
+    if ((elementType !== 'number' && elementType !== 'bigint') || element < minimum || element > maximum) return false;
+  }
+  return true;
+}
+
+function AssertionTypeIntegerBounded_fast(instruction, instance, depth, template, evaluator) {
+  const target = resolveInstance(instance, instruction[2]);
+  const range = instruction[6];
+  return (typeof target === 'bigint' || Number.isInteger(target)) && target >= range[0] && target <= range[1];
+}
+
+function AssertionTypeIntegerBoundedStrict_fast(instruction, instance, depth, template, evaluator) {
+  const target = resolveInstance(instance, instruction[2]);
+  const range = instruction[6];
+  return (typeof target === 'bigint' || Number.isInteger(target)) && target >= range[0] && target <= range[1];
+}
+
+function AssertionTypeIntegerLowerBound_fast(instruction, instance, depth, template, evaluator) {
+  const target = resolveInstance(instance, instruction[2]);
+  const range = instruction[6];
+  return (typeof target === 'bigint' || Number.isInteger(target)) && target >= range[0];
+}
+
+function AssertionTypeIntegerLowerBoundStrict_fast(instruction, instance, depth, template, evaluator) {
+  const target = resolveInstance(instance, instruction[2]);
+  const range = instruction[6];
+  return (typeof target === 'bigint' || Number.isInteger(target)) && target >= range[0];
+}
+
+const fastHandlers = handlers.slice();
+fastHandlers[16] = AssertionTypeArrayBounded_fast;
+fastHandlers[88] = LoopItemsTypeStrictAny_fast;
+fastHandlers[43] = AssertionPropertyTypeStrict_fast;
+fastHandlers[11] = AssertionTypeStrict_fast;
+fastHandlers[4] = AssertionDefinesAllStrict_fast;
+fastHandlers[27] = AssertionEqual_fast;
+fastHandlers[66] = LoopPropertiesMatch_fast;
+fastHandlers[57] = LogicalOr_fast;
+fastHandlers[100] = ControlJump_fast;
+fastHandlers[29] = AssertionEqualsAnyStringHash_fast;
+fastHandlers[59] = LogicalXor_fast;
+fastHandlers[2] = AssertionDefinesStrict_fast;
+fastHandlers[83] = LoopItems_fast;
+fastHandlers[67] = LoopPropertiesMatchClosed_fast;
+fastHandlers[14] = AssertionTypeStringBounded_fast;
+fastHandlers[58] = LogicalAnd_fast;
+fastHandlers[8] = AssertionPropertyDependencies_fast;
+fastHandlers[10] = AssertionTypeAny_fast;
+fastHandlers[60] = LogicalCondition_fast;
+fastHandlers[73] = LoopPropertiesExcept_fast;
+fastHandlers[20] = AssertionRegex_fast;
+fastHandlers[68] = LoopProperties_fast;
+fastHandlers[1] = AssertionDefines_fast;
+fastHandlers[61] = LogicalWhenType_fast;
+fastHandlers[62] = LogicalWhenDefines_fast;
+fastHandlers[0] = AssertionFail_fast;
+fastHandlers[93] = LoopContains_fast;
+fastHandlers[55] = LogicalNot_fast;
+fastHandlers[86] = LoopItemsType_fast;
+fastHandlers[87] = LoopItemsTypeStrict_fast;
+fastHandlers[28] = AssertionEqualsAny_fast;
+fastHandlers[3] = AssertionDefinesAll_fast;
+fastHandlers[5] = AssertionDefinesExactly_fast;
+fastHandlers[6] = AssertionDefinesExactlyStrict_fast;
+fastHandlers[7] = AssertionDefinesExactlyStrictHash3_fast;
+fastHandlers[9] = AssertionType_fast;
+fastHandlers[12] = AssertionTypeStrictAny_fast;
+fastHandlers[13] = AssertionNotTypeStrictAny_fast;
+fastHandlers[15] = AssertionTypeStringUpper_fast;
+fastHandlers[17] = AssertionTypeArrayUpper_fast;
+fastHandlers[18] = AssertionTypeObjectBounded_fast;
+fastHandlers[19] = AssertionTypeObjectUpper_fast;
+fastHandlers[21] = AssertionStringSizeLess_fast;
+fastHandlers[22] = AssertionStringSizeGreater_fast;
+fastHandlers[23] = AssertionArraySizeLess_fast;
+fastHandlers[24] = AssertionArraySizeGreater_fast;
+fastHandlers[25] = AssertionObjectSizeLess_fast;
+fastHandlers[26] = AssertionObjectSizeGreater_fast;
+fastHandlers[30] = AssertionGreaterEqual_fast;
+fastHandlers[31] = AssertionLessEqual_fast;
+fastHandlers[32] = AssertionGreater_fast;
+fastHandlers[33] = AssertionLess_fast;
+fastHandlers[34] = AssertionUnique_fast;
+fastHandlers[35] = AssertionDivisible_fast;
+fastHandlers[36] = AssertionTypeIntegerBounded_fast;
+fastHandlers[37] = AssertionTypeIntegerBoundedStrict_fast;
+fastHandlers[38] = AssertionTypeIntegerLowerBound_fast;
+fastHandlers[39] = AssertionTypeIntegerLowerBoundStrict_fast;
+fastHandlers[40] = AssertionStringType_fast;
+fastHandlers[41] = AssertionPropertyType_fast;
+fastHandlers[42] = AssertionPropertyTypeEvaluate_fast;
+fastHandlers[44] = AssertionPropertyTypeStrictEvaluate_fast;
+fastHandlers[45] = AssertionPropertyTypeStrictAny_fast;
+fastHandlers[46] = AssertionPropertyTypeStrictAnyEvaluate_fast;
+fastHandlers[47] = AssertionArrayPrefix_fast;
+fastHandlers[48] = AssertionArrayPrefixEvaluate_fast;
+fastHandlers[49] = AssertionObjectPropertiesSimple_fast;
+fastHandlers[50] = AnnotationEmit_fast;
+fastHandlers[51] = AnnotationEmitWrapped_fast;
+fastHandlers[52] = AnnotationToParent_fast;
+fastHandlers[53] = AnnotationBasenameToParent_fast;
+fastHandlers[54] = Evaluate_fast;
+fastHandlers[56] = LogicalNotEvaluate_fast;
+fastHandlers[63] = LogicalWhenArraySizeGreater_fast;
+fastHandlers[64] = LoopPropertiesUnevaluated_fast;
+fastHandlers[65] = LoopPropertiesUnevaluatedExcept_fast;
+fastHandlers[69] = LoopPropertiesEvaluate_fast;
+fastHandlers[70] = LoopPropertiesRegex_fast;
+fastHandlers[71] = LoopPropertiesRegexClosed_fast;
+fastHandlers[72] = LoopPropertiesStartsWith_fast;
+fastHandlers[74] = LoopPropertiesType_fast;
+fastHandlers[75] = LoopPropertiesTypeEvaluate_fast;
+fastHandlers[76] = LoopPropertiesExactlyTypeStrict_fast;
+fastHandlers[77] = LoopPropertiesExactlyTypeStrictHash_fast;
+fastHandlers[78] = LoopPropertiesTypeStrict_fast;
+fastHandlers[79] = LoopPropertiesTypeStrictEvaluate_fast;
+fastHandlers[80] = LoopPropertiesTypeStrictAny_fast;
+fastHandlers[81] = LoopPropertiesTypeStrictAnyEvaluate_fast;
+fastHandlers[82] = LoopKeys_fast;
+fastHandlers[84] = LoopItemsFrom_fast;
+fastHandlers[85] = LoopItemsUnevaluated_fast;
+fastHandlers[89] = LoopItemsPropertiesExactlyTypeStrictHash_fast;
+fastHandlers[90] = LoopItemsPropertiesExactlyTypeStrictHash_fast;
+fastHandlers[91] = LoopItemsIntegerBounded_fast;
+fastHandlers[92] = LoopItemsIntegerBoundedSized_fast;
+fastHandlers[99] = ControlDynamicAnchorJump_fast;
+
+import { describe } from './describe.mjs';
+
+const STANDARD_MASK_KEYWORDS =
+  new Set([ 'anyOf', 'oneOf', 'not', 'if', 'contains' ]);
+
+function isAnnotationOpcode(opcode) {
+  return opcode >= ANNOTATION_EMIT && opcode <= ANNOTATION_BASENAME_TO_PARENT;
+}
+
+function lastEvaluatePathToken(evaluatePath) {
+  const lastSlash = evaluatePath.lastIndexOf('/');
+  if (lastSlash < 0) return '';
+  return evaluatePath.slice(lastSlash + 1);
+}
+
+function isPathPrefix(path, prefix) {
+  if (path === prefix) return true;
+  return path.startsWith(prefix) && path[prefix.length] === '/';
+}
+
+function maskKey(evaluatePath, instanceLocation) {
+  return evaluatePath + '\u0000' + instanceLocation;
+}
+
+class SimpleOutput {
+  constructor(instance) {
+    this.instance = instance;
+    this.errors = [];
+    this.mask = [];
+    this.maskedTraces = new Map();
+    this.annotations = new Map();
+  }
+
+  callback(type, valid, instruction, evaluatePath, instanceLocation, annotation) {
+    if (evaluatePath === '') return;
+
+    const opcode = instruction[0];
+    const isAnnotation = isAnnotationOpcode(opcode);
+    const keyword = lastEvaluatePathToken(evaluatePath);
+
+    if (valid && !isAnnotation) {
+      if (type === 'pre' && STANDARD_MASK_KEYWORDS.has(keyword)) {
+        this.mask.push({
+          evaluatePath, instanceLocation,
+          key: maskKey(evaluatePath, instanceLocation)
+        });
+      } else if (type === 'post' && this.mask.length > 0) {
+        const top = this.mask[this.mask.length - 1];
+        if (top.evaluatePath === evaluatePath &&
+            top.instanceLocation === instanceLocation) {
+          this.maskedTraces.delete(top.key);
+          this.mask.pop();
+        }
+      }
+      return;
+    }
+
+    if (isAnnotation) {
+      if (type !== 'post') return;
+      const annotationKey =
+        evaluatePath + '\u0000' + instanceLocation + '\u0000' + instruction[3];
+      let bucket = this.annotations.get(annotationKey);
+      if (bucket === undefined) {
+        bucket = {
+          keywordLocation: evaluatePath,
+          absoluteKeywordLocation: instruction[3],
+          instanceLocation,
+          values: [ annotation ],
+          isWrapped: isWrappedAnnotationOpcode(instruction[0])
+        };
+        this.annotations.set(annotationKey, bucket);
+      } else {
+        const last = bucket.values[bucket.values.length - 1];
+        let isSame = last === annotation;
+        if (!isSame && Array.isArray(last) && Array.isArray(annotation) &&
+            last.length === annotation.length) {
+          isSame = last.every((value, index) => value === annotation[index]);
+        }
+        if (!isSame) bucket.values.push(annotation);
+      }
+      return;
+    }
+
+    if (type === 'pre') {
+      if (STANDARD_MASK_KEYWORDS.has(keyword)) {
+        this.mask.push({
+          evaluatePath, instanceLocation,
+          key: maskKey(evaluatePath, instanceLocation)
+        });
+      }
+      return;
+    }
+
+    const currentKey = maskKey(evaluatePath, instanceLocation);
+    const matchIndex = this.mask.findIndex(entry => entry.key === currentKey);
+    if (matchIndex >= 0) {
+      if (!valid && keyword !== 'not' && keyword !== 'if') {
+        const buffered = this.maskedTraces.get(currentKey);
+        if (buffered !== undefined) {
+          for (const entry of buffered) this.errors.push(entry);
+          this.maskedTraces.delete(currentKey);
+        }
+      } else {
+        this.maskedTraces.delete(currentKey);
+      }
+      this.mask.splice(matchIndex, 1);
+    }
+
+    if (valid) return;
+
+    if (this.annotations.size > 0) {
+      const lastSlash = evaluatePath.lastIndexOf('/');
+      const parentPath = lastSlash <= 0 ? '' : evaluatePath.slice(0, lastSlash);
+      for (const [ key, value ] of this.annotations) {
+        if (value.instanceLocation === instanceLocation &&
+            (parentPath === '' ||
+             isPathPrefix(value.keywordLocation, parentPath))) {
+          this.annotations.delete(key);
+        }
+      }
+    }
+
+    if (keyword === 'if') return;
+
+    const entry = {
+      keywordLocation: evaluatePath,
+      absoluteKeywordLocation: instruction[3],
+      instanceLocation,
+      error: describe(valid, instruction, evaluatePath, instanceLocation,
+                      this.instance, annotation)
+    };
+
+    for (const maskEntry of this.mask) {
+      if (isPathPrefix(evaluatePath, maskEntry.evaluatePath)) {
+        let buffer = this.maskedTraces.get(maskEntry.key);
+        if (buffer === undefined) {
+          buffer = [];
+          this.maskedTraces.set(maskEntry.key, buffer);
+        }
+        buffer.push(entry);
+        return;
+      }
+    }
+
+    this.errors.push(entry);
+  }
+
+  toBasic(valid) {
+    if (valid) {
+      const result = { valid: true };
+      if (this.annotations.size > 0) {
+        result.annotations = [ ...this.annotations.values() ].map(entry => ({
+          keywordLocation: entry.keywordLocation,
+          absoluteKeywordLocation: entry.absoluteKeywordLocation,
+          instanceLocation: entry.instanceLocation,
+          annotation: entry.isWrapped
+            ? entry.values
+            : entry.values[entry.values.length - 1]
+        }));
+      }
+      return result;
+    }
+    return { valid: false, errors: this.errors };
+  }
+}
+
+function runStandard(evaluator, instance, format) {
+  if (format === 'flag') {
+    return { valid: evaluator.validate(instance) };
+  }
+  if (format !== 'basic') {
+    throw new Error(`Unknown standard output format: ${format}`);
+  }
+  const collector = new SimpleOutput(instance);
+  const valid = evaluator.validate(instance,
+    (type, ok, instruction, evaluatePath, instanceLocation, annotation) =>
+      collector.callback(type, ok, instruction, evaluatePath, instanceLocation,
+                         annotation));
+  return collector.toBasic(valid);
+}
+
+export { Blaze };
+export { describe } from './describe.mjs';
