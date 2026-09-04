@@ -106,6 +106,10 @@ const changeSchemaFormat = useCallback(
     exportGraphRef.current?.();
   };
 
+  const [isCustomDebuggerOpen, setIsCustomDebuggerOpen] = useState(false);
+  const openCustomDebugger = () => setIsCustomDebuggerOpen(true);
+  const closeCustomDebugger = () => setIsCustomDebuggerOpen(false);
+
   const toggleFullScreen = useCallback(() => {
     const el = containerRef.current;
 
@@ -168,6 +172,9 @@ const changeSchemaFormat = useCallback(
     triggerNavigateMatch,
     registerExportGraph,
     triggerExportGraph,
+    isCustomDebuggerOpen,
+    openCustomDebugger,
+    closeCustomDebugger,
   };
 
   return <AppContext.Provider value={value}>{children}</AppContext.Provider>;

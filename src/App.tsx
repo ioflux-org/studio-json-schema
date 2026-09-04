@@ -1,6 +1,7 @@
 // import BottomBar from "./components/BottomBar";
 import NavigationBar from "./components/NavigationBar";
 import MonacoEditor from "./components/MonacoEditor";
+import CustomDebuggerGate from "./components/CustomDebugger/CustomDebuggerGate";
 import { AppProvider } from "./contexts/AppProvider";
 
 function App() {
@@ -11,6 +12,7 @@ function App() {
         <MonacoEditor />
         {/* <BottomBar /> */}
       </div>
+      <CustomDebuggerGate />
     </AppProvider>
   );
 }

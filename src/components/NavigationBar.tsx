@@ -1,4 +1,4 @@
-import { BsGithub, BsMoonStars, BsBook, BsSun } from "react-icons/bs";
+import { BsGithub, BsMoonStars, BsBook, BsSun, BsBug } from "react-icons/bs";
 import { RiSearchLine, RiCloseLine } from "react-icons/ri";
 import {
   type KeyboardEvent,
@@ -21,6 +21,7 @@ const NavigationBar = () => {
     setSearchString,
     setSelectedNode,
     triggerNavigateMatch,
+    openCustomDebugger,
   } = useContext(AppContext);
 
   const searchInputRef = useRef<HTMLInputElement>(null);
@@ -182,6 +183,25 @@ const NavigationBar = () => {
               delayHide={0}
             />
           </a>
+        </li>
+
+        {/* Custom Debugger */}
+        <li className="flex items-center">
+          <button
+            aria-label="Custom Debugger"
+            onClick={openCustomDebugger}
+            className="p-2 rounded-md border border-transparent text-[var(--navigation-text-color)] hover:bg-[var(--bg-color)] hover:border-[var(--accent-color)] hover:text-[var(--accent-color)] cursor-pointer transition-all duration-200"
+            data-tooltip-id="custom-debugger"
+          >
+            <BsBug size={16} />
+
+            <Tooltip
+              id="custom-debugger"
+              content="Custom Debugger — step through Blaze's evaluation"
+              delayShow={150}
+              delayHide={0}
+            />
+          </button>
         </li>
 
         {/* Documentation */}

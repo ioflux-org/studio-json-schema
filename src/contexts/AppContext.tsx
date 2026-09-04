@@ -34,6 +34,10 @@ type AppContextType = {
 
   registerExportGraph: (fn: () => void) => void;
   triggerExportGraph: () => void;
+
+  isCustomDebuggerOpen: boolean;
+  openCustomDebugger: () => void;
+  closeCustomDebugger: () => void;
 };
 
 export const AppContext = createContext<AppContextType>({} as AppContextType);
