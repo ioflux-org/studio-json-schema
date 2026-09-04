@@ -12,33 +12,45 @@ import StackVisualizer from "./StackVisualizer";
 
 const PLAY_INTERVAL_MS = 700;
 
+// Matches Studio's own default schema (src/data/defaultJSONSchema.json), so
+// the fallback here and the schema a fresh Studio session seeds the
+// debugger with are the same — and DEFAULT_INSTANCE below passes against it.
 const DEFAULT_SCHEMA = `{
   "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://studio.ioflux.org/schema",
+  "description": "A JSON Schema describing a person",
   "type": "object",
   "properties": {
-    "engineer": { "type": "string", "minLength": 1 },
-    "project": { "type": "string", "enum": ["one-ui", "studio-json-schema", "blaze"] },
-    "task": { "type": "string" },
-    "date": { "type": "string", "format": "date" },
-    "planet": { "const": "Earth" },
-    "company": { "type": "string" },
-    "tags": {
-      "type": "array",
-      "items": { "type": "string" },
-      "minItems": 1
-    }
+    "name": { "type": "string", "minLength": 2, "maxLength": 50 },
+    "age": { "type": "integer", "minimum": 0, "maximum": 150 },
+    "address": { "$ref": "#/$defs/address" },
+    "hobbies": { "type": "array", "minItems": 0, "maxItems": 5 },
+    "maritalStatus": {
+      "oneOf": [{ "const": "single" }, { "const": "married" }]
+    },
+    "isEmployed": { "type": "boolean" }
   },
-  "required": ["engineer", "project", "task", "date", "planet", "company"]
+  "additionalProperties": true,
+  "$defs": {
+    "address": {
+      "type": "object",
+      "properties": {
+        "city": { "type": "string" },
+        "zip": { "description": "six digit zip code", "type": "number" }
+      },
+      "additionalProperties": false,
+      "required": ["city", "zip"]
+    }
+  }
 }`;
 
 const DEFAULT_INSTANCE = `{
-  "engineer": "Sumit",
-  "project": "one-ui",
-  "task": "Blaze integration",
-  "date": "2026-09-04",
-  "planet": "Earth",
-  "company": "Sourcemeta",
-  "tags": ["wasm", "browser", "debugger"]
+  "name": "Sumit",
+  "age": 22,
+  "address": { "city": "Pune", "zip": 411001 },
+  "hobbies": ["coding", "reading"],
+  "maritalStatus": "single",
+  "isEmployed": true
 }`;
 
 const toMonacoRange = (position: [number, number, number, number]) => ({
