@@ -615,6 +615,9 @@ const MonacoEditor = () => {
             minimap: { enabled: false },
             occurrencesHighlight: "off",
             renderLineHighlightOnlyWhenFocus: true,
+            fontFamily: "'Inter', ui-sans-serif, sans-serif",
+            fontLigatures: false,
+            lineHeight: 24,
           }}
           onChange={(value) => setSchemaText(value ?? "")}
           onMount={handleEditorDidMount}

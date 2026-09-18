@@ -74,7 +74,7 @@ const NavigationBar = () => {
             draggable="false"
           />
 
-          <div className="flex font-mono flex-col">
+          <div className="flex flex-col">
             <span className="text-xl font-bold text-[var(--tool-name-color)]">
               Studio
             </span>
