@@ -39,6 +39,12 @@ import { resolveCollisions } from "../utils/resolveCollisions";
 import { MdNavigateBefore, MdNavigateNext } from "react-icons/md";
 import { CgClose } from "react-icons/cg";
 import { extractKeywords } from "../utils/searchNodeHelpers";
+import { findNearestGraphNodeId, type TraceStepType } from "../utils/traceInstance";
+
+export type ActiveTraceStep = {
+  schemaUri: string;
+  status: TraceStepType;
+};
 
 const nodeTypes = { customNode: CustomNode };
 
@@ -48,8 +54,10 @@ const HORIZONTAL_GAP = 150;
 
 const GraphView = ({
   compiledSchema,
+  activeTraceStep = null,
 }: {
   compiledSchema: CompiledSchema | null;
+  activeTraceStep?: ActiveTraceStep | null;
 }) => {
   const { setCenter, getZoom, fitView, getNodes } = useReactFlow();
   const { theme, selectedNode, setSelectedNode, searchString, registerNavigateMatch, registerExportGraph } =
@@ -271,6 +279,21 @@ const GraphView = ({
 
     return [...normal, ...selected];
   }, [edges]);
+
+  const activeNodeId = useMemo(() => {
+    if (!activeTraceStep) return null;
+    const nodeIds = new Set(nodes.map((n) => n.id));
+    return findNearestGraphNodeId(activeTraceStep.schemaUri, nodeIds);
+  }, [activeTraceStep, nodes]);
+
+  const nodesWithTraceStatus = useMemo(() => {
+    if (!activeNodeId || !activeTraceStep) return nodes;
+    return nodes.map((n) =>
+      n.id === activeNodeId
+        ? { ...n, data: { ...n.data, traceStatus: activeTraceStep.status } }
+        : n
+    );
+  }, [nodes, activeNodeId, activeTraceStep]);
 
   const animatedEdges = useMemo(
     () =>
@@ -514,7 +537,7 @@ const GraphView = ({
         }}
       >
       <ReactFlow
-        nodes={nodes}
+        nodes={nodesWithTraceStatus}
         edges={animatedEdges}
         onNodeClick={onNodeClick}
         onNodesChange={onNodeChange}

@@ -1,0 +1,11 @@
+{
+  "name": "Ada Lovelace",
+  "age": 36,
+  "address": {
+    "city": "London",
+    "zip": 12345
+  },
+  "hobbies": ["mathematics", "writing"],
+  "maritalStatus": "single",
+  "isEmployed": true
+}

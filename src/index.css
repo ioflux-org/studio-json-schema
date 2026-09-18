@@ -333,6 +333,24 @@ body {
   width: 100% !important;
 }
 
+.monaco-trace-push {
+  background-color: var(--color-warning-soft);
+  border-left: 3px solid var(--color-warning);
+  width: 100% !important;
+}
+
+.monaco-trace-pass {
+  background-color: color-mix(in srgb, var(--color-success) 18%, transparent);
+  border-left: 3px solid var(--color-success);
+  width: 100% !important;
+}
+
+.monaco-trace-fail {
+  background-color: var(--color-danger-soft);
+  border-left: 3px solid var(--color-danger);
+  width: 100% !important;
+}
+
 /* ====================== Panel Transitions ====================== */
 
 .panel-animating [data-panel] {

@@ -1,17 +1,19 @@
-import GraphView from "./GraphView";
+import GraphView, { type ActiveTraceStep } from "./GraphView";
 import { type CompiledSchema } from "@hyperjump/json-schema/experimental";
 import { ReactFlowProvider } from "@xyflow/react";
 import { Tooltip } from "react-tooltip";
 
 const SchemaVisualization = ({
   compiledSchema,
+  activeTraceStep,
 }: {
   compiledSchema: CompiledSchema | null;
+  activeTraceStep?: ActiveTraceStep | null;
 }) => {
   return (
     <>
       <ReactFlowProvider>
-        <GraphView compiledSchema={compiledSchema} />
+        <GraphView compiledSchema={compiledSchema} activeTraceStep={activeTraceStep} />
       </ReactFlowProvider>
       <div className="absolute bottom-[10px] right-[10px] z-10">
         <img
