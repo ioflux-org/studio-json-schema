@@ -21,7 +21,7 @@
     "@tailwindcss/vite": "^4.3.3",
     "@xyflow/react": "^12.11.3",
     "html-to-image": "^1.11.13",
-    "js-yaml": "^4.1.1",
+    "js-yaml": "^5.3.0",
     "jsonc-parser": "^3.3.1",
     "monaco-editor": "^0.56.0",
     "react": "^19.2.8",
