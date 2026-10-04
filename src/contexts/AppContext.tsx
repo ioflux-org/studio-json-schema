@@ -1,4 +1,4 @@
-import { createContext, type Ref } from "react";
+import { createContext, type RefObject } from "react";
 
 export type SchemaFormat = "json" | "yaml";
 
@@ -10,7 +10,7 @@ export type SelectedNode = {
 export type NavigationDirection = "next" | "prev";
 
 type AppContextType = {
-  containerRef: Ref<HTMLDivElement>;
+  containerRef: RefObject<HTMLDivElement>;
   isFullScreen: boolean;
   toggleFullScreen: () => void;
 
