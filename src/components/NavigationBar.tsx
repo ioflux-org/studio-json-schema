@@ -188,7 +188,7 @@ const NavigationBar = () => {
         <li className="flex items-center">
           <a
             aria-label="Documentation"
-            href="https://github.com/ioflux-org/studio-json-schema?tab=readme-ov-file#json-schema-visualizer"
+            href="https://github.com/ioflux-org/studio-json-schema?tab=readme-ov-file#understanding-the-visualization"
             target="_blank"
             rel="noopener noreferrer"
             className="p-2 rounded-md border border-transparent text-[var(--navigation-text-color)] hover:bg-[var(--bg-color)] hover:border-[var(--accent-color)] hover:text-[var(--accent-color)] flex items-center transition-all duration-200"

@@ -101,7 +101,7 @@ export class NavigationBar {
         await expect(this.documentationLink).toBeVisible();
         await expect(this.documentationLink).toHaveAttribute(
             "href",
-            "https://github.com/ioflux-org/studio-json-schema?tab=readme-ov-file#json-schema-visualizer"
+            "https://github.com/ioflux-org/studio-json-schema?tab=readme-ov-file#understanding-the-visualization"
         );
     }
 }
