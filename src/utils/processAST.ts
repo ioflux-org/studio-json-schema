@@ -29,7 +29,8 @@ export type RFNodeData = {
     nodeData: NodeData,
     nodeStyle: Partial<NodeStyle>,
     sourceHandles: HandleConfig[],
-    targetHandles: HandleConfig[]
+    targetHandles: HandleConfig[],
+    traceStatus?: "push" | "pass" | "fail",
 }
 
 type NodeStyle = {

@@ -39,6 +39,15 @@ const CustomNode = ({
 
   const { color } = data.nodeStyle;
 
+  const traceColor =
+    data.traceStatus === "fail"
+      ? "var(--color-danger)"
+      : data.traceStatus === "pass"
+        ? "var(--color-success)"
+        : data.traceStatus === "push"
+          ? "var(--color-warning)"
+          : null;
+
   if (data.isBooleanNode) {
     const boolValue = Object.values(data.nodeData)[0]?.value;
     const isTrue = String(boolValue) === "true";
@@ -49,13 +58,16 @@ const CustomNode = ({
           relative rounded-full px-5 py-2.5 text-center transition-all duration-300
           min-w-[80px]
           ${
-            selected
-              ? "shadow-[0_0_20px_var(--color)] ring-1 ring-[var(--color)]"
-              : "hover:shadow-[0_0_14px_var(--color)]"
+            traceColor
+              ? "shadow-[0_0_20px_var(--trace-color)] ring-2 ring-[var(--trace-color)]"
+              : selected
+                ? "shadow-[0_0_20px_var(--color)] ring-1 ring-[var(--color)]"
+                : "hover:shadow-[0_0_14px_var(--color)]"
           }
         `}
         style={{
           ["--color" as string]: color,
+          ["--trace-color" as string]: traceColor ?? undefined,
           border: `2px solid ${color}`,
           outline: "1px solid var(--node-rim-color)",
           background: theme === "dark"
@@ -115,13 +127,16 @@ const CustomNode = ({
         relative transition-all duration-300 text-sm bg-[var(--node-bg-color)] text-[var(--text-color)]
         min-w-[100px] max-w-[400px]
         ${
-          selected
-            ? "shadow-[0_0_20px_var(--color)] ring-1 ring-[var(--color)]"
-            : "hover:shadow-[0_0_14px_var(--color)]"
+          traceColor
+            ? "shadow-[0_0_20px_var(--trace-color)] ring-2 ring-[var(--trace-color)]"
+            : selected
+              ? "shadow-[0_0_20px_var(--color)] ring-1 ring-[var(--color)]"
+              : "hover:shadow-[0_0_14px_var(--color)]"
         }
       `}
       style={{
         ["--color" as string]: color,
+        ["--trace-color" as string]: traceColor ?? undefined,
         border: `2px solid ${color}`,
         outline: "1px solid var(--node-rim-color)",
         wordBreak: "break-word",

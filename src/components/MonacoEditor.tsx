@@ -1,6 +1,14 @@
 import { useContext, useState, useEffect, useRef, useMemo } from "react";
 import { BsUpload, BsDownload } from "react-icons/bs";
-import { SESSION_SCHEMA_KEY } from "../constants";
+import { MdPlayArrow, MdPause, MdSkipPrevious, MdSkipNext, MdReplay } from "react-icons/md";
+import { SESSION_SCHEMA_KEY, SESSION_INSTANCE_KEY } from "../constants";
+import defaultInstance from "../data/defaultInstance.json";
+import {
+  traceInstance,
+  pointerToPath,
+  type TraceResult,
+} from "../utils/traceInstance";
+import type { ActiveTraceStep } from "./GraphView";
 
 import {
   Panel,
@@ -162,6 +170,118 @@ const MonacoEditor = () => {
   const [compiledSchema, setCompiledSchema] = useState<CompiledSchema | null>(
     null
   );
+
+  const [activeEditorTab, setActiveEditorTab] = useState<"schema" | "instance">("schema");
+
+  const [instanceText, setInstanceTextState] = useState<string>(() => {
+    const raw = sessionStorage.getItem(SESSION_INSTANCE_KEY);
+    return raw ?? JSON.stringify(defaultInstance, null, 2);
+  });
+
+  const setInstanceText = (text: string) => {
+    setInstanceTextState(text);
+    try {
+      sessionStorage.setItem(SESSION_INSTANCE_KEY, text);
+    } catch {
+      // sessionStorage can be unavailable (private mode); the editor still works
+    }
+  };
+
+  const [traceResult, setTraceResult] = useState<TraceResult | null>(null);
+  const [traceStepIndex, setTraceStepIndex] = useState(0);
+  const [isTracePlaying, setIsTracePlaying] = useState(false);
+  const [traceError, setTraceError] = useState<string | null>(null);
+
+  const TRACE_PLAY_INTERVAL_MS = 700;
+
+  const runTrace = () => {
+    if (!compiledSchema) return;
+    try {
+      const instanceValue = JSON.parse(instanceText);
+      setTraceResult(traceInstance(compiledSchema, instanceValue));
+      setTraceStepIndex(0);
+      setIsTracePlaying(false);
+      setTraceError(null);
+    } catch (err) {
+      setTraceResult(null);
+      setTraceError(err instanceof Error ? err.message : String(err));
+    }
+  };
+
+  useEffect(() => {
+    setTraceResult(null);
+    setTraceStepIndex(0);
+    setIsTracePlaying(false);
+    setTraceError(null);
+  }, [compiledSchema]);
+
+  useEffect(() => {
+    if (!isTracePlaying || !traceResult) return;
+    if (traceStepIndex >= traceResult.steps.length - 1) {
+      setIsTracePlaying(false);
+      return;
+    }
+    const timer = setTimeout(
+      () => setTraceStepIndex((i) => i + 1),
+      TRACE_PLAY_INTERVAL_MS
+    );
+    return () => clearTimeout(timer);
+  }, [isTracePlaying, traceStepIndex, traceResult]);
+
+  const currentTraceStep = traceResult?.steps[traceStepIndex] ?? null;
+
+  const activeTraceStep: ActiveTraceStep | null = currentTraceStep
+    ? { schemaUri: currentTraceStep.schemaUri, status: currentTraceStep.type }
+    : null;
+
+  useEffect(() => {
+    if (activeEditorTab !== "instance" || !editorRef.current) return;
+    const model = editorRef.current.getModel();
+    if (!model) return;
+
+    const clearTraceDecorations = () => {
+      const old = model
+        .getAllDecorations()
+        .filter((d: any) => d.options.className?.startsWith("monaco-trace-"))
+        .map((d: any) => d.id);
+      model.deltaDecorations(old, []);
+    };
+
+    if (!currentTraceStep) {
+      clearTraceDecorations();
+      return;
+    }
+
+    const path = pointerToPath(currentTraceStep.instancePointer);
+    const range = getHighlightedNodeRangeFromPath(instanceText, path, "json");
+    if (!range) {
+      clearTraceDecorations();
+      return;
+    }
+
+    const startPos = model.getPositionAt(range.start);
+    const endPos = model.getPositionAt(range.end);
+    editorRef.current.revealPositionInCenter(startPos);
+
+    const decoration = {
+      range: new (window as any).monaco.Range(
+        startPos.lineNumber,
+        1,
+        endPos.lineNumber,
+        1
+      ),
+      options: {
+        isWholeLine: true,
+        className: `monaco-trace-${currentTraceStep.type}`,
+      },
+    };
+
+    const old = model
+      .getAllDecorations()
+      .filter((d: any) => d.options.className?.startsWith("monaco-trace-"))
+      .map((d: any) => d.id);
+    model.deltaDecorations(old, [decoration]);
+  }, [currentTraceStep, activeEditorTab, instanceText]);
 
   const fileInputRef = useRef<HTMLInputElement>(null);
 
@@ -523,7 +643,30 @@ const MonacoEditor = () => {
       onDragOver={handleDragOver}
       onDrop={handleDrop}
     >
-      <div className="flex items-center gap-2 px-3 py-1.5 bg-[var(--toolbar-bg-color)] border-b border-[var(--toolbar-border-color)]">
+      <div className="flex items-center gap-1 px-2 pt-1.5 bg-[var(--toolbar-bg-color)] border-b border-[var(--toolbar-border-color)]">
+        <button
+          onClick={() => setActiveEditorTab("schema")}
+          className={`h-[26px] px-2.5 text-xs font-medium rounded-t-md border border-b-0 transition-colors duration-200 ${
+            activeEditorTab === "schema"
+              ? "bg-[var(--bg-color)] border-[var(--toolbar-border-color)] text-[var(--text-color)]"
+              : "border-transparent text-[var(--text-secondary-color)] hover:text-[var(--text-color)]"
+          }`}
+        >
+          Schema
+        </button>
+        <button
+          onClick={() => setActiveEditorTab("instance")}
+          className={`h-[26px] px-2.5 text-xs font-medium rounded-t-md border border-b-0 transition-colors duration-200 ${
+            activeEditorTab === "instance"
+              ? "bg-[var(--bg-color)] border-[var(--toolbar-border-color)] text-[var(--text-color)]"
+              : "border-transparent text-[var(--text-secondary-color)] hover:text-[var(--text-color)]"
+          }`}
+        >
+          Instance
+        </button>
+      </div>
+      {activeEditorTab === "schema" ? (
+        <div className="flex items-center gap-2 px-3 py-1.5 bg-[var(--toolbar-bg-color)] border-b border-[var(--toolbar-border-color)]">
           <input
             type="file"
             id="schema-file-input"
@@ -603,20 +746,102 @@ const MonacoEditor = () => {
               {schemaValidation.status === "error" && "✗"}
             </span>
           )}
-      </div>
+        </div>
+      ) : (
+        <div className="flex items-center gap-2 px-3 py-1.5 bg-[var(--toolbar-bg-color)] border-b border-[var(--toolbar-border-color)]">
+          {!traceResult ? (
+            <button
+              onClick={runTrace}
+              disabled={!compiledSchema}
+              className="h-[28px] flex items-center gap-1.5 bg-[var(--bg-color)] border border-[var(--toolbar-border-color)] text-[var(--text-color)] text-xs font-medium px-2.5 rounded-md hover:text-[var(--accent-color)] hover:border-[var(--accent-color)] transition-all duration-200 cursor-pointer disabled:opacity-40 disabled:cursor-not-allowed"
+              aria-label="Run trace"
+              title="Step through validation of this instance against the schema"
+            >
+              <MdPlayArrow size={13} />
+              <span>Run Trace</span>
+            </button>
+          ) : (
+            <>
+              <button
+                onClick={() => setTraceStepIndex((i) => Math.max(i - 1, 0))}
+                disabled={traceStepIndex === 0}
+                className="h-[28px] w-[28px] flex items-center justify-center rounded-md border border-[var(--toolbar-border-color)] text-[var(--text-color)] hover:text-[var(--accent-color)] hover:border-[var(--accent-color)] transition-all duration-200 cursor-pointer disabled:opacity-40 disabled:cursor-not-allowed"
+                aria-label="Previous step"
+                title="Previous step"
+              >
+                <MdSkipPrevious size={16} />
+              </button>
+              <button
+                onClick={() => setIsTracePlaying((p) => !p)}
+                className="h-[28px] w-[28px] flex items-center justify-center rounded-md border border-[var(--toolbar-border-color)] text-[var(--text-color)] hover:text-[var(--accent-color)] hover:border-[var(--accent-color)] transition-all duration-200 cursor-pointer"
+                aria-label={isTracePlaying ? "Stop" : "Play"}
+                title={isTracePlaying ? "Stop" : "Play"}
+              >
+                {isTracePlaying ? <MdPause size={14} /> : <MdPlayArrow size={14} />}
+              </button>
+              <button
+                onClick={() =>
+                  setTraceStepIndex((i) =>
+                    Math.min(i + 1, traceResult.steps.length - 1)
+                  )
+                }
+                disabled={traceStepIndex >= traceResult.steps.length - 1}
+                className="h-[28px] w-[28px] flex items-center justify-center rounded-md border border-[var(--toolbar-border-color)] text-[var(--text-color)] hover:text-[var(--accent-color)] hover:border-[var(--accent-color)] transition-all duration-200 cursor-pointer disabled:opacity-40 disabled:cursor-not-allowed"
+                aria-label="Next step"
+                title="Next step"
+              >
+                <MdSkipNext size={16} />
+              </button>
+              <span className="text-[11px] text-[var(--text-secondary-color)] font-mono">
+                {traceStepIndex + 1}/{traceResult.steps.length}
+              </span>
+              <button
+                onClick={runTrace}
+                className="h-[28px] w-[28px] flex items-center justify-center rounded-md border border-[var(--toolbar-border-color)] text-[var(--text-color)] hover:text-[var(--accent-color)] hover:border-[var(--accent-color)] transition-all duration-200 cursor-pointer"
+                aria-label="Re-run trace"
+                title="Re-run trace"
+              >
+                <MdReplay size={14} />
+              </button>
+              <span
+                className={`text-sm leading-none ml-1 ${
+                  traceResult.valid ? "text-[var(--color-success)]" : "text-[var(--color-danger)]"
+                }`}
+                title={traceResult.valid ? "Instance is valid" : "Instance is invalid"}
+                aria-hidden
+              >
+                {traceResult.valid ? "✓" : "✗"}
+              </span>
+            </>
+          )}
+          {traceError && (
+            <span
+              className="text-xs text-[var(--color-danger)] break-words"
+              title={traceError}
+            >
+              {traceError}
+            </span>
+          )}
+        </div>
+      )}
       <div className="flex-1 min-h-0">
         <Editor
+          key={activeEditorTab}
           height="100%"
           width="100%"
-          language={schemaFormat}
-          value={schemaText}
+          language={activeEditorTab === "schema" ? schemaFormat : "json"}
+          value={activeEditorTab === "schema" ? schemaText : instanceText}
           theme={theme === "light" ? "studio-light" : "studio-dark"}
           options={{
             minimap: { enabled: false },
             occurrencesHighlight: "off",
             renderLineHighlightOnlyWhenFocus: true,
           }}
-          onChange={(value) => setSchemaText(value ?? "")}
+          onChange={(value) =>
+            activeEditorTab === "schema"
+              ? setSchemaText(value ?? "")
+              : setInstanceText(value ?? "")
+          }
           onMount={handleEditorDidMount}
         />
       </div>
@@ -628,7 +853,7 @@ const MonacoEditor = () => {
       minSize={isMobile ? undefined : 60}
       className="flex flex-col relative bg-[var(--visualize-bg-color)]"
     >
-      <SchemaVisualization compiledSchema={compiledSchema} />
+      <SchemaVisualization compiledSchema={compiledSchema} activeTraceStep={activeTraceStep} />
       <SchemaErrorsPopup
         schemaValidation={schemaValidation}
         activeErrorIndex={activeErrorIndex}
